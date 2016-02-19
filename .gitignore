@@ -1,2 +1,4 @@
-sbt/sbt-launch*.jar
+build/sbt-launch*.jar
 target/
+.classpath
+.project
