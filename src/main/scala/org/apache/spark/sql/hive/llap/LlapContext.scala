@@ -19,6 +19,7 @@ package org.apache.spark.sql.hive.llap
 
 import java.sql.Connection
 import org.apache.spark.SparkContext
+import org.apache.spark.sql.SQLConf
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.analysis.OverrideCatalog
 
@@ -37,6 +38,15 @@ class LlapContext(
     catalog.setCurrentDatabase(dbName)
   }
 
+  override protected[sql] def createSession(): SQLSession = {
+    new this.SQLSession()
+  }
+
+  protected[llap] class SQLSession extends super.SQLSession {
+    protected[sql] override lazy val conf: SQLConf = new SQLConf {
+      override def caseSensitiveAnalysis: Boolean = getConf(SQLConf.CASE_SENSITIVE, false)
+    }
+  }
 }
 
 object LlapContext {

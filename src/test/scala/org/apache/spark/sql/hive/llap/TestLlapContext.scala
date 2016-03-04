@@ -45,4 +45,17 @@ class TestLlapContext extends FunSuite with BeforeAndAfterAll {
     assert(rows(0)(0) == 1155)
   }
 
+  test("filtered colums") {
+    // Also test case-insensitive column names
+    var df = llapContext.sql("select Last_Name, first_name from EMPLOYEE order by last_name, first_name limit 10")
+    var rows = df.collect
+    assert(rows(0).length == 2)
+    assert(rows.length == 10)
+
+    assert(rows(0)(0) == "Abbott")
+    assert(rows(0)(1) == "Eric")
+
+    assert(rows(9)(0) == "Adams")
+    assert(rows(9)(1) == "Michelle")
+  }
 }
