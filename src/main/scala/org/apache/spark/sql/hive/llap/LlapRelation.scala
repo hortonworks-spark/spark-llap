@@ -97,23 +97,33 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
     // Set JDBC url/etc
     jobConf.set("llap.if.hs2.connection", parameters("url"))
     jobConf.set("llap.if.query", queryString)
-    jobConf.set("llap.if.user", "user")
+    var userName = getUser()
+    jobConf.set("llap.if.user", userName)
     jobConf.set("llap.if.pwd", "password")
 
     // This should be set to the number of executors
     var numPartitions = sc.sparkContext.defaultMinPartitions
 
 
-    val rdd = sc.sparkContext.hadoopRDD(jobConf, inputFormatClass,
-      classOf[NullWritable], classOf[Text], numPartitions).asInstanceOf[HadoopRDD[NullWritable, Text]]
+    //val rdd = sc.sparkContext.hadoopRDD(jobConf, inputFormatClass,
+    //  classOf[NullWritable], classOf[Text], numPartitions).asInstanceOf[HadoopRDD[NullWritable, Text]]
 
     // For debugging
-    //val rdd = new HadoopRDD(sc.sparkContext, jobConf, inputFormatClass,
-    //    classOf[NullWritable], classOf[Text], numPartitions) with OverrideRDD[(NullWritable, Text)]
+    val rdd = new HadoopRDD(sc.sparkContext, jobConf, inputFormatClass,
+        classOf[NullWritable], classOf[Text], numPartitions) with OverrideRDD[(NullWritable, Text)]
 
     // Convert from RDD into Spark Rows
     val preservesPartitioning = false; // ???
     rdd.mapPartitionsWithInputSplit(LlapRelation.textRddToRows, preservesPartitioning)
+  }
+
+  def getUser(): String = {
+    sc match {
+      case hs2Context: LlapContext => hs2Context.userName
+      case _ => {
+        LlapContext.getUser()
+      }
+    }
   }
 
   def getConnection(): Connection = {
@@ -121,7 +131,7 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
       case hs2Context: LlapContext => hs2Context.connection
       case _ => {
         //throw new Exception("TODO not supported")
-        DefaultJDBCWrapper.getConnector(None, parameters("url"))
+        DefaultJDBCWrapper.getConnector(None, parameters("url"), getUser())
       }
     }
   }

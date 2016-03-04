@@ -25,12 +25,9 @@ import org.apache.spark.sql.catalyst.analysis.OverrideCatalog
 class LlapContext(
   @transient override val sparkContext: SparkContext,
   val connectionUrl: String,
-  @transient val connection: Connection)
+  @transient val connection: Connection, val userName: String)
     extends SQLContext(sparkContext) {
   @transient override lazy val catalog = getCatalog()
-
-  // HACK: task execution is hanging
-  connection.prepareStatement("set hive.llap.execution.mode=none").execute()
 
   def getCatalog() = {
     new HS2Catalog(this, connectionUrl, connection) with OverrideCatalog
@@ -43,9 +40,14 @@ class LlapContext(
 }
 
 object LlapContext {
+  def getUser(): String = {
+    System.getProperty("hive_user", System.getProperty("user.name"))
+  }
+
   def newInstance(sparkContext: SparkContext, connectionUrl: String) = {
-    val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl)
-    new LlapContext(sparkContext, connectionUrl, conn)
+    val userName: String = getUser()
+    val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName)
+    new LlapContext(sparkContext, connectionUrl, conn, userName)
   }
 }
 

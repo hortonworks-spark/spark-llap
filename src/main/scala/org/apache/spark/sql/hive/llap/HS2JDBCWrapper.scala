@@ -162,11 +162,11 @@ class JDBCWrapper {
    *                                discover the appropriate driver class.
    * @param url the JDBC url to connect to.
    */
-  def getConnector(userProvidedDriverClass: Option[String], url: String): Connection = {
+  def getConnector(userProvidedDriverClass: Option[String], url: String, userName: String): Connection = {
     val subprotocol = new URI(url.stripPrefix("jdbc:")).getScheme
     val driverClass: Class[Driver] = getDriverClass(subprotocol, userProvidedDriverClass)
     registerDriver(driverClass.getCanonicalName)
-    DriverManager.getConnection(url, new Properties())
+    DriverManager.getConnection(url, userName, "password")
   }
 
   /**
@@ -275,4 +275,3 @@ class JDBCWrapper {
 }
 
 object DefaultJDBCWrapper extends JDBCWrapper
-
