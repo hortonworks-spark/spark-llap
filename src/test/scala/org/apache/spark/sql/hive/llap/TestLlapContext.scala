@@ -58,4 +58,42 @@ class TestLlapContext extends FunSuite with BeforeAndAfterAll {
     assert(rows(9)(0) == "Adams")
     assert(rows(9)(1) == "Michelle")
   }
+
+  test("filters1") {
+    var df = llapContext.sql("select last_name, first_name from employee where employee_id > 1 and employee_id < 5")
+    var rows = df.collect
+    assert(rows(0).length == 2)
+    assert(rows.length == 2)
+
+    assert(rows(0)(0) == "Whelply")
+    assert(rows(0)(1) == "Derrick")
+
+    assert(rows(1)(0) == "Spence")
+    assert(rows(1)(1) == "Michael")
+  }
+
+  test("filters_in1") {
+    // IN filter
+    var df = llapContext.sql("select last_name, first_name from employee where employee_id in (2,3,4)")
+    var rows = df.collect
+    assert(rows(0).length == 2)
+    assert(rows.length == 2)
+
+    assert(rows(0)(0) == "Whelply")
+    assert(rows(0)(1) == "Derrick")
+
+    assert(rows(1)(0) == "Spence")
+    assert(rows(1)(1) == "Michael")
+  }
+
+    test("filters_in2") {
+    // IN filter
+    var df = llapContext.sql("select last_name, first_name from employee where first_name in ('Derrick') and last_name in ('Whelply')")
+    var rows = df.collect
+    assert(rows(0).length == 2)
+    assert(rows.length == 1)
+
+    assert(rows(0)(0) == "Whelply")
+    assert(rows(0)(1) == "Derrick")
+  }
 }

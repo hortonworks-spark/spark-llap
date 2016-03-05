@@ -19,6 +19,7 @@ package org.apache.spark.sql.hive.llap
 
 import collection.JavaConversions._
 
+import org.apache.spark.Logging
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.rdd.HadoopRDD
 import org.apache.spark.rdd.RDD
@@ -31,6 +32,7 @@ import org.apache.spark.sql.types.StructType
 
 import java.sql.Connection
 import java.util.Properties
+import java.util.UUID
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.JobConf
@@ -46,7 +48,8 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Map[String, String])
   extends BaseRelation
-  with TableScan {
+  with PrunedFilteredScan
+  with Logging {
 
   override def sqlContext(): SQLContext = {
     sc
@@ -62,7 +65,7 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
   }
 
   override def schema(): StructType = {
-    println("*** tableSchema = " + tableSchema)
+    logDebug("tableSchema = " + tableSchema)
     tableSchema
   }
 
@@ -82,14 +85,9 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
     }
   }
 
-  // TableScan implementation
-  // TODO: Implement PrunedFilteredScan rather than TableScan
-  override def buildScan(): RDD[Row] = {
-    
-    val queryString = getQueryType match {
-      case "table" => "select * from " + parameters("table")
-      case "query" => parameters("query")
-    }
+  // PrunedFilteredScan implementation
+  override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
+    val queryString = getQueryString(requiredColumns, filters)
 
     @transient val inputFormatClass = Class.forName("org.apache.hive.jdbc.LlapInputFormat")
       .asInstanceOf[Class[_ <: InputFormat[NullWritable, Text]]]
@@ -115,6 +113,30 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
     // Convert from RDD into Spark Rows
     val preservesPartitioning = false; // ???
     rdd.mapPartitionsWithInputSplit(LlapRelation.textRddToRows, preservesPartitioning)
+  }
+
+  private def getQueryString(requiredColumns: Array[String], filters: Array[Filter]): String = {
+    logDebug("requiredColumns: " + requiredColumns.mkString(","))
+    logDebug("filters: " + filters.mkString(","))
+
+    var selectCols = "*"
+    if (requiredColumns.length > 0) {
+      selectCols = requiredColumns.mkString(",")
+    }
+
+    val baseQuery = getQueryType match {
+      case "table" => "select * from " + parameters("table")
+      case "query" => parameters("query")
+    }
+    val baseQueryAlias = "q_" + UUID.randomUUID().toString().replaceAll("[^A-Za-z0-9 ]", "")
+
+    val whereClause = FilterPushdown.buildWhereClause(schema, filters)
+
+    var queryString =
+      s"""select $selectCols from ($baseQuery) as $baseQueryAlias $whereClause"""
+    logDebug("Generated queryString: " + queryString);
+
+    queryString
   }
 
   def getUser(): String = {
@@ -148,7 +170,7 @@ import org.apache.spark.serializer.JavaSerializer
 trait OverrideRDD[T] extends RDD[T] {
   abstract override def getPartitions: Array[Partition] = {
     val partitions = super.getPartitions
-    println("*** Partitions = " + partitions.map(part => part.toString()).mkString(","))
+    logDebug("Partitions = " + partitions.map(part => part.toString()).mkString(","))
     partitions
   }
 }
