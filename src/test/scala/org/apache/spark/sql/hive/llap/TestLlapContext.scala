@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.spark.sql.hive.llap
 
 import org.apache.spark.sql.{DataFrame, SQLContext, Row}
@@ -8,8 +24,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 class TestLlapContext extends FunSuite with BeforeAndAfterAll {
 
   private var jdbcUrl =  "jdbc:hive2://localhost:10000"
-  private val sparkContext = new SparkContext("local", "test")
-  private var llapContext = LlapContext.newInstance(sparkContext, jdbcUrl)
+  private var llapContext = LlapContext.newInstance(TestUtils.sparkContext, jdbcUrl)
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -86,7 +101,7 @@ class TestLlapContext extends FunSuite with BeforeAndAfterAll {
     assert(rows(1)(1) == "Michael")
   }
 
-    test("filters_in2") {
+  test("filters_in2") {
     // IN filter
     var df = llapContext.sql("select last_name, first_name from employee where first_name in ('Derrick') and last_name in ('Whelply')")
     var rows = df.collect

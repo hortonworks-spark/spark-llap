@@ -32,12 +32,12 @@ private[llap] object FilterPushdown extends Object with Logging {
    * Attempt to convert the given filter into a SQL expression. Returns None if the expression
    * could not be converted.
    */
-  private def buildFilterExpression(schema: StructType, filter: Filter): Option[String] = {
+  private[llap] def buildFilterExpression(schema: StructType, filter: Filter): Option[String] = {
     def buildComparison(attr: String, value: Any, comparisonOp: String): Option[String] = {
-     getTypeForAttribute(schema, attr).map { dataType =>
-       val sqlEscapedValue: String = getSqlEscapedValue(dataType, value)
-       s"""$attr $comparisonOp $sqlEscapedValue"""
-     }
+      getTypeForAttribute(schema, attr).map { dataType =>
+        val sqlEscapedValue: String = getSqlEscapedValue(dataType, value)
+        s"""$attr $comparisonOp $sqlEscapedValue"""
+      }
     }
 
     def buildInClause(attr: String, values: Array[Any]): Option[String] = {
@@ -47,23 +47,60 @@ private[llap] object FilterPushdown extends Object with Logging {
       }
     }
 
-    filter match {
+    def buildNullCheck(attr: String, isNull: Boolean): Option[String] = {
+      val check = if (isNull) " IS NULL" else " IS NOT NULL"
+      Option(attr + check)
+    }
+
+    def buildLogicalExpr(left: Filter, right: Filter, op: String): Option[String] = {
+      val leftExpr = buildFilterExpression(schema, left)
+      val rightExpr = buildFilterExpression(schema, right)
+      if (leftExpr.isEmpty || rightExpr.isEmpty) {
+        return None
+      }
+      Option(s"(${leftExpr.get}) ${op} (${rightExpr.get})")
+    }
+
+    def buildNotExpr(operand: Filter): Option[String] = {
+      val expr = buildFilterExpression(schema, operand)
+      if (expr.isEmpty) {
+        return None
+      }
+      Option(s"NOT (${expr.get})")
+    }
+
+    val filterExpression: Option[String] = filter match {
       case EqualTo(attr, value) => buildComparison(attr, value, "=")
       case LessThan(attr, value) => buildComparison(attr, value, "<")
       case GreaterThan(attr, value) => buildComparison(attr, value, ">")
       case LessThanOrEqual(attr, value) => buildComparison(attr, value, "<=")
       case GreaterThanOrEqual(attr, value) => buildComparison(attr, value, ">=")
       case In(attr, values) => buildInClause(attr, values)
+      case StringStartsWith(attr, value: String) => buildComparison(attr, value + "%", "LIKE")
+      case StringEndsWith(attr, value: String) => buildComparison(attr, "%" + value, "LIKE")
+      case StringContains(attr, value: String) => buildComparison(attr, "%" + value + "%", "LIKE")
+      case IsNull(attr) => buildNullCheck(attr, true)
+      case IsNotNull(attr) => buildNullCheck(attr, false)
+      case And(left, right) => buildLogicalExpr(left, right, "AND")
+      case Or(left, right) => buildLogicalExpr(left, right, "OR")
+      case Not(value) => buildNotExpr(value)
       case _ => {
-        logDebug("Unable to generate SQL expression for SparkSQL Filter: " + filter)
         None
       }
     }
+
+    if (filterExpression.isEmpty) {
+      logDebug("Unable to generate SQL expression for SparkSQL Filter: " + filter)
+    }
+
+    filterExpression
   }
 
   private def getSqlEscapedValue(dataType: DataType, value: Any): String = {
     dataType match {
-         case StringType => s"\\'${value.toString.replace("'", "\\'\\'")}\\'"
+         case StringType => s"'${value.toString.replace("'", "\\'")}'"
+         case TimestampType => s"TIMESTAMP '${value.toString()}'"
+         case DateType => s"DATE '${value.toString()}'"
          case _ => value.toString
     }
   }
