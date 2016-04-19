@@ -19,6 +19,7 @@ package org.apache.spark.sql.hive.llap
 import org.apache.spark.sql.{DataFrame, SQLContext, Row}
 import org.apache.spark.{SparkContext, SparkException}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import java.net.InetAddress
 
 
 class TestLlapContext extends FunSuite with BeforeAndAfterAll {
@@ -28,6 +29,10 @@ class TestLlapContext extends FunSuite with BeforeAndAfterAll {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
+    // Setting this to the local hostname ends up using LlapFixedRegistryImpl,
+    // which gets the port values from the config, rather than Zookeeper.
+    TestUtils.sparkContext.hadoopConfiguration.set("hive.llap.daemon.service.hosts",
+        InetAddress.getLocalHost().getHostName())
   }
 
   override protected def afterAll(): Unit = {

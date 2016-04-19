@@ -69,7 +69,7 @@ class TextRowParser(colNames: Seq[String], colTypes: Seq[DataType], props: Prope
 object SerdeUtils {
 
   def parseValue(stringValue:String, colType: DataType): Any = {
-    if (stringValue == null) {
+    if (stringValue == null || stringValue == "\\N") {
       return null
     }
     try {
