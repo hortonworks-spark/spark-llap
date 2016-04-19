@@ -38,14 +38,8 @@ class LlapContext(
     catalog.setCurrentDatabase(dbName)
   }
 
-  override protected[sql] def createSession(): SQLSession = {
-    new this.SQLSession()
-  }
-
-  protected[llap] class SQLSession extends super.SQLSession {
-    protected[sql] override lazy val conf: SQLConf = new SQLConf {
-      override def caseSensitiveAnalysis: Boolean = getConf(SQLConf.CASE_SENSITIVE, false)
-    }
+  protected[sql] override lazy val conf: SQLConf = new SQLConf {
+    override def caseSensitiveAnalysis: Boolean = getConf(SQLConf.CASE_SENSITIVE, false)
   }
 }
 

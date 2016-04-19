@@ -39,7 +39,7 @@ private [llap] class HS2Catalog(sqlContext: SQLContext, jdbcUrl: String, connect
 
   override val conf: CatalystConf = new SimpleCatalystConf(false)
 
-  override def tableExists(tableIdentifier: Seq[String]): Boolean = {
+  override def tableExists(tableIdentifier: TableIdentifier): Boolean = {
 
     val dmd = connection.getMetaData()
     var dbName = getDbName(tableIdentifier)
@@ -47,7 +47,7 @@ private [llap] class HS2Catalog(sqlContext: SQLContext, jdbcUrl: String, connect
     // In the absence of a DB name, should call getTables() with "" as DB name,
     // to search with no schema. null DB name has different semantics in getTables()
     // TODO: Another option is to set the dbName to the default DB
-    val rs = dmd.getTables(null, getDbName(tableIdentifier), getTableName(tableIdentifier), null)
+    val rs = dmd.getTables(null, getDbName(tableIdentifier), tableIdentifier.table, null)
 
     val tableExists = rs.next()
     rs.close()
@@ -55,14 +55,13 @@ private [llap] class HS2Catalog(sqlContext: SQLContext, jdbcUrl: String, connect
   }
 
   override def lookupRelation(
-      tableIdentifier: Seq[String],
+      tableIdentifier: TableIdentifier,
       alias: Option[String] = None): LogicalPlan = {
-    
-    val tableName = getTableName(tableIdentifier)
+
     if (!tableExists(tableIdentifier)) {
       throw new Exception("Table " + tableIdentifier + " does not exist")
     }
-    val qualifiedName = getDbName(tableIdentifier) + "." + getTableName(tableIdentifier)
+    val qualifiedName = getDbName(tableIdentifier) + "." + tableIdentifier.table
 
     var options = Map("table" -> qualifiedName, "url" -> jdbcUrl)
     val resolved = ResolvedDataSource(
@@ -72,7 +71,7 @@ private [llap] class HS2Catalog(sqlContext: SQLContext, jdbcUrl: String, connect
         relationSourceName,
         options)
     val logicalRelation = LogicalRelation(resolved.relation)
-    val tableWithQualifiers = Subquery(tableName, logicalRelation)
+    val tableWithQualifiers = Subquery(tableIdentifier.table, logicalRelation)
     alias.map(a => Subquery(a, tableWithQualifiers)).getOrElse(tableWithQualifiers)
   }
 
@@ -95,12 +94,12 @@ private [llap] class HS2Catalog(sqlContext: SQLContext, jdbcUrl: String, connect
   }
 
   // TODO: Refactor it in the work of SPARK-10104
-  override def registerTable(tableIdentifier: Seq[String], plan: LogicalPlan): Unit = {
+  override def registerTable(tableIdentifier: TableIdentifier, plan: LogicalPlan): Unit = {
     // TODO
   }
 
   // TODO: Refactor it in the work of SPARK-10104
-  override def unregisterTable(tableIdentifier: Seq[String]): Unit = {
+  override def unregisterTable(tableIdentifier: TableIdentifier): Unit = {
     // TODO
   }
 
@@ -108,21 +107,12 @@ private [llap] class HS2Catalog(sqlContext: SQLContext, jdbcUrl: String, connect
     // TODO
   }
 
-  protected def getDbName(tableIdent: Seq[String]): String = {
-    if (tableIdent.size < 2) {
-      //return None
+  protected def getDbName(tableIdent: TableIdentifier): String = {
+    if (tableIdent.database.isEmpty) {
       getCurrentDatabase()
     } else {
-      //return Option(tableIdent(0))
-      tableIdent(0)
+      tableIdent.database.get
     }
-  }
-
-  protected def getTableName(tableIdent: Seq[String]): String = {
-    if (tableIdent.size < 2) {
-      return tableIdent(0)
-    }
-    return tableIdent(1)
   }
 
   def getCurrentDatabase(): String = {

@@ -28,7 +28,7 @@ import org.apache.spark.sql.catalyst.CatalystTypeConverters
 object DataTypeUtils {
 
   def parse(dataTypeString: String): DataType = {
-    org.apache.spark.sql.types.DataTypeParser.parse(dataTypeString)
+    org.apache.spark.sql.catalyst.util.DataTypeParser.parse(dataTypeString)
   }
 }
 

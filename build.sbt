@@ -2,12 +2,12 @@
 name := "spark-llap"
 version := "1.0"
 organization := "Hortonworks"
-scalaVersion := "2.10.4"
+scalaVersion := "2.10.5"
 //scalaVersion := "2.11.4"
 //crossScalaVersions := Seq("2.10.5", "2.11.4")
 val scalatestVersion = "2.2.4"
 
-sparkVersion := "1.5.2"
+sparkVersion := "1.6.0"
 //sparkComponents ++= Seq("core", "catalyst", "sql", "hive")
 //sparkComponents ++= Seq("core", "catalyst", "sql")
 
