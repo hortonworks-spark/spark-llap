@@ -42,8 +42,9 @@ import org.apache.hadoop.io.NullWritable
 import org.apache.hadoop.io.Text
 import org.apache.hadoop.io.Writable
 
-// TODO: this may need to be replaced
-import org.apache.hadoop.hive.metastore.api.FieldSchema
+import org.apache.hadoop.hive.llap.FieldDesc
+import org.apache.hadoop.hive.llap.Schema
+import org.apache.hadoop.hive.llap.TypeDesc
 
 
 case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Map[String, String])
@@ -89,7 +90,7 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
   override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
     val queryString = getQueryString(requiredColumns, filters)
 
-    @transient val inputFormatClass = Class.forName("org.apache.hive.jdbc.LlapInputFormat")
+    @transient val inputFormatClass = classOf[org.apache.hadoop.hive.llap.LlapBaseInputFormat[Text]]
       .asInstanceOf[Class[_ <: InputFormat[NullWritable, Text]]]
     @transient val jobConf = new JobConf(sc.sparkContext.hadoopConfiguration)
     // Set JDBC url/etc
@@ -103,12 +104,12 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
     var numPartitions = sc.sparkContext.defaultMinPartitions
 
 
-    //val rdd = sc.sparkContext.hadoopRDD(jobConf, inputFormatClass,
-    //  classOf[NullWritable], classOf[Text], numPartitions).asInstanceOf[HadoopRDD[NullWritable, Text]]
+    val rdd = sc.sparkContext.hadoopRDD(jobConf, inputFormatClass,
+      classOf[NullWritable], classOf[Text], numPartitions).asInstanceOf[HadoopRDD[NullWritable, Text]]
 
     // For debugging
-    val rdd = new HadoopRDD(sc.sparkContext, jobConf, inputFormatClass,
-        classOf[NullWritable], classOf[Text], numPartitions) with OverrideRDD[(NullWritable, Text)]
+    //val rdd = new HadoopRDD(sc.sparkContext, jobConf, inputFormatClass,
+    //    classOf[NullWritable], classOf[Text], numPartitions) with OverrideRDD[(NullWritable, Text)]
 
     // Convert from RDD into Spark Rows
     val preservesPartitioning = false; // ???
@@ -180,11 +181,10 @@ object LlapRelation {
    * Convert the RDD from LLAP (Text data) into Spark Rows
    */
   def textRddToRows(inputSplit:InputSplit, iterator:Iterator[(Writable, Text)]): Iterator[Row] = {
-    val jdbcllapInputSplit = inputSplit.asInstanceOf[org.apache.hive.jdbc.LlapInputSplit[Text]]
-    val llapInputSplit = jdbcllapInputSplit.getSplit.asInstanceOf[org.apache.hadoop.hive.llap.LlapInputSplit]
-    val schema:Seq[FieldSchema] = llapInputSplit.getSchema.getFieldSchemas
+    val llapInputSplit = inputSplit.asInstanceOf[org.apache.hadoop.hive.llap.LlapInputSplit]
+    val schema:Seq[FieldDesc] = llapInputSplit.getSchema.getColumns
     val colNames = schema.map(fieldSchema => { fieldSchema.getName })
-    val colTypes = schema.map(fieldSchema => { DataTypeUtils.parse(fieldSchema.getType) })
+    val colTypes = schema.map(fieldSchema => { DataTypeUtils.parse(fieldSchema.getTypeDesc.toString) })
     val props = new Properties
 
     // Parse the row as delimited text

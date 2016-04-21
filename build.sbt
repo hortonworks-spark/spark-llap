@@ -41,6 +41,10 @@ libraryDependencies ++= Seq(
     ExclusionRule(organization = "javax.servlet"),
     ExclusionRule(organization = "com.fasterxml.jackson.core")
   ),
+  "org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "compile" excludeAll(
+    ExclusionRule(organization = "javax.servlet"),
+    ExclusionRule(organization = "com.fasterxml.jackson.core")
+  ),
   "org.apache.tez" % "tez-api" % tezVersion % "test" excludeAll(
     ExclusionRule(organization = "javax.servlet"),
     ExclusionRule(organization = "com.fasterxml.jackson.core")
@@ -65,7 +69,7 @@ libraryDependencies ++= Seq(
     ExclusionRule(organization = "javax.servlet"),
     ExclusionRule(organization = "com.fasterxml.jackson.core")
   ),
-  "org.apache.hive" % "hive-llap-server" % hiveVersion  excludeAll(
+  "org.apache.hive" % "hive-llap-ext-client" % hiveVersion  excludeAll(
     ExclusionRule(organization = "com.sun.jersey"),
     ExclusionRule(organization = "javax.servlet"),
     ExclusionRule(organization = "com.fasterxml.jackson.core")
