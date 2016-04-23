@@ -20,6 +20,7 @@ package org.apache.spark.sql.hive.llap
 import collection.JavaConversions._
 
 import org.apache.spark.Logging
+import org.apache.spark.Partition
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.rdd.HadoopRDD
 import org.apache.spark.rdd.RDD
@@ -39,12 +40,11 @@ import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapred.InputFormat
 import org.apache.hadoop.mapred.InputSplit
 import org.apache.hadoop.io.NullWritable
-import org.apache.hadoop.io.Text
 import org.apache.hadoop.io.Writable
 
-import org.apache.hadoop.hive.llap.FieldDesc
+import org.apache.hadoop.hive.llap.LlapInputSplit
+import org.apache.hadoop.hive.llap.LlapRowInputFormat
 import org.apache.hadoop.hive.llap.Schema
-import org.apache.hadoop.hive.llap.TypeDesc
 
 
 case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Map[String, String])
@@ -90,8 +90,7 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
   override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
     val queryString = getQueryString(requiredColumns, filters)
 
-    @transient val inputFormatClass = classOf[org.apache.hadoop.hive.llap.LlapBaseInputFormat[Text]]
-      .asInstanceOf[Class[_ <: InputFormat[NullWritable, Text]]]
+    @transient val inputFormatClass = classOf[LlapRowInputFormat]
     @transient val jobConf = new JobConf(sc.sparkContext.hadoopConfiguration)
     // Set JDBC url/etc
     jobConf.set("llap.if.hs2.connection", parameters("url"))
@@ -105,15 +104,17 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
 
 
     val rdd = sc.sparkContext.hadoopRDD(jobConf, inputFormatClass,
-      classOf[NullWritable], classOf[Text], numPartitions).asInstanceOf[HadoopRDD[NullWritable, Text]]
+        classOf[NullWritable], classOf[org.apache.hadoop.hive.llap.Row], numPartitions)
+        .asInstanceOf[HadoopRDD[NullWritable, org.apache.hadoop.hive.llap.Row]]
 
     // For debugging
     //val rdd = new HadoopRDD(sc.sparkContext, jobConf, inputFormatClass,
-    //    classOf[NullWritable], classOf[Text], numPartitions) with OverrideRDD[(NullWritable, Text)]
+    //    classOf[NullWritable], classOf[org.apache.hadoop.hive.llap.Row], numPartitions)
+    //    with OverrideRDD[(NullWritable, org.apache.hadoop.hive.llap.Row)]
 
     // Convert from RDD into Spark Rows
     val preservesPartitioning = false; // ???
-    rdd.mapPartitionsWithInputSplit(LlapRelation.textRddToRows, preservesPartitioning)
+    rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToRows, preservesPartitioning)
   }
 
   private def getQueryString(requiredColumns: Array[String], filters: Array[Filter]): String = {
@@ -161,12 +162,6 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
   
 }
 
-
-import org.apache.spark.Partition
-import org.apache.spark.SerializableWritable
-import org.apache.spark.rdd.HadoopPartition
-import org.apache.spark.serializer.JavaSerializer
-
 // Override getPartitions() for some debugging
 trait OverrideRDD[T] extends RDD[T] {
   abstract override def getPartitions: Array[Partition] = {
@@ -177,20 +172,13 @@ trait OverrideRDD[T] extends RDD[T] {
 }
 
 object LlapRelation {
-  /**
-   * Convert the RDD from LLAP (Text data) into Spark Rows
-   */
-  def textRddToRows(inputSplit:InputSplit, iterator:Iterator[(Writable, Text)]): Iterator[Row] = {
-    val llapInputSplit = inputSplit.asInstanceOf[org.apache.hadoop.hive.llap.LlapInputSplit]
-    val schema:Seq[FieldDesc] = llapInputSplit.getSchema.getColumns
-    val colNames = schema.map(fieldSchema => { fieldSchema.getName })
-    val colTypes = schema.map(fieldSchema => { DataTypeUtils.parse(fieldSchema.getTypeDesc.toString) })
-    val props = new Properties
+  def llapRowRddToRows(inputSplit:InputSplit,
+      iterator:Iterator[(NullWritable, org.apache.hadoop.hive.llap.Row)]): Iterator[Row] = {
 
-    // Parse the row as delimited text
-    val parser = new TextRowParser(colNames, colTypes, props)
+    val llapInputSplit = inputSplit.asInstanceOf[LlapInputSplit]
+    val schema:Schema = llapInputSplit.getSchema
     iterator.map((tuple) => {
-      val row = parser.parseRow(tuple._2)
+      val row = RowConverter.llapRowToSparkRow(tuple._2, schema)
       row
     })
   }
