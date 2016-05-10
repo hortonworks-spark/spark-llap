@@ -30,12 +30,7 @@ class TestLlapContext extends FunSuite with BeforeAndAfterAll {
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     // Assume this test is running against MiniLlapCluster.
-    TestUtils.sparkContext.hadoopConfiguration.set("hive.llap.daemon.service.hosts",
-        "@llap_MiniLlapCluster")
-    TestUtils.sparkContext.hadoopConfiguration.set("hive.zookeeper.quorum",
-        "localhost")
-    TestUtils.sparkContext.hadoopConfiguration.set("hive.zookeeper.client.port",
-        "52175")  // Needs to be changed to the MiniLlapCluster ZK port
+    TestUtils.updateConfWithMiniClusterSettings(jdbcUrl, System.getProperty("user.name"))
   }
 
   override protected def afterAll(): Unit = {

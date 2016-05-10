@@ -17,7 +17,34 @@
 package org.apache.spark.sql.hive.llap
 
 import org.apache.spark.SparkContext
+import java.sql.ResultSet
+import java.sql.Statement
 
 object TestUtils {
   lazy val sparkContext = new SparkContext("local", "test")
+
+  // Query HS2 for the necessary settings
+  def updateConfWithMiniClusterSettings(connectionUrl: String, userName: String): Unit = {
+    val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName)
+    val settings = Seq(
+      "hive.llap.daemon.service.hosts",
+      "hive.zookeeper.quorum",
+      "hive.zookeeper.client.port"
+    )
+
+    val stmt = conn.createStatement()
+    settings.foreach { setting =>
+      val value = getConfSetting(stmt, setting)
+      println("Setting " + setting + " to " + value)
+      sparkContext.hadoopConfiguration.set(setting, value)
+    }
+    stmt.close()
+  }
+
+  private def getConfSetting(stmt: Statement, confSetting: String): String = {
+    val res = stmt.executeQuery("set " + confSetting)
+    res.next()
+    val fields: Array[String] = res.getString(1).split("=", 2)
+    fields(1)
+  }
 }
