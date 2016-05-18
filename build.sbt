@@ -99,6 +99,13 @@ logLevel in assembly := {
   }
 }
 
+// Add assembly to publish task
+artifact in (Compile, assembly) := {
+  val art = (artifact in (Compile, assembly)).value
+  art.copy(`classifier` = Some("assembly"))
+}
+addArtifact(artifact in (Compile, assembly), assembly)
+
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 
 // Get full stack trace
