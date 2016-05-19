@@ -181,8 +181,8 @@ class JDBCWrapper {
         case LongType => "BIGINT"
         case DoubleType => "DOUBLE PRECISION"
         case FloatType => "REAL"
-        case ShortType => "INTEGER"
-        case ByteType => "SMALLINT" // Redshift does not support the BYTE type.
+        case ShortType => "SMALLINT"
+        case ByteType => "TINYINT"
         case BooleanType => "BOOLEAN"
         case StringType =>
           if (field.metadata.contains("maxlength")) {
@@ -257,12 +257,12 @@ class JDBCWrapper {
       case java.sql.Types.REAL          => DoubleType
       case java.sql.Types.REF           => StringType
       case java.sql.Types.ROWID         => LongType
-      case java.sql.Types.SMALLINT      => IntegerType
+      case java.sql.Types.SMALLINT      => ShortType
       case java.sql.Types.SQLXML        => StringType
       case java.sql.Types.STRUCT        => StringType
       case java.sql.Types.TIME          => TimestampType
       case java.sql.Types.TIMESTAMP     => TimestampType
-      case java.sql.Types.TINYINT       => IntegerType
+      case java.sql.Types.TINYINT       => ByteType
       case java.sql.Types.VARBINARY     => BinaryType
       case java.sql.Types.VARCHAR       => StringType
       case _                            => null
