@@ -20,6 +20,7 @@ package org.apache.spark.sql.hive.llap
 import java.sql.Connection
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SQLConf
+import org.apache.spark.sql.SQLConf.SQLConfEntry.stringConf
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.analysis.OverrideCatalog
 
@@ -44,14 +45,30 @@ class LlapContext(
 }
 
 object LlapContext {
+  val HIVESERVER2_URL = stringConf(
+    key = "spark.sql.hive.hiveserver2.url",
+    defaultValue = None,
+    doc = "HiveServer2 URL.")
+
   def getUser(): String = {
     System.getProperty("hive_user", System.getProperty("user.name"))
   }
 
-  def newInstance(sparkContext: SparkContext, connectionUrl: String) = {
+  def newInstance(sparkContext: SparkContext, connectionUrl: String): LlapContext = {
     val userName: String = getUser()
     val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName)
     new LlapContext(sparkContext, connectionUrl, conn, userName)
+  }
+
+  def newInstance(sparkContext: SparkContext): LlapContext = {
+    LlapContext.newInstance(sparkContext, LlapContext.getConnectionUrlFromConf(sparkContext))
+  }
+
+  private def getConnectionUrlFromConf(sparkContext: SparkContext): String = {
+    if (!sparkContext.conf.contains(HIVESERVER2_URL.key)) {
+      throw new Exception("Spark conf does not contain config " + HIVESERVER2_URL.key)
+    }
+    sparkContext.conf.get(HIVESERVER2_URL.key)
   }
 }
 
