@@ -13,6 +13,7 @@ val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0-SNAPSHOT")
 val log4j2Version = sys.props.getOrElse("log4j2.version", "2.4.1")
 val tezVersion = sys.props.getOrElse("tez.version", "0.8.3")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
+val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
 spName := "Hortonworks/spark-llap"
 
@@ -21,6 +22,8 @@ val testSparkVersion = settingKey[String]("The version of Spark to test against.
 testSparkVersion := sys.props.get("spark.testVersion").getOrElse(sparkVersion.value)
 
 spIgnoreProvided := true
+
+checksums in update := Nil
 
 libraryDependencies ++= Seq(
 
@@ -107,6 +110,7 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
+resolvers += "Additional Maven Repository" at repoUrl
 
 // Get full stack trace
 testOptions in Test += Tests.Argument("-oD")
