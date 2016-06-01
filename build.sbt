@@ -17,6 +17,9 @@ val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
 spName := "hortonworks/spark-llap"
 
+// disable using the Scala version in output paths and artifacts
+crossPaths := false
+
 val testSparkVersion = settingKey[String]("The version of Spark to test against.")
 
 testSparkVersion := sys.props.get("spark.testVersion").getOrElse(sparkVersion.value)
