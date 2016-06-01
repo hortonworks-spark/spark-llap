@@ -1,7 +1,7 @@
 
 name := "spark-llap"
 version := "1.0"
-organization := "Hortonworks"
+organization := "com.hortonworks"
 scalaVersion := "2.10.5"
 val scalatestVersion = "2.2.4"
 
@@ -15,7 +15,7 @@ val tezVersion = sys.props.getOrElse("tez.version", "0.8.3")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
 val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
-spName := "Hortonworks/spark-llap"
+spName := "hortonworks/spark-llap"
 
 val testSparkVersion = settingKey[String]("The version of Spark to test against.")
 
