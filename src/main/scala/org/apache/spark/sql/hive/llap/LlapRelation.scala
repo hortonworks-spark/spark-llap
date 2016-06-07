@@ -143,7 +143,6 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
 
   def getUser(): String = {
     sc match {
-      case hs2Context: LlapContext => hs2Context.userName
       case _ => {
         LlapContext.getUser()
       }
@@ -154,7 +153,6 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
     sc match {
       case hs2Context: LlapContext => hs2Context.connection
       case _ => {
-        //throw new Exception("TODO not supported")
         DefaultJDBCWrapper.getConnector(None, parameters("url"), getUser())
       }
     }

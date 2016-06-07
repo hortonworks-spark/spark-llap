@@ -22,25 +22,71 @@ import org.apache.spark.SparkContext
 import org.apache.spark.sql.SQLConf
 import org.apache.spark.sql.SQLConf.SQLConfEntry.stringConf
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.OverrideCatalog
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.plans.logical.Subquery
+import org.apache.spark.sql.execution.CacheManager
+import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.datasources.ResolvedDataSource
+import org.apache.spark.sql.execution.ui.SQLListener
+import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.sql.hive.HiveMetastoreCatalog
+import org.apache.spark.sql.hive.MetastoreRelation
+import org.apache.spark.sql.hive.client.ClientInterface
+import org.apache.spark.sql.hive.client.ClientWrapper
 
-class LlapContext(
-  @transient override val sparkContext: SparkContext,
-  val connectionUrl: String,
-  @transient val connection: Connection, val userName: String)
-    extends SQLContext(sparkContext) {
-  @transient override lazy val catalog = getCatalog()
+class LlapContext(sc: SparkContext,
+    cacheManager: CacheManager,
+    listener: SQLListener,
+    @transient private val execHive: ClientWrapper,
+    @transient private val metaHive: ClientInterface,
+    isRootContext: Boolean) extends HiveContext(sc, cacheManager, listener, execHive, metaHive, isRootContext) {
+  override protected[sql] lazy val catalog =
+    new LlapCatalog(metadataHive, this) with OverrideCatalog
 
-  def getCatalog() = {
-    new HS2Catalog(this, connectionUrl, connection) with OverrideCatalog
+  def this(sc: SparkContext) = {
+    this(sc, new CacheManager, SQLContext.createListenerAndUI(sc), null, null, true)
   }
 
-  def setCurrentDatabase(dbName: String) = {
-    catalog.setCurrentDatabase(dbName)
+  def connection: Connection = {
+    if (conn == null) {
+      conn = DefaultJDBCWrapper.getConnector(None, LlapContext.getConnectionUrlFromConf(sc), LlapContext.getUser())
+    }
+    conn
   }
 
-  protected[sql] override lazy val conf: SQLConf = new SQLConf {
-    override def caseSensitiveAnalysis: Boolean = getConf(SQLConf.CASE_SENSITIVE, false)
+  var conn: Connection = null
+}
+
+class LlapCatalog(override val client: ClientInterface, hive: HiveContext)
+    extends HiveMetastoreCatalog(client, hive) {
+
+  override def lookupRelation(
+      tableIdentifier: TableIdentifier,
+      alias: Option[String] = None): LogicalPlan = {
+    // Use metastore catalog to lookup tables, then convert to our relations
+    val relation = super.lookupRelation(tableIdentifier, alias)
+    val relationSourceName = "org.apache.spark.sql.hive.llap"
+
+    // Now convert to LlapRelation
+    val logicalRelation = relation match {
+      case MetastoreRelation(dbName, tabName, alias) => {
+        val qualifiedName = dbName + "." + tabName
+        var options = Map("table" -> qualifiedName, "url" -> LlapContext.getConnectionUrlFromConf(hive.sparkContext))
+        val resolved = ResolvedDataSource(
+        hive,
+        None,
+        Array[String](),
+        relationSourceName,
+        options)
+        LogicalRelation(resolved.relation)
+      }
+      case _ => throw new Exception("Expected MetastoreRelation")
+    }
+
+    val tableWithQualifiers = Subquery(tableIdentifier.table, logicalRelation)
+    alias.map(a => Subquery(a, tableWithQualifiers)).getOrElse(tableWithQualifiers)
   }
 }
 
@@ -54,17 +100,7 @@ object LlapContext {
     System.getProperty("hive_user", System.getProperty("user.name"))
   }
 
-  def newInstance(sparkContext: SparkContext, connectionUrl: String): LlapContext = {
-    val userName: String = getUser()
-    val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName)
-    new LlapContext(sparkContext, connectionUrl, conn, userName)
-  }
-
-  def newInstance(sparkContext: SparkContext): LlapContext = {
-    LlapContext.newInstance(sparkContext, LlapContext.getConnectionUrlFromConf(sparkContext))
-  }
-
-  private def getConnectionUrlFromConf(sparkContext: SparkContext): String = {
+  def getConnectionUrlFromConf(sparkContext: SparkContext): String = {
     if (!sparkContext.conf.contains(HIVESERVER2_URL.key)) {
       throw new Exception("Spark conf does not contain config " + HIVESERVER2_URL.key)
     }
