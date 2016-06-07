@@ -24,23 +24,29 @@ import org.apache.spark.Partition
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.rdd.HadoopRDD
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.sources.BaseRelation
+import org.apache.spark.sql.sources.InsertableRelation
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.sources.TableScan
 import org.apache.spark.sql.sources.PrunedFilteredScan
 import org.apache.spark.sql.types.StructType
 
+import java.net.URI
 import java.sql.Connection
 import java.util.Properties
 import java.util.UUID
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.io.NullWritable
+import org.apache.hadoop.io.Writable
 import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapred.InputFormat
 import org.apache.hadoop.mapred.InputSplit
-import org.apache.hadoop.io.NullWritable
-import org.apache.hadoop.io.Writable
+
 
 import org.apache.hadoop.hive.llap.LlapInputSplit
 import org.apache.hadoop.hive.llap.LlapRowInputFormat
@@ -49,6 +55,7 @@ import org.apache.hadoop.hive.llap.Schema
 
 case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Map[String, String])
   extends BaseRelation
+  with InsertableRelation
   with PrunedFilteredScan
   with Logging {
 
@@ -117,6 +124,22 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
     rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToRows, preservesPartitioning)
   }
 
+  // InsertableRelation implementation
+  override def insert(data: DataFrame, overwrite: Boolean): Unit = {
+    if (getQueryType() != "table") {
+      throw new Exception("Cannot insert data to a relation that is not a table")
+    }
+
+    val nameStr = parameters.get("table")
+    val nameParts = nameStr.get.split("\\.")
+    if (nameParts.length != 2) {
+      throw new IllegalArgumentException("Expected " + nameStr + " to be in the form db.table")
+    }
+
+    val writer = new HiveWriter(sc)
+    writer.saveDataFrameToHiveTable(data, nameParts(0), nameParts(1), getConnection(), overwrite)
+  }
+
   private def getQueryString(requiredColumns: Array[String], filters: Array[Filter]): String = {
     logDebug("requiredColumns: " + requiredColumns.mkString(","))
     logDebug("filters: " + filters.mkString(","))
@@ -179,5 +202,44 @@ object LlapRelation {
       val row = RowConverter.llapRowToSparkRow(tuple._2, schema)
       row
     })
+  }
+}
+
+class HiveWriter(sc: SQLContext) {
+  def saveDataFrameToHiveTable(dataFrame: DataFrame, dbName: String, tabName: String, conn: Connection, overwrite: Boolean): Unit = {
+    var tmpCleanupNeeded = false
+    var tmpPath:String = null
+    try {
+      // Save data frame to HDFS. This needs to be accessible by HiveServer2
+      tmpPath = createTempPathForInsert(dbName, tabName)
+      dataFrame.write.orc(tmpPath)
+      tmpCleanupNeeded = true
+
+      // Run commands in HiveServer2 via JDBC:
+      //   - Create temp table using the saved dataframe in HDFS
+      //   - Run insert command to destination table using temp table
+      var tmpTableName = "tmp_" + UUID.randomUUID().toString().replaceAll("[^A-Za-z0-9 ]", "")
+      var sql = s"create temporary external table $tmpTableName like $dbName.$tabName stored as orc location '$tmpPath'"
+      conn.prepareStatement(sql).execute()
+
+      val overwriteOrInto = overwrite match {
+        case true => "overwrite"
+        case false => "into"
+      }
+
+      sql = s"insert $overwriteOrInto table $dbName.$tabName select * from $tmpTableName"
+      conn.prepareStatement(sql).execute()
+    } finally {
+      if (tmpCleanupNeeded) {
+        var fs = FileSystem.get(new URI(tmpPath), sc.sparkContext.hadoopConfiguration)
+        fs.delete(new Path(tmpPath), true)
+      }
+    }
+  }
+
+  def createTempPathForInsert(dbName: String, tabName: String): String = {
+    val baseDir = "/tmp"
+    val tmpPath = new Path(baseDir, UUID.randomUUID().toString())
+    tmpPath.toString()
   }
 }
