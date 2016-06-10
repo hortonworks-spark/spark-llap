@@ -69,6 +69,9 @@ libraryDependencies ++= Seq(
     )
 
 )
+dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
+dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
+dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
 
 // Assembly rules for shaded JAR
 assemblyShadeRules in assembly := Seq(
