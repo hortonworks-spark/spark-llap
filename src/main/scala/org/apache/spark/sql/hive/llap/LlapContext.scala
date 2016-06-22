@@ -45,6 +45,16 @@ class LlapContext(sc: SparkContext,
   override protected[sql] lazy val catalog =
     new LlapCatalog(metadataHive, this) with OverrideCatalog
 
+  override def newSession(): LlapContext = {
+    new LlapContext(
+      sc = sc,
+      cacheManager = cacheManager,
+      listener = listener,
+      execHive = executionHive.newSession(),
+      metaHive = metadataHive.newSession(),
+      isRootContext = false)
+  }
+
   def this(sc: SparkContext) = {
     this(sc, new CacheManager, SQLContext.createListenerAndUI(sc), null, null, true)
   }
