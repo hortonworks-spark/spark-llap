@@ -18,8 +18,9 @@
 package org.apache.spark.sql.hive.llap
 
 import java.net.URI
-import java.sql.{Connection, Driver, DriverManager, ResultSetMetaData, SQLException}
+import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
 import java.util.Properties
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import org.apache.spark.SPARK_VERSION
 import org.apache.spark.sql.types._
@@ -98,29 +99,23 @@ class JDBCWrapper {
    * @throws SQLException if the table specification is garbage.
    * @throws SQLException if the table contains an unsupported type.
    */
-  def resolveTable(conn: Connection, table: String): StructType = {
-    val rs = conn.prepareStatement(s"SELECT * FROM $table WHERE 1=0").executeQuery()
+  def resolveTable(conn: Connection, dbName: String, tableName: String): StructType = {
+
+    val dbmd: DatabaseMetaData = conn.getMetaData()
+    val rs: ResultSet = dbmd.getColumns(null, dbName, tableName, null)
     try {
-      val rsmd = rs.getMetaData
-      val ncols = rsmd.getColumnCount
-      val fields = new Array[StructField](ncols)
-      var i = 0
-      while (i < ncols) {
-        // HIVE-11750 - ResultSetMetadata.getColumnName() has format tablename.columnname
-        // Hack to remove the table name
-        val columnName = rsmd.getColumnLabel(i + 1).split("\\.").last
-        val dataType = rsmd.getColumnType(i + 1)
-        val typeName = rsmd.getColumnTypeName(i + 1)
-        val fieldSize = rsmd.getPrecision(i + 1)
-        val fieldScale = rsmd.getScale(i + 1)
-        //val isSigned = rsmd.isSigned(i + 1)
-        val isSigned = true;
-        val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
+      val fields = new ArrayBuffer[StructField]
+      while (rs.next()) {
+        val columnName = rs.getString(4)
+        val dataType = rs.getInt(5)
+        val fieldSize = rs.getInt(7)
+        val fieldScale = rs.getInt(9)
+        val nullable = true // Hive cols nullable
+        val isSigned = true
         val columnType = getCatalystType(dataType, fieldSize, fieldScale, isSigned)
-        fields(i) = StructField(columnName, columnType, nullable)
-        i = i + 1
+        fields += StructField(columnName, columnType, nullable)
       }
-      new StructType(fields)
+      new StructType(fields.toArray)
     } finally {
       rs.close()
     }

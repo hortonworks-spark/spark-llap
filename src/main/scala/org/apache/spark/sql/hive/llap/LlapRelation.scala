@@ -66,7 +66,8 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
   @transient val tableSchema:StructType = {
     val queryKey = getQueryType()
     if (queryKey == "table") {
-      DefaultJDBCWrapper.resolveTable(getConnection(), parameters("table"))
+      val (dbName, tableName) = getDbTableNames(parameters.get("table").get)
+      DefaultJDBCWrapper.resolveTable(getConnection(), dbName, tableName)
     } else {
       DefaultJDBCWrapper.resolveQuery(getConnection(), parameters("query"))
     }
@@ -130,14 +131,18 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
       throw new Exception("Cannot insert data to a relation that is not a table")
     }
 
-    val nameStr = parameters.get("table")
-    val nameParts = nameStr.get.split("\\.")
+    val (dbName, tableName) = getDbTableNames(parameters.get("table").get)
+
+    val writer = new HiveWriter(sc)
+    writer.saveDataFrameToHiveTable(data, dbName, tableName, getConnection(), overwrite)
+  }
+
+  private def getDbTableNames(nameStr: String): Tuple2[String, String] = {
+    val nameParts = nameStr.split("\\.")
     if (nameParts.length != 2) {
       throw new IllegalArgumentException("Expected " + nameStr + " to be in the form db.table")
     }
-
-    val writer = new HiveWriter(sc)
-    writer.saveDataFrameToHiveTable(data, nameParts(0), nameParts(1), getConnection(), overwrite)
+    new Tuple2[String, String](nameParts(0), nameParts(1))
   }
 
   private def getQueryString(requiredColumns: Array[String], filters: Array[Filter]): String = {
