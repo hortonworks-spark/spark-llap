@@ -57,6 +57,7 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.ant", "ant")
     .exclude("org.apache.logging.log4j", "log4j-1.2-api")
     .exclude("org.apache.logging.log4j", "log4j-slf4j-impl")
+    .exclude("org.apache.logging.log4j", "log4j-web")
     .exclude("org.apache.slider", "slider-core")
     .exclude("stax", "stax-api")
     excludeAll(
