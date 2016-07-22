@@ -170,16 +170,20 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
   }
 
   def getUser(): String = {
-    sc match {
+    var userString = sc match {
+      case hs2Context: LlapContext => hs2Context.getUserString()
       case _ => {
         LlapContext.getUser()
       }
     }
+    if (userString == null) {
+      userString = LlapContext.getUser()
+    }
+    userString
   }
 
   def getConnection(): Connection = {
     sc match {
-      case hs2Context: LlapContext => hs2Context.connection
       case _ => {
         DefaultJDBCWrapper.getConnector(None, parameters("url"), getUser())
       }

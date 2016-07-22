@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.hive.llap
 
+import scala.reflect.runtime.{universe => ru}
 import java.sql.Connection
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SQLConf
@@ -61,15 +62,35 @@ class LlapContext(sc: SparkContext,
 
   def connection: Connection = {
     if (conn == null) {
-      conn = DefaultJDBCWrapper.getConnector(None, LlapContext.getConnectionUrlFromConf(sc), LlapContext.getUser())
+      conn = DefaultJDBCWrapper.getConnector(None, getConnectionUrl(), getUserString())
     }
     conn
   }
 
   var conn: Connection = null
+
+  def getConnectionUrl(): String = {
+    var userString = getUserString()
+    if (userString == null) {
+      userString = ""
+    }
+    var urlString = LlapContext.getConnectionUrlFromConf(sc)
+    urlString.replace("${user}", userString)
+  }
+
+  def getUserString(): String = {
+    LlapContext.getUserMethod match {
+      case null => null
+      case _ => {
+        val instanceMirror = ru.runtimeMirror(this.getClass.getClassLoader).reflect(this)
+        val methodMirror = instanceMirror.reflectMethod(LlapContext.getUserMethod)
+        methodMirror().asInstanceOf[String]
+      }
+    }
+  }
 }
 
-class LlapCatalog(override val client: ClientInterface, hive: HiveContext)
+class LlapCatalog(override val client: ClientInterface, hive: LlapContext)
     extends HiveMetastoreCatalog(client, hive) {
 
   override def lookupRelation(
@@ -83,7 +104,7 @@ class LlapCatalog(override val client: ClientInterface, hive: HiveContext)
     val logicalRelation = relation match {
       case MetastoreRelation(dbName, tabName, alias) => {
         val qualifiedName = dbName + "." + tabName
-        var options = Map("table" -> qualifiedName, "url" -> LlapContext.getConnectionUrlFromConf(hive.sparkContext))
+        var options = Map("table" -> qualifiedName, "url" -> hive.getConnectionUrl())
         val resolved = ResolvedDataSource(
         hive,
         None,
@@ -115,6 +136,18 @@ object LlapContext {
       throw new Exception("Spark conf does not contain config " + HIVESERVER2_URL.key)
     }
     sparkContext.conf.get(HIVESERVER2_URL.key)
+  }
+
+  private[llap] val getUserMethod = findGetUserMethod()
+
+  private def findGetUserMethod(): ru.MethodSymbol = {
+    val symbol = ru.typeOf[HiveContext].declaration(ru.stringToTermName("getUser"))
+    val methodSymbol = symbol match {
+      case ru.NoSymbol => null
+      case null => null
+      case _ => symbol.asMethod
+    }
+    methodSymbol
   }
 }
 
