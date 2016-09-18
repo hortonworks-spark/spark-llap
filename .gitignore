@@ -1,4 +1,6 @@
-build/sbt-launch*.jar
+.DS_Store
+.idea/
+build/*.jar
+derby.log
+metastore_db/
 target/
-.classpath
-.project

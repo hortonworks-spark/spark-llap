@@ -5,7 +5,7 @@ A library to load data into Apache Spark&trade; SQL DataFrames from Apache Hive&
 ## Building From Source
 This library is built with [SBT](http://www.scala-sbt.org/0.13/docs/Command-Line-Reference.html), which is
 automatically downloaded by the included shell script.
-To build a JAR run 'build/sbt package' from the project root.
+To build a JAR run 'build/sbt assembly' from the project root.
 
 
 ## Using spark-llap
@@ -20,7 +20,7 @@ Using Apache Ambari&trade;, the following config changes are needed:
 
 #### Custom hive-interactive-site (only needed for secure cluster):
   - hive.llap.task.principal=*hive principal*  (Can use same value as hive.llap.task.principal)
-  -  hive.llap.task.keytab.file=*hive keytab file* (Can use same value as hive.llap.task.keytab.file)
+  - hive.llap.task.keytab.file=*hive keytab file* (Can use same value as hive.llap.task.keytab.file)
 
 #### Custom spark-defaults.conf:
   - spark.sql.hive.hiveserver2.url=*HiveServer2URL* (e.g. jdbc:hive2://hostname:10500;principal=hive/\_HOST@EXAMPLE.COM)
@@ -32,7 +32,7 @@ Using Apache Ambari&trade;, the following config changes are needed:
   - spark.hadoop.hive.llap.daemon.service.hosts=*value for hive.llap.daemon.service.hosts in Hive configuration*
   - spark.hadoop.hive.zookeeper.quorum=*value for hive.zookeeper.quorum in Hive configuration*
 
-####Advanced spark-env:
+#### Advanced spark-env:
 - spark\_thrift\_cmd\_opts= --jars /path/to/spark-llap-assembly.jar
 
 
@@ -40,16 +40,23 @@ Using Apache Ambari&trade;, the following config changes are needed:
 If using Apache Spark&trade; ThriftServer from HDP&trade; and the above configuration changes are made, the Apache Spark&trade; ThriftServer should be using the LlapContext in place of HiveContext any SparkSQL queries should automatically be using spark-llap.
 
 
-### Using spark-llap with spark-shell:
-Include the spark-llap JAR when running spark-shell:
+### Using `spark-llap` with `spark-shell`:
 
-    spark-shell --jars /path/to/spark-llap-assembly.jar
+Include the `spark-llap` JAR when running `spark-shell`:
 
+    spark-shell --jars /path/to/spark-llap_2.11-assembly-2.0.jar
 
-The application will need to import/instantiate/use the LlapContext in place of the HiveContext when running SparkSQL queries:
+`spark-shell` will import/instantiate/use `spark-llap` classes to run SparkSQL queries:
 
-    import org.apache.spark.sql.hive.llap.LlapContext
-    // Instantiate LlapContext, and use in place of HiveContext
-    var llapContext = new LlapContext(sc)
-    llapContext.sql("select * from tab1").show
+    sql("show tables")
+
+### Using `spark-llap` from `SparkSession`
+
+    val spark = SparkSession
+      .builder()
+      .master("local")
+      .appName("Spark-LLAP2 Test")
+      .enableHiveSupport()
+      .getOrCreate()
+    spark.sql("show tables")
 

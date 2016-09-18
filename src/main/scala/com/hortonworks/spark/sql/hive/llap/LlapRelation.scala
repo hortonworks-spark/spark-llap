@@ -15,66 +15,47 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.hive.llap
-
-import collection.JavaConversions._
-
-import org.apache.spark.Logging
-import org.apache.spark.Partition
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.rdd.HadoopRDD
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.sources.BaseRelation
-import org.apache.spark.sql.sources.InsertableRelation
-import org.apache.spark.sql.sources.Filter
-import org.apache.spark.sql.sources.TableScan
-import org.apache.spark.sql.sources.PrunedFilteredScan
-import org.apache.spark.sql.types.StructType
+package com.hortonworks.spark.sql.hive.llap
 
 import java.net.URI
 import java.sql.Connection
-import java.util.Properties
 import java.util.UUID
 
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.hive.llap.{LlapInputSplit, LlapRowInputFormat, Schema}
 import org.apache.hadoop.io.NullWritable
-import org.apache.hadoop.io.Writable
-import org.apache.hadoop.mapred.JobConf
-import org.apache.hadoop.mapred.InputFormat
-import org.apache.hadoop.mapred.InputSplit
+import org.apache.hadoop.mapred.{InputSplit, JobConf}
+
+import org.apache.spark.rdd.HadoopRDD
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import org.apache.spark.sql.sources.{BaseRelation, Filter, InsertableRelation, PrunedFilteredScan}
+import org.apache.spark.sql.types.StructType
 
 
-import org.apache.hadoop.hive.llap.LlapInputSplit
-import org.apache.hadoop.hive.llap.LlapRowInputFormat
-import org.apache.hadoop.hive.llap.Schema
-
-
-case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Map[String, String])
+case class LlapRelation(
+    @transient sc: SQLContext,
+    @transient parameters: Map[String, String],
+    @transient conn: Connection)
   extends BaseRelation
   with InsertableRelation
-  with PrunedFilteredScan
-  with Logging {
+  with PrunedFilteredScan {
 
   override def sqlContext(): SQLContext = {
     sc
   }
 
-  @transient val tableSchema:StructType = {
+  @transient val tableSchema: StructType = {
     val queryKey = getQueryType()
     if (queryKey == "table") {
-      val (dbName, tableName) = getDbTableNames(parameters.get("table").get)
-      DefaultJDBCWrapper.resolveTable(getConnection(), dbName, tableName)
+      val (dbName, tableName) = getDbTableNames(parameters("table"))
+      DefaultJDBCWrapper.resolveTable(conn, dbName, tableName)
     } else {
-      DefaultJDBCWrapper.resolveQuery(getConnection(), parameters("query"))
+      DefaultJDBCWrapper.resolveQuery(conn, parameters("query"))
     }
   }
 
   override def schema(): StructType = {
-    logDebug("tableSchema = " + tableSchema)
     tableSchema
   }
 
@@ -82,16 +63,18 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
     val hasTable = parameters.isDefinedAt("table")
     val hasQuery = parameters.isDefinedAt("query")
     if (hasTable && hasQuery) {
-      throw new Exception("LlapRelation has both table and query parameters, can only have one or the other")
+      throw new Exception(
+        "LlapRelation has both table and query parameters, can only have one or the other")
     }
     if (!hasTable && !hasQuery) {
       throw new Exception("LlapRelation requires either a table or query parameter")
     }
-    if (hasTable) {
+    val queryType = if (hasTable) {
       "table"
     } else {
       "query"
     }
+    queryType
   }
 
   // PrunedFilteredScan implementation
@@ -100,29 +83,21 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
 
     @transient val inputFormatClass = classOf[LlapRowInputFormat]
     @transient val jobConf = new JobConf(sc.sparkContext.hadoopConfiguration)
+    jobConf.set("hive.llap.zk.registry.user", "hive")
     // Set JDBC url/etc
     jobConf.set("llap.if.hs2.connection", parameters("url"))
     jobConf.set("llap.if.query", queryString)
-    var userName = getUser()
-    jobConf.set("llap.if.user", userName)
-    jobConf.set("llap.if.pwd", "password")
+    jobConf.set("llap.if.user", parameters("user.name"))
+    jobConf.set("llap.if.pwd", parameters("user.password"))
 
     // This should be set to the number of executors
-    var numPartitions = sc.sparkContext.defaultMinPartitions
-
-
+    val numPartitions = sc.sparkContext.defaultMinPartitions
     val rdd = sc.sparkContext.hadoopRDD(jobConf, inputFormatClass,
         classOf[NullWritable], classOf[org.apache.hadoop.hive.llap.Row], numPartitions)
         .asInstanceOf[HadoopRDD[NullWritable, org.apache.hadoop.hive.llap.Row]]
 
-    // For debugging
-    //val rdd = new HadoopRDD(sc.sparkContext, jobConf, inputFormatClass,
-    //    classOf[NullWritable], classOf[org.apache.hadoop.hive.llap.Row], numPartitions)
-    //    with OverrideRDD[(NullWritable, org.apache.hadoop.hive.llap.Row)]
-
     // Convert from RDD into Spark Rows
-    val preservesPartitioning = false; // ???
-    rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToRows, preservesPartitioning)
+    rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToRows, preservesPartitioning = false)
   }
 
   // InsertableRelation implementation
@@ -131,10 +106,10 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
       throw new Exception("Cannot insert data to a relation that is not a table")
     }
 
-    val (dbName, tableName) = getDbTableNames(parameters.get("table").get)
+    val (dbName, tableName) = getDbTableNames(parameters("table"))
 
     val writer = new HiveWriter(sc)
-    writer.saveDataFrameToHiveTable(data, dbName, tableName, getConnection(), overwrite)
+    writer.saveDataFrameToHiveTable(data, dbName, tableName, conn, overwrite)
   }
 
   private def getDbTableNames(nameStr: String): Tuple2[String, String] = {
@@ -146,9 +121,6 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
   }
 
   private def getQueryString(requiredColumns: Array[String], filters: Array[Filter]): String = {
-    logDebug("requiredColumns: " + requiredColumns.mkString(","))
-    logDebug("filters: " + filters.mkString(","))
-
     var selectCols = "*"
     if (requiredColumns.length > 0) {
       selectCols = requiredColumns.mkString(",")
@@ -162,51 +134,18 @@ case class LlapRelation(@transient sc: SQLContext, @transient val parameters: Ma
 
     val whereClause = FilterPushdown.buildWhereClause(schema, filters)
 
-    var queryString =
+    val queryString =
       s"""select $selectCols from ($baseQuery) as $baseQueryAlias $whereClause"""
-    logDebug("Generated queryString: " + queryString);
 
     queryString
-  }
-
-  def getUser(): String = {
-    var userString = sc match {
-      case hs2Context: LlapContext => hs2Context.getUserString()
-      case _ => {
-        LlapContext.getUser()
-      }
-    }
-    if (userString == null) {
-      userString = LlapContext.getUser()
-    }
-    userString
-  }
-
-  def getConnection(): Connection = {
-    sc match {
-      case _ => {
-        DefaultJDBCWrapper.getConnector(None, parameters("url"), getUser())
-      }
-    }
-  }
-  
-}
-
-// Override getPartitions() for some debugging
-trait OverrideRDD[T] extends RDD[T] {
-  abstract override def getPartitions: Array[Partition] = {
-    val partitions = super.getPartitions
-    logDebug("Partitions = " + partitions.map(part => part.toString()).mkString(","))
-    partitions
   }
 }
 
 object LlapRelation {
-  def llapRowRddToRows(inputSplit:InputSplit,
-      iterator:Iterator[(NullWritable, org.apache.hadoop.hive.llap.Row)]): Iterator[Row] = {
-
+  def llapRowRddToRows(inputSplit: InputSplit,
+      iterator: Iterator[(NullWritable, org.apache.hadoop.hive.llap.Row)]): Iterator[Row] = {
     val llapInputSplit = inputSplit.asInstanceOf[LlapInputSplit]
-    val schema:Schema = llapInputSplit.getSchema
+    val schema: Schema = llapInputSplit.getSchema
     iterator.map((tuple) => {
       val row = RowConverter.llapRowToSparkRow(tuple._2, schema)
       row
@@ -215,9 +154,14 @@ object LlapRelation {
 }
 
 class HiveWriter(sc: SQLContext) {
-  def saveDataFrameToHiveTable(dataFrame: DataFrame, dbName: String, tabName: String, conn: Connection, overwrite: Boolean): Unit = {
+  def saveDataFrameToHiveTable(
+      dataFrame: DataFrame,
+      dbName: String,
+      tabName: String,
+      conn: Connection,
+      overwrite: Boolean): Unit = {
     var tmpCleanupNeeded = false
-    var tmpPath:String = null
+    var tmpPath: String = null
     try {
       // Save data frame to HDFS. This needs to be accessible by HiveServer2
       tmpPath = createTempPathForInsert(dbName, tabName)
@@ -228,7 +172,9 @@ class HiveWriter(sc: SQLContext) {
       //   - Create temp table using the saved dataframe in HDFS
       //   - Run insert command to destination table using temp table
       var tmpTableName = "tmp_" + UUID.randomUUID().toString().replaceAll("[^A-Za-z0-9 ]", "")
-      var sql = s"create temporary external table $tmpTableName like $dbName.$tabName stored as orc location '$tmpPath'"
+      var sql =
+        s"create temporary external table $tmpTableName like $dbName.$tabName " +
+        s"stored as orc location '$tmpPath'"
       conn.prepareStatement(sql).execute()
 
       val overwriteOrInto = overwrite match {
