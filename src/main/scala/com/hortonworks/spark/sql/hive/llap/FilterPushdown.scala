@@ -14,15 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql.hive.llap
+package com.hortonworks.spark.sql.hive.llap
 
-import org.apache.spark.Logging
-import org.apache.spark.sql.types._
 import org.apache.spark.sql.sources._
+import org.apache.spark.sql.types.{DataType, DateType, StringType, StructType, TimestampType}
 
 
-// Thanks again spark-redshift ..
-private[llap] object FilterPushdown extends Object with Logging {
+private[llap] object FilterPushdown extends Object {
   def buildWhereClause(schema: StructType, filters: Seq[Filter]): String = {
     val filterExpressions = filters.flatMap(f => buildFilterExpression(schema, f)).mkString(" AND ")
     if (filterExpressions.isEmpty) "" else "WHERE " + filterExpressions
@@ -84,13 +82,7 @@ private[llap] object FilterPushdown extends Object with Logging {
       case And(left, right) => buildLogicalExpr(left, right, "AND")
       case Or(left, right) => buildLogicalExpr(left, right, "OR")
       case Not(value) => buildNotExpr(value)
-      case _ => {
-        None
-      }
-    }
-
-    if (filterExpression.isEmpty) {
-      logDebug("Unable to generate SQL expression for SparkSQL Filter: " + filter)
+      case _ => None
     }
 
     filterExpression

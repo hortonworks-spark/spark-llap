@@ -15,18 +15,31 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.hive.llap
+package com.hortonworks.spark.sql.hive.llap
 
 import java.net.URI
-import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
-import java.util.Properties
-import scala.collection.mutable.ArrayBuffer
-import scala.util.Try
-import org.apache.spark.SPARK_VERSION
-import org.apache.spark.sql.types._
-import org.slf4j.LoggerFactory
-import org.apache.spark.util.Utils
+import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData,
+  SQLException}
 
+import scala.collection.mutable.ArrayBuffer
+
+import org.slf4j.LoggerFactory
+
+import org.apache.spark.sql.types._
+
+
+object Utils {
+  def classForName(className: String): Class[_] = {
+    // scalastyle:off classforname
+    Class.forName(
+      className,
+      true,
+      Option(Thread.currentThread().getContextClassLoader).getOrElse(getClass.getClassLoader))
+    // scalastyle:on classforname
+  }
+}
+
+object DefaultJDBCWrapper extends JDBCWrapper
 
 /**
  * Shim which exposes some JDBC helper functions. Most of this code is copied from Spark SQL, with
@@ -70,21 +83,10 @@ class JDBCWrapper {
   }
 
   private def registerDriver(driverClass: String): Unit = {
-    // DriverRegistry.register() is one of the few pieces of private Spark functionality which
-    // we need to rely on. This class was relocated in Spark 1.5.0, so we need to use reflection
-    // in order to support both Spark 1.4.x and 1.5.x.
-    if (SPARK_VERSION.startsWith("1.4")) {
-      val className = "org.apache.spark.sql.jdbc.package$DriverRegistry$"
-      val driverRegistryClass = Utils.classForName(className)
-      val registerMethod = driverRegistryClass.getDeclaredMethod("register", classOf[String])
-      val companionObject = driverRegistryClass.getDeclaredField("MODULE$").get(null)
-      registerMethod.invoke(companionObject, driverClass)
-    } else { // Spark 1.5.0+
-      val className = "org.apache.spark.sql.execution.datasources.jdbc.DriverRegistry"
-      val driverRegistryClass = Utils.classForName(className)
-      val registerMethod = driverRegistryClass.getDeclaredMethod("register", classOf[String])
-      registerMethod.invoke(null, driverClass)
-    }
+    val className = "org.apache.spark.sql.execution.datasources.jdbc.DriverRegistry"
+    val driverRegistryClass = Utils.classForName(className)
+    val registerMethod = driverRegistryClass.getDeclaredMethod("register", classOf[String])
+    registerMethod.invoke(null, driverClass)
   }
 
   /**
@@ -92,7 +94,8 @@ class JDBCWrapper {
    * schema.
    *
    * @param conn A JDBC connection to the database.
-   * @param table The table name of the desired table.  This may also be a
+   * @param dbName The database name.
+   * @param tableName The table name of the desired table.  This may also be a
    *   SQL query wrapped in parentheses.
    *
    * @return A StructType giving the table's Catalyst schema.
@@ -100,7 +103,7 @@ class JDBCWrapper {
    * @throws SQLException if the table contains an unsupported type.
    */
   def resolveTable(conn: Connection, dbName: String, tableName: String): StructType = {
-
+    log.debug(s"resolveTable $dbName $tableName")
     val dbmd: DatabaseMetaData = conn.getMetaData()
     val rs: ResultSet = dbmd.getColumns(null, dbName, tableName, null)
     try {
@@ -121,8 +124,9 @@ class JDBCWrapper {
     }
   }
 
-    def resolveQuery(conn: Connection, query: String): StructType = {
+  def resolveQuery(conn: Connection, query: String): StructType = {
     val rs = conn.prepareStatement(s"SELECT * FROM ($query) q WHERE 1=0").executeQuery()
+    log.debug(s"SELECT * FROM ($query) q WHERE 1=0")
     try {
       val rsmd = rs.getMetaData
       val ncols = rsmd.getColumnCount
@@ -136,8 +140,7 @@ class JDBCWrapper {
         val typeName = rsmd.getColumnTypeName(i + 1)
         val fieldSize = rsmd.getPrecision(i + 1)
         val fieldScale = rsmd.getScale(i + 1)
-        //val isSigned = rsmd.isSigned(i + 1)
-        val isSigned = true;
+        val isSigned = true
         val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
         val columnType = getCatalystType(dataType, fieldSize, fieldScale, isSigned)
         fields(i) = StructField(columnName, columnType, nullable)
@@ -157,11 +160,36 @@ class JDBCWrapper {
    *                                discover the appropriate driver class.
    * @param url the JDBC url to connect to.
    */
-  def getConnector(userProvidedDriverClass: Option[String], url: String, userName: String): Connection = {
+  def getConnector(
+      userProvidedDriverClass: Option[String],
+      url: String,
+      userName: String): Connection = {
+    log.debug(s"${userProvidedDriverClass.getOrElse("")} $url $userName password")
     val subprotocol = new URI(url.stripPrefix("jdbc:")).getScheme
     val driverClass: Class[Driver] = getDriverClass(subprotocol, userProvidedDriverClass)
     registerDriver(driverClass.getCanonicalName)
     DriverManager.getConnection(url, userName, "password")
+  }
+
+  def columnString(dataType: DataType, dataSize: Option[Long]): String = dataType match {
+    case IntegerType => "INTEGER"
+    case LongType => "BIGINT"
+    case DoubleType => "DOUBLE PRECISION"
+    case FloatType => "REAL"
+    case ShortType => "SMALLINT"
+    case ByteType => "TINYINT"
+    case BooleanType => "BOOLEAN"
+    case StringType =>
+      if (dataSize.isDefined) {
+        s"VARCHAR(${dataSize.get})"
+      } else {
+        "TEXT"
+      }
+    case BinaryType => "BLOB"
+    case TimestampType => "TIMESTAMP"
+    case DateType => "DATE"
+    case t: DecimalType => s"DECIMAL(${t.precision},${t.scale})"
+    case _ => throw new IllegalArgumentException(s"Don't know how to save $dataType to JDBC")
   }
 
   /**
@@ -171,39 +199,16 @@ class JDBCWrapper {
     val sb = new StringBuilder()
     schema.fields.foreach { field => {
       val name = field.name
-      val typ: String = field.dataType match {
-        case IntegerType => "INTEGER"
-        case LongType => "BIGINT"
-        case DoubleType => "DOUBLE PRECISION"
-        case FloatType => "REAL"
-        case ShortType => "SMALLINT"
-        case ByteType => "TINYINT"
-        case BooleanType => "BOOLEAN"
-        case StringType =>
-          if (field.metadata.contains("maxlength")) {
-            s"VARCHAR(${field.metadata.getLong("maxlength")})"
-          } else {
-            "TEXT"
-          }
-        case BinaryType => "BLOB"
-        case TimestampType => "TIMESTAMP"
-        case DateType => "DATE"
-        case t: DecimalType => s"DECIMAL(${t.precision},${t.scale})"
-        case _ => throw new IllegalArgumentException(s"Don't know how to save $field to JDBC")
+      val size = if (field.metadata.contains("maxLength")) {
+        Some(field.metadata.getLong("maxLength"))
+      } else {
+        None
       }
+      val typ: String = columnString(field.dataType, size)
       val nullable = if (field.nullable) "" else "NOT NULL"
       sb.append(s""", "${name.replace("\"", "\\\"")}" $typ $nullable""".trim)
     }}
     if (sb.length < 2) "" else sb.substring(2)
-  }
-
-  /**
-   * Returns true if the table already exists in the JDBC database.
-   */
-  def tableExists(conn: Connection, table: String): Boolean = {
-    // Somewhat hacky, but there isn't a good way to identify whether a table exists for all
-    // SQL database systems, considering "table" could also include the database name.
-    Try(conn.prepareStatement(s"SELECT 1 FROM $table LIMIT 1").executeQuery().next()).isSuccess
   }
 
   /**
@@ -212,12 +217,12 @@ class JDBCWrapper {
    * @param sqlType - A field of java.sql.Types
    * @return The Catalyst type corresponding to sqlType.
    */
-  private def getCatalystType(
+  def getCatalystType(
       sqlType: Int,
       precision: Int,
       scale: Int,
       signed: Boolean): DataType = {
-    // TODO: cleanup types which are irrelevant for Redshift.
+    log.debug(s"getCatalystType $sqlType")
     val answer = sqlType match {
       // scalastyle:off
       case java.sql.Types.ARRAY         => null
@@ -268,5 +273,3 @@ class JDBCWrapper {
     answer
   }
 }
-
-object DefaultJDBCWrapper extends JDBCWrapper

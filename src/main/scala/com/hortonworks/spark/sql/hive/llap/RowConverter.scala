@@ -14,42 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql.hive.llap
+package com.hortonworks.spark.sql.hive.llap
 
-import collection.JavaConversions._
+import org.apache.hadoop.hive.llap.{Schema, TypeDesc}
+import org.apache.hadoop.hive.llap.TypeDesc.Type
+import org.apache.hadoop.hive.serde2.io.{ByteWritable, DateWritable, DoubleWritable, HiveDecimalWritable,
+  ShortWritable, TimestampWritable}
+import org.apache.hadoop.io.{BooleanWritable, BytesWritable, FloatWritable, IntWritable, LongWritable, Text}
 
 import org.apache.spark.sql.Row
 
-import org.apache.hadoop.hive.llap.FieldDesc
-import org.apache.hadoop.hive.llap.Schema
-import org.apache.hadoop.hive.llap.TypeDesc
-import org.apache.hadoop.hive.llap.TypeDesc.Type
-
-// TODO: prefer hadoop writables over the hive equivalents? This needs to be fixed in the LLAP Row.
-import org.apache.hadoop.hive.serde2.io.ByteWritable;
-import org.apache.hadoop.hive.serde2.io.DateWritable;
-import org.apache.hadoop.hive.serde2.io.DoubleWritable;
-import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
-import org.apache.hadoop.hive.serde2.io.ShortWritable;
-import org.apache.hadoop.hive.serde2.io.TimestampWritable;
-
-import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-
-import org.apache.hadoop.mapred.InputSplit
 
 object RowConverter {
 
   def llapRowToSparkRow(llapRow: org.apache.hadoop.hive.llap.Row, schema: Schema): Row = {
+    import collection.JavaConverters._
+
     Row.fromSeq({
       var idx = 0
-      schema.getColumns.map(colDesc => {
+      schema.getColumns.asScala.map(colDesc => {
         val sparkValue = convertValue(llapRow.getValue(idx), colDesc.getTypeDesc)
         idx += 1
         sparkValue
@@ -74,7 +57,8 @@ object RowConverter {
         case Type.DATE => value.asInstanceOf[DateWritable].get()
         case Type.TIMESTAMP => value.asInstanceOf[TimestampWritable].getTimestamp()
         case Type.BINARY => value.asInstanceOf[BytesWritable].getBytes()
-        case Type.DECIMAL => value.asInstanceOf[HiveDecimalWritable].getHiveDecimal().bigDecimalValue()
+        case Type.DECIMAL =>
+          value.asInstanceOf[HiveDecimalWritable].getHiveDecimal().bigDecimalValue()
         case _ => null
       }
     } catch {

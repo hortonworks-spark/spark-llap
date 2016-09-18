@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql.hive.llap
+package com.hortonworks.spark.sql.hive.llap
 
-import org.apache.spark.SparkContext
-import java.sql.ResultSet
 import java.sql.Statement
 
-object TestUtils {
-  lazy val sparkContext = new SparkContext("local", "test")
+import org.apache.spark.sql.SparkSession
 
-  // Query HS2 for the necessary settings
-  def updateConfWithMiniClusterSettings(connectionUrl: String, userName: String): Unit = {
+object TestUtils {
+  def updateConfWithMiniClusterSettings(
+      spark: SparkSession,
+      connectionUrl: String,
+      userName: String): Unit = {
     val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName)
     val settings = Seq(
       "hive.llap.daemon.service.hosts",
@@ -35,8 +35,7 @@ object TestUtils {
     val stmt = conn.createStatement()
     settings.foreach { setting =>
       val value = getConfSetting(stmt, setting)
-      println("Setting " + setting + " to " + value)
-      sparkContext.hadoopConfiguration.set(setting, value)
+      spark.sparkContext.hadoopConfiguration.set(setting, value)
     }
     stmt.close()
   }
