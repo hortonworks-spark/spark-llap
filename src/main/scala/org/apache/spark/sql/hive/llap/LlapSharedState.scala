@@ -17,23 +17,23 @@
 
 package org.apache.spark.sql.hive.llap
 
-import com.hortonworks.spark.sql.hive.llap.LlapRelation
+import org.apache.spark.SparkContext
+import org.apache.spark.sql.hive.HiveSharedState
 
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.sources.BaseRelation
-import org.apache.spark.sql.sources.RelationProvider
+/**
+ * A class that holds all state shared across sessions in a given
+ * [[org.apache.spark.sql.SparkSession]] backed by `HiveServer2 Interactive`.
+ */
+private[hive] class LlapSharedState(override val sparkContext: SparkContext)
+  extends HiveSharedState(sparkContext) {
 
-class DefaultSource extends RelationProvider {
-
-  override def createRelation(sqlContext: SQLContext, parameters: Map[String, String])
-      : BaseRelation = {
-    val sessionState = sqlContext.sparkSession.sessionState.asInstanceOf[LlapSessionState]
-    val params = parameters +
-      ("user.name" -> sessionState.getUserString()) +
-      ("user.password" -> "password")
-    LlapRelation(
-      sqlContext,
-      params,
-      sessionState.connection)
+  /**
+   * A catalog that interacts with the `HiveServer2 Interactive` metastore.
+   */
+  override lazy val externalCatalog = {
+    new LlapExternalCatalog(
+      sparkContext,
+      metadataHive,
+      sparkContext.hadoopConfiguration)
   }
 }
