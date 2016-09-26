@@ -1,6 +1,6 @@
-# spark-llap
+# Apache Spark&trade; connector for Apache Hive&trade; LLAP
 
-A library to load data into Spark SQL DataFrames from Hive using LLAP. It also contains Catalog/Context classes to enable querying of Hive tables without having to first register them as temporary tables in Spark SQL.
+A library to load data into Apache Spark&trade; SQL DataFrames from Apache Hive&trade; using LLAP. It also contains Catalog/Context classes to enable querying of Hive tables without having to first register them as temporary tables in Apache Spark&trade; SQL.
 
 ## Building From Source
 This library is built with [SBT](http://www.scala-sbt.org/0.13/docs/Command-Line-Reference.html), which is
@@ -11,12 +11,12 @@ To build a JAR run 'build/sbt package' from the project root.
 ## Using spark-llap
 
 ### Prerequisites
-- Spark 1.6
+- Apache Spark&trade; 1.6
 - HiveServer2 Interactive (LLAP)
 
 
 ### Configuration changes to use spark-llap:
-Using Ambari, the following config changes are needed:
+Using Apache Ambari&trade;, the following config changes are needed:
 
 #### Custom hive-interactive-site (only needed for secure cluster):
   - hive.llap.task.principal=*hive principal*  (Can use same value as hive.llap.task.principal)
@@ -36,8 +36,8 @@ Using Ambari, the following config changes are needed:
 - spark\_thrift\_cmd\_opts= --jars /path/to/spark-llap-assembly.jar
 
 
-### Using spark-llap with Spark ThriftServer:
-If using Spark ThriftServer from HDP and the above configuration changes are made, the Spark ThriftServer should be using the LlapContext in place of HiveContext any SparkSQL queries should automatically be using spark-llap.
+### Using spark-llap with Apache Spark&trade; ThriftServer:
+If using Apache Spark&trade; ThriftServer from HDP&trade; and the above configuration changes are made, the Apache Spark&trade; ThriftServer should be using the LlapContext in place of HiveContext any SparkSQL queries should automatically be using spark-llap.
 
 
 ### Using spark-llap with spark-shell:
