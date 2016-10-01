@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/hortonworks-spark/spark-llap.svg?branch=branch-2.0)](https://travis-ci.org/hortonworks-spark/spark-llap)
+
 # Apache Spark&trade; connector for Apache Hive&trade; LLAP
 
 A library to load data into Apache Spark&trade; SQL DataFrames from Apache Hive&trade; using LLAP. It also contains Catalog/Context classes to enable querying of Hive tables without having to first register them as temporary tables in Apache Spark&trade; SQL.
