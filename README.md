@@ -13,7 +13,7 @@ To build a JAR run 'build/sbt assembly' from the project root.
 ## Using spark-llap
 
 ### Prerequisites
-- Apache Spark&trade; 1.6
+- Apache Spark&trade; 2.1.0-SNAPSHOT
 - HiveServer2 Interactive (LLAP)
 
 
@@ -46,7 +46,7 @@ If using Apache Spark&trade; ThriftServer from HDP&trade; and the above configur
 
 Include the `spark-llap` JAR when running `spark-shell`:
 
-    spark-shell --jars /path/to/spark-llap_2.11-assembly-2.0.jar
+    spark-shell --jars /path/to/spark-llap_2.11-assembly-2.1.jar
 
 `spark-shell` will import/instantiate/use `spark-llap` classes to run SparkSQL queries:
 

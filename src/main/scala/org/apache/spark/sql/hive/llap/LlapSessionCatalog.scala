@@ -30,19 +30,18 @@ import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
-import org.apache.spark.sql.catalyst.catalog.FunctionResourceLoader
+import org.apache.spark.sql.catalyst.catalog.{FunctionResourceLoader, GlobalTempViewManager}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, ExpressionInfo}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.hive.{HiveGenericUDF, HiveGenericUDTF, HiveSessionCatalog, HiveSimpleUDF, HiveUDAFFunction}
 import org.apache.spark.sql.hive.HiveShim.HiveFunctionWrapper
-import org.apache.spark.sql.hive.client.HiveClient
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{DecimalType, DoubleType}
 
 
 private[sql] class LlapSessionCatalog(
     externalCatalog: LlapExternalCatalog,
-    client: HiveClient,
+    globalTempViewManager: GlobalTempViewManager,
     sparkSession: SparkSession,
     functionResourceLoader: FunctionResourceLoader,
     functionRegistry: FunctionRegistry,
@@ -50,7 +49,7 @@ private[sql] class LlapSessionCatalog(
     hadoopConf: Configuration)
   extends HiveSessionCatalog(
     externalCatalog,
-    client,
+    globalTempViewManager,
     sparkSession,
     functionResourceLoader,
     functionRegistry,
@@ -67,10 +66,10 @@ private[sql] class LlapSessionCatalog(
       metastoreCatalog.lookupRelation(newName, alias)
     } else {
       val relation = tempTables(table)
-      val tableWithQualifiers = SubqueryAlias(table, relation)
+      val tableWithQualifiers = SubqueryAlias(table, relation, None)
       // If an alias was specified by the lookup, wrap the plan in a subquery so that
       // attributes are properly qualified with this alias.
-      alias.map(a => SubqueryAlias(a, tableWithQualifiers)).getOrElse(tableWithQualifiers)
+      alias.map(a => SubqueryAlias(a, tableWithQualifiers, None)).getOrElse(tableWithQualifiers)
     }
   }
 }

@@ -36,17 +36,18 @@ class LlapMetastoreCatalog(sparkSession: SparkSession)
       tableIdentifier: TableIdentifier,
       alias: Option[String] = None): LogicalPlan = {
     val qualifiedTableName = getQualifiedTableName(tableIdentifier)
-    val catalog = sparkSession.sharedState.asInstanceOf[LlapSharedState].externalCatalog
+    val catalog = sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog]
     val table = catalog.getTable(qualifiedTableName.database, qualifiedTableName.name)
 
     // Use metastore catalog to lookup tables, then convert to our relations
-    val client = sparkSession.sharedState.asInstanceOf[LlapSharedState].metadataHive
-    val relation = MetastoreRelation(
-      qualifiedTableName.database, qualifiedTableName.name, alias)(table, client, sparkSession)
+    val client = sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog].client
+    val qualifiedTable = MetastoreRelation(
+      qualifiedTableName.database, qualifiedTableName.name)(table, sparkSession)
+    val relation = alias.map(a => SubqueryAlias(a, qualifiedTable, None)).getOrElse(qualifiedTable)
 
     // Now convert to LlapRelation
     val logicalRelation = relation match {
-      case MetastoreRelation(dbName, tabName, alias) =>
+      case MetastoreRelation(dbName, tabName) =>
         val sessionState = sparkSession.sessionState.asInstanceOf[LlapSessionState]
         LogicalRelation(
           DataSource(
@@ -59,7 +60,7 @@ class LlapMetastoreCatalog(sparkSession: SparkSession)
       case _ => throw new Exception("Expected MetastoreRelation")
     }
 
-    val tableWithQualifiers = SubqueryAlias(tableIdentifier.table, logicalRelation)
-    alias.map(a => SubqueryAlias(a, tableWithQualifiers)).getOrElse(tableWithQualifiers)
+    val tableWithQualifiers = SubqueryAlias(tableIdentifier.table, logicalRelation, None)
+    alias.map(a => SubqueryAlias(a, tableWithQualifiers, None)).getOrElse(tableWithQualifiers)
   }
 }

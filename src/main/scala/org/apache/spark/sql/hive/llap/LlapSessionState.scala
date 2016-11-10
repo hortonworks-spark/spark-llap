@@ -36,17 +36,13 @@ class LlapSessionState(sparkSession: SparkSession)
 
   self =>
 
-  private lazy val sharedState: LlapSharedState = {
-    sparkSession.sharedState.asInstanceOf[LlapSharedState]
-  }
-
   /**
    * Internal catalog for managing table and database states.
    */
   override lazy val catalog = {
     new LlapSessionCatalog(
-      sharedState.externalCatalog,
-      metadataHive,
+      sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog],
+      sparkSession.sharedState.globalTempViewManager,
       sparkSession,
       functionResourceLoader,
       functionRegistry,

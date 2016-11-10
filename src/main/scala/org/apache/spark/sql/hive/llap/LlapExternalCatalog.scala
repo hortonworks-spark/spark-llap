@@ -5,7 +5,6 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -28,16 +27,16 @@ import org.apache.hadoop.hive.ql.metadata.HiveException
 import org.apache.thrift.TException
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.catalyst.catalog.{CatalogColumn, CatalogStorageFormat, CatalogTable,
+import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, CatalogTable,
   CatalogTableType}
 import org.apache.spark.sql.hive.HiveExternalCatalog
 import org.apache.spark.sql.hive.client.HiveClient
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.StringType
+import org.apache.spark.sql.types.{StringType, StructType}
 
 
 /**
@@ -46,9 +45,9 @@ import org.apache.spark.sql.types.StringType
  */
 private[spark] class LlapExternalCatalog(
     sparkContext: SparkContext,
-    client: HiveClient,
+    conf: SparkConf,
     hadoopConf: Configuration)
-  extends HiveExternalCatalog(client, hadoopConf) with Logging {
+  extends HiveExternalCatalog(conf, hadoopConf) with Logging {
 
   // Exceptions thrown by the hive client that we would like to wrap
   private val clientExceptions = Set(
@@ -98,7 +97,7 @@ private[spark] class LlapExternalCatalog(
     val dmd = sessionState.connection.getMetaData()
     val rs = dmd.getColumns(null, db, table, null)
     try {
-      val columns = scala.collection.mutable.ArrayBuffer.empty[CatalogColumn]
+      val schema = new StructType()
       while (rs.next()) {
         val columnName = rs.getString(4)
         val dataType = rs.getInt(5)
@@ -109,20 +108,20 @@ private[spark] class LlapExternalCatalog(
         val columnType =
           DefaultJDBCWrapper.getCatalystType(dataType, fieldSize, fieldScale, isSigned)
         val columnTypeString = DefaultJDBCWrapper.columnString(columnType, Some(fieldSize))
-        columns += CatalogColumn(columnName, columnTypeString, nullable)
+        schema.add(columnName, columnTypeString, nullable)
       }
 
       CatalogTable(
         identifier = TableIdentifier(table, Option(db)),
         tableType = CatalogTableType.EXTERNAL,
-        schema = columns,
+        schema = schema,
         storage = CatalogStorageFormat(
           locationUri = None,
           inputFormat = None,
           outputFormat = None,
           serde = None,
           compressed = false,
-          serdeProperties = Map.empty))
+          properties = Map.empty))
     } finally {
       rs.close()
     }
