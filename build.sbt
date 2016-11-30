@@ -5,7 +5,7 @@ organization := "com.hortonworks"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
-sparkVersion := sys.props.getOrElse("spark.version", "2.1.0-SNAPSHOT")
+sparkVersion := sys.props.getOrElse("spark.version", "2.1.0")
 
 
 val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3")
