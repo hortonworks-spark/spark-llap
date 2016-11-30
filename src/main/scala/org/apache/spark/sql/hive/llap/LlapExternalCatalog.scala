@@ -27,7 +27,7 @@ import org.apache.hadoop.hive.ql.metadata.HiveException
 import org.apache.thrift.TException
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -44,7 +44,6 @@ import org.apache.spark.sql.types.{StringType, StructType}
  * All public methods must be synchronized for thread-safety.
  */
 private[spark] class LlapExternalCatalog(
-    sparkContext: SparkContext,
     conf: SparkConf,
     hadoopConf: Configuration)
   extends HiveExternalCatalog(conf, hadoopConf) with Logging {
