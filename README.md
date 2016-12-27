@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/hortonworks-spark/spark-llap.svg?branch=branch-2.0)](https://travis-ci.org/hortonworks-spark/spark-llap)
+[![Build Status](https://travis-ci.org/hortonworks-spark/spark-llap.svg?branch=branch-2.1)](https://travis-ci.org/hortonworks-spark/spark-llap)
 
 # Apache Spark&trade; connector for Apache Hive&trade; LLAP
 
@@ -13,7 +13,7 @@ To build a JAR run 'build/sbt assembly' from the project root.
 ## Using spark-llap
 
 ### Prerequisites
-- Apache Spark&trade; 2.1.0-SNAPSHOT
+- Apache Spark&trade; 2.1.0
 - HiveServer2 Interactive (LLAP)
 
 
