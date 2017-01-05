@@ -91,6 +91,19 @@ private[spark] class LlapExternalCatalog(
     }
   }
 
+  override def dropTable(
+      db: String,
+      table: String,
+      ignoreIfNotExists: Boolean,
+      purge: Boolean): Unit = withClient {
+    requireDbExists(db)
+    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
+    val stmt = sessionState.connection.createStatement()
+    val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
+    val purgeString = if (purge) "PURGE" else ""
+    stmt.executeUpdate(s"DROP TABLE $ifExistsString $db.$table $purgeString")
+  }
+
   override def getTable(db: String, table: String): CatalogTable = withClient {
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val dmd = sessionState.connection.getMetaData()
