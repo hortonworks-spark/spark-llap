@@ -119,6 +119,7 @@ addArtifact(artifact in (Compile, assembly), assembly)
 
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 resolvers += "Additional Maven Repository" at repoUrl
+resolvers += "Hortonworks Maven Repository" at "http://repo.hortonworks.com/content/groups/public/"
 
 // Get full stack trace
 testOptions in Test += Tests.Argument("-oD")
