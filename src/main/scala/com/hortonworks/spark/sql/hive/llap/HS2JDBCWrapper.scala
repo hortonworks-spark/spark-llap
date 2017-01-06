@@ -174,7 +174,7 @@ class JDBCWrapper {
   def columnString(dataType: DataType, dataSize: Option[Long]): String = dataType match {
     case IntegerType => "INTEGER"
     case LongType => "BIGINT"
-    case DoubleType => "DOUBLE PRECISION"
+    case DoubleType => "DOUBLE"
     case FloatType => "REAL"
     case ShortType => "SMALLINT"
     case ByteType => "TINYINT"
