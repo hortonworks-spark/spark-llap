@@ -5,6 +5,7 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -30,7 +31,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import org.apache.spark.sql.catalyst.analysis.{NoSuchTableException, TableAlreadyExistsException}
 import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, CatalogTable,
   CatalogTableType}
 import org.apache.spark.sql.hive.HiveExternalCatalog
@@ -88,6 +89,32 @@ private[spark] class LlapExternalCatalog(
       throw new AnalysisException(
         s"Provided database '$db' does not match the one specified in the " +
         s"table definition (${table.identifier.database.getOrElse("n/a")})")
+    }
+  }
+
+  override def createTable(
+      tableDefinition: CatalogTable,
+      ignoreIfExists: Boolean): Unit = {
+    logInfo(tableDefinition.toString)
+
+    assert(tableDefinition.identifier.database.isDefined)
+    val db = tableDefinition.identifier.database.get
+    requireDbExists(db)
+
+    if (tableExists(db, tableDefinition.identifier.table)) {
+      if (ignoreIfExists) {
+        // No-op
+      } else {
+        throw new TableAlreadyExistsException(db = db, table = tableDefinition.identifier.table)
+      }
+    } else {
+      val sessionState =
+        SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
+      val stmt = sessionState.connection.createStatement()
+      // Check the privilege by creating a dummy table with the given name.
+      stmt.executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT)")
+      super.dropTable(db, tableDefinition.identifier.table, true, true)
+      super.createTable(tableDefinition, ignoreIfExists)
     }
   }
 
