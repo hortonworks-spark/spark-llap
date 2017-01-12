@@ -30,7 +30,7 @@ import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
-import org.apache.spark.sql.catalyst.catalog.{FunctionResourceLoader, GlobalTempViewManager}
+import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, ExpressionInfo}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.hive.{HiveGenericUDF, HiveGenericUDTF, HiveSessionCatalog, HiveSimpleUDF, HiveUDAFFunction}
@@ -71,5 +71,20 @@ private[sql] class LlapSessionCatalog(
       // attributes are properly qualified with this alias.
       alias.map(a => SubqueryAlias(a, tableWithQualifiers, None)).getOrElse(tableWithQualifiers)
     }
+  }
+
+  /**
+   * Retrieve the metadata of an existing permanent table/view. If no database is specified,
+   * assume the table/view is in the current database. If the specified table/view is not found
+   * in the database then a [[NoSuchTableException]] is thrown.
+   */
+  override def getTableMetadata(name: TableIdentifier): CatalogTable = {
+    val db = formatDatabaseName(name.database.getOrElse(getCurrentDatabase))
+    val table = formatTableName(name.table)
+    val sessionState = sparkSession.sessionState.asInstanceOf[LlapSessionState]
+    val stmt = sessionState.connection.createStatement()
+    stmt.executeUpdate(s"DESC `$db`.`$table`")
+
+    super.getTableMetadata(name)
   }
 }
