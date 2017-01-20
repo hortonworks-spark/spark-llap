@@ -180,7 +180,7 @@ private[spark] class LlapExternalCatalog(
   override def listTables(db: String, pattern: String): Seq[String] = withClient {
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val dmd = sessionState.connection.getMetaData()
-    val rs = dmd.getTables(null, db, "%", null)
+    val rs = dmd.getTables(null, db, pattern, null)
     var tableList: List[String] = Nil
     while (rs.next()) {
       tableList = rs.getString(3) :: tableList
