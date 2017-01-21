@@ -79,11 +79,13 @@ private[sql] class LlapSessionCatalog(
    * in the database then a [[NoSuchTableException]] is thrown.
    */
   override def getTableMetadata(name: TableIdentifier): CatalogTable = {
-    val db = formatDatabaseName(name.database.getOrElse(getCurrentDatabase))
-    val table = formatTableName(name.table)
-    val sessionState = sparkSession.sessionState.asInstanceOf[LlapSessionState]
-    val stmt = sessionState.connection.createStatement()
-    stmt.executeUpdate(s"DESC `$db`.`$table`")
+    if (Thread.currentThread().getStackTrace()(2).toString().contains("DescribeTableCommand")) {
+      val db = formatDatabaseName(name.database.getOrElse(getCurrentDatabase))
+      val table = formatTableName(name.table)
+      val sessionState = sparkSession.sessionState.asInstanceOf[LlapSessionState]
+      val stmt = sessionState.connection.createStatement()
+      stmt.executeUpdate(s"DESC `$db`.`$table`")
+    }
 
     super.getTableMetadata(name)
   }
