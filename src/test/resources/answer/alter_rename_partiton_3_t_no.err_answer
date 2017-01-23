@@ -1,0 +1,1 @@
+Error: org.apache.spark.sql.catalyst.analysis.NoSuchTableException: Table or view 't_no_part' not found in database 'spark_ranger_test'; (state=,code=0)

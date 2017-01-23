@@ -1,0 +1,1 @@
+Error: org.apache.spark.sql.AnalysisException: Operation not allowed: TRUNCATE TABLE on external tables: `spark_ranger_test`.`t_alter`; (state=,code=0)
