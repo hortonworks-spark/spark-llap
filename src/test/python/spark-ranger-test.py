@@ -8,11 +8,22 @@ import filecmp
 import tempfile
 
 testdb = "spark_ranger_test"
-sparkJdbcUrl = 'jdbc:hive2://localhost:10016/' + testdb
-hiveJdbcUrl = 'jdbc:hive2://dspark-3:10500/default'
+hiveJdbcUrl = 'jdbc:hive2://dranger-1:10500/default'
 generateGoldenFiles = False
 answerPath = "../resources/answer"
 dirPath = tempfile.mkdtemp()
+dbs = [
+    'db_full',
+    'db_no',
+    'db_partial',
+    'db_select',
+    'db_update',
+    'db_create',
+    'db_drop',
+    'db_alter',
+    'db_index',
+    'db_lock',
+]
 tables = [
     't_full',
     't_no',
@@ -28,6 +39,100 @@ tables = [
 
 
 class SparkRangerTestSuite(unittest.TestCase):
+    def out_answer_file(self, test_id):
+        return "{}/{}.out_answer".format(answerPath, test_id)
+
+    def err_answer_file(self, test_id):
+        return "{}/{}.err_answer".format(answerPath, test_id)
+
+    def out_file(self, test_id):
+        return "{}/{}.out".format(dirPath, test_id)
+
+    def err_file(self, test_id):
+        return "{}/{}.err".format(dirPath, test_id)
+
+    def execute(self, query, test_id, user='spark', check=True, verbose=False):
+        if verbose or generateGoldenFiles:
+            print "[{}] {} {}".format(test_id, user, query)
+        try:
+            p = subprocess.Popen(['beeline', '-u', self.sparkJdbcUrl,
+                                  '--silent=true', '-n', user, '-e', query],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+            out, err = p.communicate()
+        except:
+            pass
+        finally:
+            if verbose or generateGoldenFiles:
+                if len(out) > 0:
+                    print out
+                if len(err.split('\n')[0]) > 0:
+                    print err.split('\n')[0] + "\n"
+            if test_id is not None:
+                f = open(self.out_file(test_id), 'w')
+                f.write(out)
+                f.close()
+                f = open(self.err_file(test_id), 'w')
+                f.write(err.split('\n')[0])
+                f.close()
+        if check:
+            self.check_result(test_id)
+
+    def check_result(self, test_id):
+        out_new = self.out_file(test_id)
+        err_new = self.err_file(test_id)
+        out_answer = self.out_answer_file(test_id)
+        err_answer = self.err_answer_file(test_id)
+        if generateGoldenFiles:
+            # Overwrite the existing answers if exist
+            os.rename(out_new, out_answer)
+            os.rename(err_new, err_answer)
+            if os.stat(out_answer).st_size == 0:
+                os.remove(out_answer)
+            if os.stat(err_answer).st_size == 0:
+                os.remove(err_answer)
+        else:
+            if os.stat(out_new).st_size == 0:
+                self.assertFalse(os.path.exists(out_answer))
+            else:
+                self.assertTrue(filecmp.cmp(out_new, out_answer))
+            os.remove(self.out_file(test_id))
+
+            if os.stat(err_new).st_size == 0:
+                self.assertFalse(os.path.exists(err_answer))
+            else:
+                self.assertTrue(filecmp.cmp(err_new, err_answer))
+            os.remove(self.err_file(test_id))
+
+
+class DbTestSuite(SparkRangerTestSuite):
+    sparkJdbcUrl = 'jdbc:hive2://localhost:10016'
+
+    def setUp(self):
+        sqls = map(lambda db: 'DROP DATABASE IF EXISTS ' + db + ' CASCADE', dbs + [testdb])
+        statements = ';'.join(sqls)
+        cmd = 'beeline --silent=true -u {} -n hive -e \'{}\''
+        os.system(cmd.format(hiveJdbcUrl, statements))
+
+    def test_00_show(self):
+        self.execute('SHOW DATABASES', 'show_db_1')
+        self.execute("SHOW DATABASES LIKE 'default'", 'show_db_2')
+
+    def test_10_create_db(self):
+        for db in dbs:
+            self.execute('CREATE DATABASE ' + db, 'create_db_1_' + db)
+            self.execute("SHOW DATABASES LIKE '" + db + "'", 'create_db_2_' + db, 'hive')
+
+    def test_20_drop_db(self):
+        for db in dbs:
+            self.execute('CREATE DATABASE ' + db, 'drop_db_1_' + db, 'hive')
+            self.execute('DROP DATABASE ' + db, 'drop_db_2_' + db)
+            self.execute("SHOW DATABASES LIKE '" + db + "'", 'drop_db_3_' + db, 'hive')
+
+
+class TableTestSuite(SparkRangerTestSuite):
+    sparkJdbcUrl = 'jdbc:hive2://localhost:10016/' + testdb
+
     def setUp(self):
         sqls = [
             'DROP DATABASE IF EXISTS {} CASCADE',
@@ -168,70 +273,7 @@ class SparkRangerTestSuite(unittest.TestCase):
         self.execute('SELECT * FROM t_mask_and_filter', 'filter_1')
         self.execute('SELECT * FROM t_mask_and_filter', 'filter_2', 'hive')
 
-    def out_answer_file(self, test_id):
-        return "{}/{}.out_answer".format(answerPath, test_id)
 
-    def err_answer_file(self, test_id):
-        return "{}/{}.err_answer".format(answerPath, test_id)
-
-    def out_file(self, test_id):
-        return "{}/{}.out".format(dirPath, test_id)
-
-    def err_file(self, test_id):
-        return "{}/{}.err".format(dirPath, test_id)
-
-    def execute(self, query, test_id, user='spark', check=True, verbose=False):
-        if verbose or generateGoldenFiles:
-            print "[{}] {} {}".format(test_id, user, query)
-        try:
-            p = subprocess.Popen(['beeline', '-u', sparkJdbcUrl,
-                                  '--silent=true', '-n', user, '-e', query],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-            out, err = p.communicate()
-        except:
-            pass
-        finally:
-            if verbose or generateGoldenFiles:
-                if len(out) > 0:
-                    print out
-                if len(err.split('\n')[0]) > 0:
-                    print err.split('\n')[0] + "\n"
-            if test_id is not None:
-                f = open(self.out_file(test_id), 'w')
-                f.write(out)
-                f.close()
-                f = open(self.err_file(test_id), 'w')
-                f.write(err.split('\n')[0])
-                f.close()
-        if check:
-            self.check_result(test_id)
-
-    def check_result(self, test_id):
-        out_new = self.out_file(test_id)
-        err_new = self.err_file(test_id)
-        out_answer = self.out_answer_file(test_id)
-        err_answer = self.err_answer_file(test_id)
-        if generateGoldenFiles:
-            # Overwrite the existing answers if exist
-            os.rename(out_new, out_answer)
-            os.rename(err_new, err_answer)
-            if os.stat(out_answer).st_size == 0:
-                os.remove(out_answer)
-            if os.stat(err_answer).st_size == 0:
-                os.remove(err_answer)
-        else:
-            if os.stat(out_new).st_size == 0:
-                self.assertFalse(os.path.exists(out_answer))
-            else:
-                self.assertTrue(filecmp.cmp(out_new, out_answer))
-            os.remove(self.out_file(test_id))
-
-            if os.stat(err_new).st_size == 0:
-                self.assertFalse(os.path.exists(err_answer))
-            else:
-                self.assertTrue(filecmp.cmp(err_new, err_answer))
-            os.remove(self.err_file(test_id))
 
 
 if __name__ == '__main__':

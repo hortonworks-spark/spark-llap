@@ -1,0 +1,1 @@
+Error: Error while compiling statement: FAILED: HiveAccessControlException Permission denied: user [spark] does not have [CREATE] privilege on [db_drop] (state=42000,code=40000)

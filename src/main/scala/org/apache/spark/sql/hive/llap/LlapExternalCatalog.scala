@@ -91,6 +91,26 @@ private[spark] class LlapExternalCatalog(
     }
   }
 
+  override def createDatabase(
+      dbDefinition: CatalogDatabase,
+      ignoreIfExists: Boolean): Unit = withClient {
+    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
+    val stmt = sessionState.connection.createStatement()
+    val ifNotExistsString = if (ignoreIfExists) "IF NOT EXISTS" else ""
+    stmt.executeUpdate(s"CREATE DATABASE $ifNotExistsString `${dbDefinition.name}`")
+  }
+
+  override def dropDatabase(
+      db: String,
+      ignoreIfNotExists: Boolean,
+      cascade: Boolean): Unit = withClient {
+    requireDbExists(db)
+    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
+    val stmt = sessionState.connection.createStatement()
+    val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
+    stmt.executeUpdate(s"DROP DATABASE `$db` $ifExistsString")
+  }
+
   override def createTable(
       tableDefinition: CatalogTable,
       ignoreIfExists: Boolean): Unit = {
