@@ -217,9 +217,9 @@ class SparkRangerTestSuite(unittest.TestCase):
             os.rename(out_new, out_answer)
             os.rename(err_new, err_answer)
             if os.stat(out_answer).st_size == 0:
-                os.rmmove(out_answer)
+                os.remove(out_answer)
             if os.stat(err_answer).st_size == 0:
-                os.rmmove(err_answer)
+                os.remove(err_answer)
         else:
             if os.stat(out_new).st_size == 0:
                 self.assertFalse(os.path.exists(out_answer))
