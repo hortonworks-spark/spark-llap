@@ -4,7 +4,7 @@ This test assumes a HDP 2.6 cluster with spark-llap library (equal to or greater
 
 **Apache Ranger Rules**
 
-1. `Access` policy for `default` database
+### `Access` policy for `default` database
 
 This is for a temporary space for Spark while `INSERT INTO`.
 
@@ -12,7 +12,7 @@ Name         | Table | Column | Permissions
 -------------|-------|--------|------------
 spark_system | tmp_* | *      | All
 
-2. `Access` policy for `db_*` database
+### `Access` policy for `db_*` database
 
 Name             | Database   | Table   | Column | Permissions
 -----------------|------------|---------|--------|------------
@@ -26,7 +26,7 @@ spark_db_alter   | db_alter   | *       | *      | All
 spark_db_index   | db_index   | *       | *      | All
 spark_db_lock    | db_lock    | *       | *      | All
 
-3. `Access` policies for `spark_ranger_test` database
+### `Access` policy for `spark_ranger_test` database
 
 Name                  | Table             | Column | Permissions
 ----------------------|-------------------|--------|------------
@@ -42,13 +42,13 @@ spark_index           | t_index*          | *      | Index
 spark_lock            | t_lock*           | *      | Lock
 spark_mask_and_filter | t_mask_and_filter | *      | Select
 
-4. `Masking` Policy for filtering and masking in `spark_ranger_test` database
+### `Masking` policy for filtering and masking in `spark_ranger_test` database
 
 Name       | Table             | Column | Access Types | Select Masking Option
 -----------|-------------------|--------|--------------|----------------------------
 spark_mask | t_mask_and_filter | name   | Select       | partial mask:'show first 4'
 
-5. `Filter` Policy for filtering and masking in `spark_ranger_test` database
+### `Filter` policy for filtering and masking in `spark_ranger_test` database
 
 Name         | Table             | Access Types | Row Level Filter
 -------------|-------------------|--------------|-----------------
@@ -56,12 +56,14 @@ spark_filter | t_mask_and_filter | Select       | gender='M'
 
 ## How to run all tests
 
-    ./spark-ranger-test.py
-    ...................
-    ----------------------------------------------------------------------
-    Ran 22 tests in 3057.237s
-    
-    OK
+```
+$ ./spark-ranger-test.py
+......................
+----------------------------------------------------------------------
+Ran 22 tests in 2894.977s
+
+OK
+```
 
 ## How to run a single test suite
 
