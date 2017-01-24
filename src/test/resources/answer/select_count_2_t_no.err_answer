@@ -1,0 +1,1 @@
+Error: org.apache.spark.sql.AnalysisException: cannot resolve '`a`' given input columns: []; line 1 pos 13;

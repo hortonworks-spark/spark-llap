@@ -1,0 +1,14 @@
++--------------------+--------------------+--------------+--+
+|      database      |     tableName      | isTemporary  |
++--------------------+--------------------+--------------+--+
+| spark_ranger_test  | t_full             | false        |
+| spark_ranger_test  | t_partial          | false        |
+| spark_ranger_test  | t_select           | false        |
+| spark_ranger_test  | t_update           | false        |
+| spark_ranger_test  | t_create           | false        |
+| spark_ranger_test  | t_drop             | false        |
+| spark_ranger_test  | t_alter            | false        |
+| spark_ranger_test  | t_index            | false        |
+| spark_ranger_test  | t_lock             | false        |
+| spark_ranger_test  | t_mask_and_filter  | false        |
++--------------------+--------------------+--------------+--+
