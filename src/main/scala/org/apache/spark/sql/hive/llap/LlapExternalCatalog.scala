@@ -108,7 +108,8 @@ private[spark] class LlapExternalCatalog(
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
     val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
-    stmt.executeUpdate(s"DROP DATABASE `$db` $ifExistsString")
+    val cascadeString = if (cascade) "CASCADE" else ""
+    stmt.executeUpdate(s"DROP DATABASE $ifExistsString `$db` $cascadeString")
   }
 
   override def createTable(

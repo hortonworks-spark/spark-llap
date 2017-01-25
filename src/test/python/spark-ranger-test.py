@@ -129,6 +129,14 @@ class DbTestSuite(SparkRangerTestSuite):
             self.execute('DROP DATABASE ' + db, 'drop_db_2_' + db)
             self.execute("SHOW DATABASES LIKE '" + db + "'", 'drop_db_3_' + db, 'hive')
 
+    def test_21_drop_db_cascade(self):
+        for db in dbs:
+            self.execute('CREATE DATABASE ' + db, 'drop_db_cascade_1_' + db, 'hive')
+            self.execute('CREATE TABLE ' + db + '.t (a INT)', 'drop_db_cascade_2_' + db, 'hive')
+            self.execute('DROP DATABASE ' + db + ' CASCADE', 'drop_db_cascade_3_' + db)
+            self.execute("SHOW DATABASES LIKE '" + db + "'", 'drop_db_cascade_4_' + db, 'hive')
+            self.execute('DROP DATABASE ' + db + ' CASCADE', 'drop_db_cascade_5_' + db, 'hive')
+
 
 class TableTestSuite(SparkRangerTestSuite):
     sparkJdbcUrl = 'jdbc:hive2://localhost:10016/' + testdb
