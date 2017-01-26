@@ -1,0 +1,1 @@
+Error: org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException: Database 'db_full' not found; (state=,code=0)
