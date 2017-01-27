@@ -216,10 +216,15 @@ private[spark] class LlapExternalCatalog(
       ignoreIfNotExists: Boolean,
       purge: Boolean,
       retainData: Boolean): Unit = {
+    // Note that `retainData` support is dropped intentionally to support SPARK-LLAP-32 instead.
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
-    stmt.executeUpdate(s"ALTER TABLE `$db`.`$table` TOUCH")
-    super.dropPartitions(db, table, parts, ignoreIfNotExists, purge, retainData)
+    val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
+    val partitionString =
+      parts.map(_.map{ case (k, v) => s"$k=$v" }.mkString("PARTITION (", ", ", ")")).mkString(", ")
+    val purgeString = if (purge) "PURGE" else ""
+    stmt.executeUpdate(
+      s"ALTER TABLE `$db`.`$table` DROP $ifExistsString $partitionString $purgeString")
   }
 
   override def renamePartitions(
