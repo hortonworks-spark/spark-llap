@@ -1,1 +1,1 @@
-Error: Error while compiling statement: FAILED: HiveAccessControlException Permission denied: user [spark] does not have [SELECT] privilege on [spark_ranger_test/t_alter] (state=42000,code=40000)
+Error: Error while compiling statement: FAILED: HiveAccessControlException Permission denied: user [spark] does not have [SELECT] privilege on [spark_ranger_test/t_alter/*] (state=42000,code=40000)
