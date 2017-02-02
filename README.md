@@ -4,14 +4,14 @@ A library to load data into Apache Spark&trade; SQL DataFrames from
 Apache Hive&trade; using LLAP. With Apache Ranger&trade; (Incubating),
 this library provides row/column level fine-grained access controls.
 
-- Shared Policies: The data in a cluster can be shared securely and
+- **Shared Policies**: The data in a cluster can be shared securely and
   consistenly controlled by the shared access rules between Apache
   Spark&trade; and Apache Hive&trade;.
 
-- Audits: All security activities can be monitored and searched
+- **Audits**: All security activities can be monitored and searched
   in a single place, i.e., Apache Ranger&trade;
 
-- Resources: each user can use different queues while accessing the
+- **Resources**: Each user can use different queues while accessing the
   secured Hive data.
 
 
