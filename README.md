@@ -89,13 +89,17 @@ Start Spark Thrift Server with `spark.sql.hive.llap=true`.
 
 You can turn off `spark-llap` by restarting Spark Thrift Server without this option or give `spark.sql.hive.llap=false`.
 
-It is recommended to run Spark Thrift Server as user `hive`.
+It is recommended to run Spark Thrift Server as user `hive` to use more SQL features.
 
 You can access `spark-llap` enabled Spark Thrift Server via `beeline` or Apache Zeppelin&trade;.
 
     beeline -u jdbc:hive2://localhost:10016 -n hive -p password -e 'show databases'
     beeline -u jdbc:hive2://localhost:10016 -n spark -p password -e 'show tables'
 
+There are two simple Python examples to submit jobs using Spark-LLAP.
+
+    examples/src/main/python/spark_llap_sql.py
+    examples/src/main/python/spark_llap_dsl.py
 
 ## Note for Kerberized Clusters
 
@@ -108,4 +112,5 @@ You can access `spark-llap` enabled Spark Thrift Server via `beeline` or Apache 
 
     beeline -u "jdbc:hive2://hostname:10500/;principal=hive/_HOST@EXAMPLE.COM;hive.server2.proxy.user=hive" -p password -e 'show tables'
     beeline -u "jdbc:hive2://hostname:10500/;principal=hive/_HOST@EXAMPLE.COM;hive.server2.proxy.user=spark" -p password -e 'show tables'
+
 
