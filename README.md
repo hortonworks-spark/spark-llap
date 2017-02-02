@@ -100,23 +100,23 @@ and turn on `Enable Interactive Query (Tech Preview)`.
 If you want to use access control, you need to setup Apache Ranger policies.
 The followings are some example policies.
 
-#### Access policy for `spark_db` database
+#### Access policy for `db_spark` database
 
 Name         | Table    | Column | Permissions
 -------------|----------|--------|------------
-spark_access | t_sample | *      | Select
+spark_access | t_spark  | *      | Select
 
-#### Masking policy in `spark_db` database
+#### Masking policy in `db_spark` database
 
 Name         | Table    | Column | Access Types | Select Masking Option
 -------------|----------|--------|--------------|----------------------------
-spark_mask   | t_sample | name   | Select       | partial mask:'show first 4'
+spark_mask   | t_spark  | name   | Select       | partial mask:'show first 4'
 
-#### Filter policy `spark_db` database
+#### Filter policy `db_spark` database
 
 Name         | Table    | Access Types | Row Level Filter
 -------------|----------|--------------|-----------------
-spark_filter | t_sample | Select       | gender='M'
+spark_filter | t_spark  | Select       | gender='M'
 
 #### Access policy for `default` database (Optional)
 
