@@ -4,10 +4,15 @@ A library to load data into Apache Spark&trade; SQL DataFrames from
 Apache Hive&trade; using LLAP. With Apache Ranger&trade; (Incubating),
 this library provides row/column level fine-grained access controls.
 
-In other words, the data in a cluster can be shared securely and
-consistenly controlled by the shared access rules between Apache
-Spark&trade; and Apache Hive&trade;. More importantly, all security
-audits can be searched by Apache Ranger&trade;
+- Shared Policies: The data in a cluster can be shared securely and
+  consistenly controlled by the shared access rules between Apache
+  Spark&trade; and Apache Hive&trade;.
+
+- Audits: All security activities can be monitored and searched
+  in a single place, i.e., Apache Ranger&trade;
+
+- Resources: each user can use different queues while accessing the
+  secured Hive data.
 
 
 ## Use cases
@@ -24,9 +29,9 @@ drwx------   - hive hdfs          0 2017-02-01 20:52 /apps/hive/warehouse
 ```
 
 In addition, make it sure that `hive.warehouse.subdir.inherit.perms=true`.
-Then, Newly created tables will inherit the permission by default.
+Newly created tables will inherit the permission by default.
 
-### Secure Spark Thrift Server with Fine-Grained Access
+### Case 1: Secure Spark Thrift Server with Fine-Grained Access
 
 Run Spark Thrift Server with LLAP as `hive`. Then, Apache Ranger policies
 rule Spark Thrift Server and Hive Thrift Server together seamlessly
@@ -36,7 +41,7 @@ In the building section, we will describe
 how to patch and how to build. For testing, refer the
 [test document](https://github.com/hortonworks-spark/spark-llap/blob/master/src/test/python/README.md).
 
-### Shells (`spark-shell` or `pyspark`)
+### Case 2: Shells (`spark-shell` or `pyspark`)
 
 A non-Hive user also runs `spark-shell` or `pyspark` like the followings.
 The user can see only the accessible data.
@@ -61,7 +66,7 @@ $ bin/pyspark --jars spark-llap_2.11-1.0.3-2.1.jar --conf spark.sql.hive.llap=tr
 +------------+
 ```
 
-### Applications
+### Case 3: Applications
 
 A non-Hive user also can submit his spark job like the following.
 Note that it will fail without `spark.sql.hive.llap=true` configuration.
