@@ -19,6 +19,7 @@ package org.apache.spark.sql.hive.llap
 
 import java.util.concurrent.CancellationException
 
+import scala.collection.mutable.ArrayBuffer
 import scala.util.control.NonFatal
 
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
@@ -112,6 +113,43 @@ private[spark] class LlapExternalCatalog(
     stmt.executeUpdate(s"DROP DATABASE $ifExistsString `$db` $cascadeString")
   }
 
+  override def databaseExists(db: String): Boolean = {
+    val sparkSession = SparkSession.getActiveSession
+    if (sparkSession.isDefined) {
+      val sessionState = sparkSession.get.sessionState.asInstanceOf[LlapSessionState]
+      val stmt = sessionState.connection.createStatement()
+      val rs = stmt.executeQuery(s"SHOW DATABASES LIKE '$db'")
+      val isExist = rs.next()
+      rs.close()
+      isExist
+    } else {
+      // This happens only once at the initialization of SparkSession.
+      // Spark checks `default` database at the beginning and creates it if not exists.
+      // However, if SparkSession is not created yet, we cannot access SessionState having
+      // connection string and user name. Here, we know that Spark-LLAP always access the
+      // existing Hive databases. So, we returns true for that. Also, Spark checks
+      // `global_temp` database and raises exceptions if it exists. For this one,
+      // we simply assume that it doesn't exist.
+      db.equalsIgnoreCase(SessionCatalog.DEFAULT_DATABASE)
+    }
+  }
+
+  override def listDatabases(): Seq[String] = withClient {
+    listDatabases("*")
+  }
+
+  override def listDatabases(pattern: String): Seq[String] = withClient {
+    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
+    val stmt = sessionState.connection.createStatement()
+    val rs = stmt.executeQuery(s"SHOW DATABASES LIKE '$pattern'")
+    val databases = new ArrayBuffer[String]()
+    while (rs.next()) {
+      databases += rs.getString("database_name")
+    }
+    rs.close()
+    databases
+  }
+
   override def createTable(
       tableDefinition: CatalogTable,
       ignoreIfExists: Boolean): Unit = {
@@ -143,11 +181,13 @@ private[spark] class LlapExternalCatalog(
       table: String,
       ignoreIfNotExists: Boolean,
       purge: Boolean): Unit = withClient {
-    if (Thread.currentThread().getStackTrace()(5).toString().contains("CreateHiveTableAsSelectCommand")) {
+    if (Thread.currentThread().getStackTrace()(5).toString()
+        .contains("CreateHiveTableAsSelectCommand")) {
       super.dropTable(db, table, ignoreIfNotExists, purge)
     } else {
       requireDbExists(db)
-      val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
+      val sessionState =
+        SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
       val stmt = sessionState.connection.createStatement()
       val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
       val purgeString = if (purge) "PURGE" else ""
@@ -156,8 +196,45 @@ private[spark] class LlapExternalCatalog(
   }
 
   override def getTable(db: String, table: String): CatalogTable = withClient {
-    val catalogTable = super.getTable(db, table)
-    catalogTable.copy(tableType = CatalogTableType.EXTERNAL)
+    try {
+      val catalogTable = super.getTable(db, table)
+      catalogTable.copy(tableType = CatalogTableType.EXTERNAL)
+    } catch {
+      case NonFatal(_) =>
+        // Try to create a dummy table. This table cannot be used for ALTER TABLE.
+        val sessionState =
+          SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
+        val dmd = sessionState.connection.getMetaData()
+        val rs = dmd.getColumns(null, db, table, null)
+        try {
+          val schema = new StructType()
+          while (rs.next()) {
+            val columnName = rs.getString(4)
+            val dataType = rs.getInt(5)
+            val fieldSize = rs.getInt(7)
+            val fieldScale = rs.getInt(9)
+            val nullable = true // Hive cols nullable
+            val isSigned = true
+            val columnType =
+              DefaultJDBCWrapper.getCatalystType(dataType, fieldSize, fieldScale, isSigned)
+            val columnTypeString = DefaultJDBCWrapper.columnString(columnType, Some(fieldSize))
+            schema.add(columnName, columnTypeString, nullable)
+          }
+          CatalogTable(
+            identifier = TableIdentifier(table, Option(db)),
+            tableType = CatalogTableType.EXTERNAL,
+            schema = schema,
+            storage = CatalogStorageFormat(
+              locationUri = None,
+              inputFormat = None,
+              outputFormat = None,
+              serde = None,
+              compressed = false,
+              properties = Map.empty))
+        } finally {
+          rs.close()
+        }
+    }
   }
 
   override def tableExists(db: String, table: String): Boolean = withClient {
