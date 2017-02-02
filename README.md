@@ -85,7 +85,7 @@ Add the following three configurations to `spark-defaults.conf`..
 
 Start Spark Thrift Server with `spark.sql.hive.llap=true`.
 
-    sbin/start-thriftserver.sh --jars spark-llap_2.11-1.0.2-2.1.jar --conf spark.sql.hive.llap=true 
+    sbin/start-thriftserver.sh --jars spark-llap_2.11-1.0.3-2.1.jar --conf spark.sql.hive.llap=true 
 
 You can turn off `spark-llap` by restarting Spark Thrift Server without this option or give `spark.sql.hive.llap=false`.
 
