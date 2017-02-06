@@ -1,6 +1,6 @@
 
 name := "spark-llap_2.11"
-version := "1.0.4-2.1-SNAPSHOT"
+version := "1.0.4-2.1"
 organization := "com.hortonworks"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
@@ -126,6 +126,18 @@ addArtifact(artifact in (Compile, assembly), assembly)
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 resolvers += "Additional Maven Repository" at repoUrl
 resolvers += "Hortonworks Maven Repository" at "http://repo.hortonworks.com/content/groups/public/"
+
+publishMavenStyle := true
+publishArtifact in Test := false
+
+val username = sys.props.getOrElse("user", "user")
+val password = sys.props.getOrElse("password", "password")
+val repourl = sys.props.getOrElse("repourl", "https://example.com")
+val host = new java.net.URL(repourl).getHost
+
+isSnapshot := true // To allow overwriting for internal nexus
+credentials += Credentials("Sonatype Nexus Repository Manager", host, username, password)
+publishTo := Some("Sonatype Nexus Repository Manager" at repourl)
 
 // Get full stack trace
 testOptions in Test += Tests.Argument("-oD")
