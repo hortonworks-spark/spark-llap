@@ -1,13 +1,11 @@
 
-name := "spark-llap_2.11"
+name := "spark-llap"
 version := "1.0.4-2.1"
 organization := "com.hortonworks"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
 sparkVersion := sys.props.getOrElse("spark.version", "2.1.0")
-
-assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
 
 val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3")
 val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.5.3.0-37")
@@ -17,9 +15,6 @@ val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
 val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
 spName := "hortonworks/spark-llap"
-
-// disable using the Scala version in output paths and artifacts
-crossPaths := false
 
 val testSparkVersion = settingKey[String]("The version of Spark to test against.")
 
@@ -116,10 +111,11 @@ logLevel in assembly := {
   }
 }
 
-// Add assembly to publish task
+// Make assembly as default artifact
+publishArtifact in (Compile, packageBin) := false
 artifact in (Compile, assembly) := {
   val art = (artifact in (Compile, assembly)).value
-  art.copy(`classifier` = Some("assembly"))
+  art.copy(`classifier` = None)
 }
 addArtifact(artifact in (Compile, assembly), assembly)
 
