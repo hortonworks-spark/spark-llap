@@ -29,7 +29,7 @@ import org.apache.spark.sql.hive.{HiveContext, HiveSessionState}
 import org.apache.spark.sql.internal.SQLConf.SQLConfigBuilder
 
 /**
- * A class that holds all session-specific state in a given [[SparkSession]] backed by Llap.
+ * A class that holds all session-specific state in a given SparkSession backed by Llap.
  */
 class LlapSessionState(sparkSession: SparkSession)
   extends HiveSessionState(sparkSession) with Logging {

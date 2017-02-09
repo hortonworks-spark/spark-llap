@@ -26,7 +26,7 @@ import org.apache.spark.sql.hive.{HiveMetastoreCatalog, MetastoreRelation}
 
 /**
  * HiveMetastoreCatalog is still used in Apache Spark, but in the future will be cleaned up
- * to integrate into [[org.apache.spark.sql.hive.HiveExternalCatalog]]. At that time,
+ * to integrate into org.apache.spark.sql.hive.HiveExternalCatalog. At that time,
  * LlapMetastoreCatalog will be removed together.
  */
 class LlapMetastoreCatalog(sparkSession: SparkSession)
