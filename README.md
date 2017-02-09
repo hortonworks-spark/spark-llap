@@ -1,7 +1,7 @@
 # Apache Spark&trade; connector for Apache Hive&trade; LLAP
 
 A library to load data into Apache Spark&trade; SQL DataFrames from
-Apache Hive&trade; using LLAP. With Apache Ranger&trade; (Incubating),
+Apache Hive&trade; using LLAP. With Apache Ranger&trade;,
 this library provides row/column level fine-grained access controls.
 
 - **Shared Policies**: The data in a cluster can be shared securely and
