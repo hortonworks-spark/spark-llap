@@ -36,13 +36,15 @@ libraryDependencies ++= Seq(
 
   ("org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion % "compile")
     .exclude("javax.servlet", "servlet-api")
-    .exclude("stax", "stax-api"),
+    .exclude("stax", "stax-api")
+    .exclude("org.apache.avro", "avro"),
 
   ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "compile")
     .exclude("commons-beanutils", "commons-beanutils")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("javax.servlet", "servlet-api")
-    .exclude("stax", "stax-api"),
+    .exclude("stax", "stax-api")
+    .exclude("org.apache.avro", "avro"),
 
   ("org.apache.tez" % "tez-runtime-internals" % tezVersion % "compile")
     .exclude("javax.servlet", "servlet-api")
@@ -51,6 +53,8 @@ libraryDependencies ++= Seq(
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
     .exclude("org.apache.ant", "ant")
+    .exclude("org.apache.avro", "avro")
+    .exclude("org.apache.curator", "apache-curator")
     .exclude("org.apache.logging.log4j", "log4j-1.2-api")
     .exclude("org.apache.logging.log4j", "log4j-slf4j-impl")
     .exclude("org.apache.logging.log4j", "log4j-web")
@@ -81,6 +85,7 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hadoop", "hadoop-yarn-server-common")
     .exclude("org.apache.hadoop", "hadoop-yarn-server-applicationhistoryservice")
     .exclude("org.apache.hadoop", "hadoop-yarn-server-web-proxy")
+    .exclude("org.apache.hbase", "hbase-client")
 )
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
