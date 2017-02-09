@@ -56,15 +56,31 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.logging.log4j", "log4j-web")
     .exclude("org.apache.slider", "slider-core")
     .exclude("stax", "stax-api")
-    excludeAll(
-      ExclusionRule(organization = "javax.servlet"),
-      ExclusionRule(organization = "javax.servlet.jsp"),
-      ExclusionRule(organization = "javax.transaction"),
-      ExclusionRule(organization = "org.apache.hadoop"),
-      ExclusionRule(organization = "org.datanucleus"),
-      ExclusionRule(organization = "org.mortbay.jetty")
-    )
-
+    .exclude("javax.servlet", "jsp-api")
+    .exclude("javax.servlet", "servlet-api")
+    .exclude("javax.servlet.jsp", "jsp-api")
+    .exclude("javax.transaction", "jta")
+    .exclude("javax.transaction", "transaction-api")
+    .exclude("org.mortbay.jetty", "jetty")
+    .exclude("org.mortbay.jetty", "jetty-util")
+    .exclude("org.mortbay.jetty", "jetty-sslengine")
+    .exclude("org.mortbay.jetty", "jsp-2.1")
+    .exclude("org.mortbay.jetty", "jsp-api-2.1")
+    .exclude("org.mortbay.jetty", "servlet-api-2.5")
+    .exclude("org.datanucleus", "datanucleus-api-jdo")
+    .exclude("org.datanucleus", "datanucleus-core")
+    .exclude("org.datanucleus", "datanucleus-rdbms")
+    .exclude("org.datanucleus", "javax.jdo")
+    .exclude("org.apache.hadoop", "hadoop-client")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-app")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-common")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-shuffle")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-jobclient")
+    .exclude("org.apache.hadoop", "hadoop-distcp")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-resourcemanager")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-common")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-applicationhistoryservice")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-web-proxy")
 )
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
