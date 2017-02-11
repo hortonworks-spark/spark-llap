@@ -18,13 +18,13 @@ Name             | Database   | Table   | Column | Permissions
 -----------------|------------|---------|--------|------------
 spark_db_full    | db_full    | *       | *      | All
 spark_db_partial | db_partial | t_full* | *      | All
-spark_db_select  | db_select  | *       | *      | All
-spark_db_update  | db_update  | *       | *      | All
-spark_db_create  | db_create  | *       | *      | All
-spark_db_drop    | db_drop    | *       | *      | All
-spark_db_alter   | db_alter   | *       | *      | All
-spark_db_index   | db_index   | *       | *      | All
-spark_db_lock    | db_lock    | *       | *      | All
+spark_db_select  | db_select  | *       | *      | Select
+spark_db_update  | db_update  | *       | *      | Update
+spark_db_create  | db_create  | *       | *      | Create
+spark_db_drop    | db_drop    | *       | *      | Drop
+spark_db_alter   | db_alter   | *       | *      | Alter
+spark_db_index   | db_index   | *       | *      | Index
+spark_db_lock    | db_lock    | *       | *      | Lock
 
 ### `Access` policy for `spark_ranger_test` database
 
