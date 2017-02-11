@@ -1,7 +1,7 @@
 
 name := "spark-llap"
-version := "1.0.5-2.1"
-organization := "com.hortonworks"
+version := "1.0.6-2.1"
+organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
@@ -132,11 +132,9 @@ logLevel in assembly := {
   }
 }
 
-// Make assembly as default artifact
-publishArtifact in (Compile, packageBin) := false
 artifact in (Compile, assembly) := {
   val art = (artifact in (Compile, assembly)).value
-  art.copy(`classifier` = None)
+  art.copy(`classifier` = Some("assembly"))
 }
 addArtifact(artifact in (Compile, assembly), assembly)
 
