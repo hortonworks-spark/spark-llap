@@ -96,7 +96,6 @@ class JDBCWrapper {
    *   SQL query wrapped in parentheses.
    *
    * @return A StructType giving the table's Catalyst schema.
-   * @throws SQLException if the table specification is garbage.
    * @throws SQLException if the table contains an unsupported type.
    */
   def resolveTable(conn: Connection, dbName: String, tableName: String): StructType = {
