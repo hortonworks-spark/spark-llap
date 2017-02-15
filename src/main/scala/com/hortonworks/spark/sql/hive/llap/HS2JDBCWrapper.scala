@@ -15,18 +15,31 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.hive.llap
+package com.hortonworks.spark.sql.hive.llap
 
 import java.net.URI
 import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
-import java.util.Properties
+
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
-import org.apache.spark.SPARK_VERSION
-import org.apache.spark.sql.types._
-import org.slf4j.LoggerFactory
-import org.apache.spark.util.Utils
 
+import org.slf4j.LoggerFactory
+
+import org.apache.spark.sql.types._
+
+
+object Utils {
+  def classForName(className: String): Class[_] = {
+    // scalastyle:off classforname
+    Class.forName(
+      className,
+      true,
+      Option(Thread.currentThread().getContextClassLoader).getOrElse(getClass.getClassLoader))
+    // scalastyle:on classforname
+  }
+}
+
+object DefaultJDBCWrapper extends JDBCWrapper
 
 /**
  * Shim which exposes some JDBC helper functions. Most of this code is copied from Spark SQL, with
@@ -70,21 +83,10 @@ class JDBCWrapper {
   }
 
   private def registerDriver(driverClass: String): Unit = {
-    // DriverRegistry.register() is one of the few pieces of private Spark functionality which
-    // we need to rely on. This class was relocated in Spark 1.5.0, so we need to use reflection
-    // in order to support both Spark 1.4.x and 1.5.x.
-    if (SPARK_VERSION.startsWith("1.4")) {
-      val className = "org.apache.spark.sql.jdbc.package$DriverRegistry$"
-      val driverRegistryClass = Utils.classForName(className)
-      val registerMethod = driverRegistryClass.getDeclaredMethod("register", classOf[String])
-      val companionObject = driverRegistryClass.getDeclaredField("MODULE$").get(null)
-      registerMethod.invoke(companionObject, driverClass)
-    } else { // Spark 1.5.0+
-      val className = "org.apache.spark.sql.execution.datasources.jdbc.DriverRegistry"
-      val driverRegistryClass = Utils.classForName(className)
-      val registerMethod = driverRegistryClass.getDeclaredMethod("register", classOf[String])
-      registerMethod.invoke(null, driverClass)
-    }
+    val className = "org.apache.spark.sql.execution.datasources.jdbc.DriverRegistry"
+    val driverRegistryClass = Utils.classForName(className)
+    val registerMethod = driverRegistryClass.getDeclaredMethod("register", classOf[String])
+    registerMethod.invoke(null, driverClass)
   }
 
   /**
@@ -92,11 +94,11 @@ class JDBCWrapper {
    * schema.
    *
    * @param conn A JDBC connection to the database.
-   * @param table The table name of the desired table.  This may also be a
+   * @param dbName The database name.
+   * @param tableName The table name of the desired table.  This may also be a
    *   SQL query wrapped in parentheses.
    *
    * @return A StructType giving the table's Catalyst schema.
-   * @throws SQLException if the table contains an unsupported type.
    */
   def resolveTable(conn: Connection, dbName: String, tableName: String): StructType = {
 
@@ -120,8 +122,9 @@ class JDBCWrapper {
     }
   }
 
-    def resolveQuery(conn: Connection, query: String): StructType = {
+  def resolveQuery(conn: Connection, query: String): StructType = {
     val rs = conn.prepareStatement(s"SELECT * FROM ($query) q WHERE 1=0").executeQuery()
+    log.debug(s"SELECT * FROM ($query) q WHERE 1=0")
     try {
       val rsmd = rs.getMetaData
       val ncols = rsmd.getColumnCount
@@ -135,8 +138,7 @@ class JDBCWrapper {
         val typeName = rsmd.getColumnTypeName(i + 1)
         val fieldSize = rsmd.getPrecision(i + 1)
         val fieldScale = rsmd.getScale(i + 1)
-        //val isSigned = rsmd.isSigned(i + 1)
-        val isSigned = true;
+        val isSigned = true
         val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
         val columnType = getCatalystType(dataType, fieldSize, fieldScale, isSigned)
         fields(i) = StructField(columnName, columnType, nullable)
@@ -156,7 +158,10 @@ class JDBCWrapper {
    *                                discover the appropriate driver class.
    * @param url the JDBC url to connect to.
    */
-  def getConnector(userProvidedDriverClass: Option[String], url: String, userName: String): Connection = {
+  def getConnector(
+      userProvidedDriverClass: Option[String],
+      url: String,
+      userName: String): Connection = {
     val subprotocol = new URI(url.stripPrefix("jdbc:")).getScheme
     val driverClass: Class[Driver] = getDriverClass(subprotocol, userProvidedDriverClass)
     registerDriver(driverClass.getCanonicalName)
@@ -267,5 +272,3 @@ class JDBCWrapper {
     answer
   }
 }
-
-object DefaultJDBCWrapper extends JDBCWrapper

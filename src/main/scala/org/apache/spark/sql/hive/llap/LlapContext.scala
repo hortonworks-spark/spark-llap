@@ -19,6 +19,7 @@ package org.apache.spark.sql.hive.llap
 
 import scala.reflect.runtime.{universe => ru}
 import java.sql.Connection
+import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SQLConf
 import org.apache.spark.sql.SQLConf.SQLConfEntry.stringConf
@@ -42,7 +43,8 @@ class LlapContext(sc: SparkContext,
     listener: SQLListener,
     @transient private val execHive: ClientWrapper,
     @transient private val metaHive: ClientInterface,
-    isRootContext: Boolean) extends HiveContext(sc, cacheManager, listener, execHive, metaHive, isRootContext) {
+    isRootContext: Boolean)
+  extends HiveContext(sc, cacheManager, listener, execHive, metaHive, isRootContext) {
   override protected[sql] lazy val catalog =
     new LlapCatalog(metadataHive, this) with OverrideCatalog
 
@@ -81,11 +83,10 @@ class LlapContext(sc: SparkContext,
   def getUserString(): String = {
     LlapContext.getUserMethod match {
       case null => null
-      case _ => {
+      case _ =>
         val instanceMirror = ru.runtimeMirror(this.getClass.getClassLoader).reflect(this)
         val methodMirror = instanceMirror.reflectMethod(LlapContext.getUserMethod)
         methodMirror().asInstanceOf[String]
-      }
     }
   }
 }
@@ -102,7 +103,7 @@ class LlapCatalog(override val client: ClientInterface, hive: LlapContext)
 
     // Now convert to LlapRelation
     val logicalRelation = relation match {
-      case MetastoreRelation(dbName, tabName, alias) => {
+      case MetastoreRelation(dbName, tabName, alias) =>
         val qualifiedName = dbName + "." + tabName
         var options = Map("table" -> qualifiedName, "url" -> hive.getConnectionUrl())
         val resolved = ResolvedDataSource(
@@ -112,7 +113,6 @@ class LlapCatalog(override val client: ClientInterface, hive: LlapContext)
         relationSourceName,
         options)
         LogicalRelation(resolved.relation)
-      }
       case _ => throw new Exception("Expected MetastoreRelation")
     }
 
