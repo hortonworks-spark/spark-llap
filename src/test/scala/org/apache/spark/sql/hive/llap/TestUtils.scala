@@ -17,8 +17,9 @@
 package org.apache.spark.sql.hive.llap
 
 import org.apache.spark.SparkContext
-import java.sql.ResultSet
 import java.sql.Statement
+
+import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 
 object TestUtils {
   lazy val sparkContext = new SparkContext("local", "test")
@@ -35,7 +36,9 @@ object TestUtils {
     val stmt = conn.createStatement()
     settings.foreach { setting =>
       val value = getConfSetting(stmt, setting)
+      // scalastyle:off println
       println("Setting " + setting + " to " + value)
+      // scalastyle:on println
       sparkContext.hadoopConfiguration.set(setting, value)
     }
     stmt.close()

@@ -17,16 +17,18 @@
 
 package org.apache.spark.sql.hive.llap
 
+import com.hortonworks.spark.sql.hive.llap.LlapRelation
+
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.sources.RelationProvider
 
 class DefaultSource
-  // TODO: with SchemaRelationProvider, CreatableRelationProvider?
   extends RelationProvider {
 
-  override def createRelation(sqlContext: SQLContext, parameters: Map[String, String]): BaseRelation = {
-    var result = new LlapRelation(sqlContext, parameters)
-    result
+  override def createRelation(
+      sqlContext: SQLContext,
+      parameters: Map[String, String]): BaseRelation = {
+    new LlapRelation(sqlContext, parameters)
   }
 }

@@ -119,8 +119,7 @@ private [llap] class HS2Catalog(sqlContext: SQLContext, jdbcUrl: String, connect
     currentDatabase
   }
 
-  def setCurrentDatabase(dbName: String) = {
+  def setCurrentDatabase(dbName: String): Unit = {
     currentDatabase = dbName
   }
 }
-
