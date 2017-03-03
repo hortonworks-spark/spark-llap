@@ -17,15 +17,22 @@
 
 package org.apache.spark.sql.hive.llap
 
-import scala.reflect.runtime.{universe => ru}
+import java.io.PrintStream
 import java.sql.Connection
+import java.util.{Map => JMap}
+import java.util.regex.Pattern
+
+import scala.reflect.runtime.{universe => ru}
+
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
+
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SQLConf
 import org.apache.spark.sql.SQLConf.SQLConfEntry.stringConf
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.OverrideCatalog
+import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.plans.logical.Subquery
 import org.apache.spark.sql.execution.CacheManager
@@ -35,8 +42,7 @@ import org.apache.spark.sql.execution.ui.SQLListener
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.sql.hive.HiveMetastoreCatalog
 import org.apache.spark.sql.hive.MetastoreRelation
-import org.apache.spark.sql.hive.client.ClientInterface
-import org.apache.spark.sql.hive.client.ClientWrapper
+import org.apache.spark.sql.hive.client.{ClientInterface, ClientWrapper, HiveDatabase, HiveTable}
 
 class LlapContext(sc: SparkContext,
     cacheManager: CacheManager,
@@ -86,7 +92,36 @@ class LlapContext(sc: SparkContext,
       case _ =>
         val instanceMirror = ru.runtimeMirror(this.getClass.getClassLoader).reflect(this)
         val methodMirror = instanceMirror.reflectMethod(LlapContext.getUserMethod)
-        methodMirror().asInstanceOf[String]
+        val user = methodMirror().asInstanceOf[String]
+        if (user == null) {
+          LlapContext.getUser()
+        } else {
+          user
+        }
+    }
+  }
+
+  private def functionOrMacroDDLPattern(command: String) = Pattern.compile(
+    ".*(create|drop)\\s+(temporary\\s+)?(function|macro).+", Pattern.DOTALL).matcher(command)
+
+  override protected[hive] def runSqlHive(sql: String): Seq[String] = {
+    val command = sql.trim.toLowerCase
+    if (functionOrMacroDDLPattern(command).matches()) {
+      executionHive.runSqlHive(sql)
+    } else if (command.startsWith("set")) {
+      metaHive.runSqlHive(sql)
+      executionHive.runSqlHive(sql)
+    } else if (command.startsWith("show")) {
+      val rs = connection.createStatement().executeQuery(sql)
+      val result = new scala.collection.mutable.ArrayBuffer[String]
+      while (rs.next()) {
+        result += rs.getString(1)
+      }
+      rs.close()
+      result
+    } else {
+      connection.createStatement().executeUpdate(sql)
+      Seq.empty
     }
   }
 }
