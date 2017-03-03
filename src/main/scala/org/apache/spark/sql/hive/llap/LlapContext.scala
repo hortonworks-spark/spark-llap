@@ -111,9 +111,17 @@ class LlapContext(sc: SparkContext,
     } else if (command.startsWith("set")) {
       metaHive.runSqlHive(sql)
       executionHive.runSqlHive(sql)
+    } else if (command.startsWith("show")) {
+      val rs = connection.createStatement().executeQuery(sql)
+      val result = new scala.collection.mutable.ArrayBuffer[String]
+      while (rs.next()) {
+        result += rs.getString(1)
+      }
+      rs.close()
+      result
     } else {
       connection.createStatement().executeUpdate(sql)
-      Seq("")
+      Seq.empty
     }
   }
 }
