@@ -116,6 +116,23 @@ class LlapContext(sc: SparkContext,
       Seq("")
     }
   }
+
+  private def functionOrMacroDDLPattern(command: String) = Pattern.compile(
+    ".*(create|drop)\\s+(temporary\\s+)?(function|macro).+", Pattern.DOTALL).matcher(command)
+
+  override protected[hive] def runSqlHive(sql: String): Seq[String] = {
+    System.out.println(sql)
+    val command = sql.trim.toLowerCase
+    if (functionOrMacroDDLPattern(command).matches()) {
+      executionHive.runSqlHive(sql)
+    } else if (command.startsWith("set")) {
+      metaHive.runSqlHive(sql)
+      executionHive.runSqlHive(sql)
+    } else {
+      connection.createStatement().executeUpdate(sql)
+      Seq("")
+    }
+  }
 }
 
 class LlapCatalog(override val client: ClientInterface, hive: LlapContext)
