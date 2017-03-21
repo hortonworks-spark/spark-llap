@@ -1,11 +1,11 @@
 
 name := "spark-llap"
-version := "1.0.7-2.1"
+version := "1.0.7-2.1.0.2.6.0.2-54"
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
-sparkVersion := sys.props.getOrElse("spark.version", "2.1.0")
+sparkVersion := sys.props.getOrElse("spark.version", "2.1.0.2.6.0.2-54")
 
 val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3")
 val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.5.3.0-37")
@@ -143,6 +143,7 @@ addArtifact(artifact in (Compile, assembly), assembly)
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 resolvers += "Additional Maven Repository" at repoUrl
 resolvers += "Hortonworks Maven Repository" at "http://repo.hortonworks.com/content/groups/public/"
+resolvers += "Hortonworks Nexus Repository" at "http://nexus-private.hortonworks.com/nexus/content/groups/public"
 
 publishMavenStyle := true
 pomIncludeRepository := { _ => false } // Remove repositories from pom
