@@ -40,20 +40,20 @@ tables = [
 
 class SparkRangerTestSuite(unittest.TestCase):
     def out_answer_file(self, test_id):
-        return "{}/{}.out_answer".format(answerPath, test_id)
+        return "{0}/{1}.out_answer".format(answerPath, test_id)
 
     def err_answer_file(self, test_id):
-        return "{}/{}.err_answer".format(answerPath, test_id)
+        return "{0}/{1}.err_answer".format(answerPath, test_id)
 
     def out_file(self, test_id):
-        return "{}/{}.out".format(dirPath, test_id)
+        return "{0}/{1}.out".format(dirPath, test_id)
 
     def err_file(self, test_id):
-        return "{}/{}.err".format(dirPath, test_id)
+        return "{0}/{1}.err".format(dirPath, test_id)
 
     def execute(self, query, test_id, user='spark', check=True, verbose=False):
         if verbose or generateGoldenFiles:
-            print "[{}] {} {}".format(test_id, user, query)
+            print "[{0}] {1} {2}".format(test_id, user, query)
         try:
             p = subprocess.Popen(['beeline', '-u', self.sparkJdbcUrl + user,
                                   '--silent=true', '-e', query],
@@ -111,7 +111,7 @@ class DbTestSuite(SparkRangerTestSuite):
     def setUp(self):
         sqls = map(lambda db: 'DROP DATABASE IF EXISTS ' + db + ' CASCADE', dbs + [testdb])
         statements = ';'.join(sqls)
-        cmd = 'beeline --silent=true -u "{}" -e \'{}\''
+        cmd = 'beeline --silent=true -u "{0}" -e \'{1}\''
         os.system(cmd.format(hiveJdbcUrl, statements))
 
     def test_00_show(self):
@@ -143,36 +143,36 @@ class TableTestSuite(SparkRangerTestSuite):
 
     def setUp(self):
         sqls = [
-            'DROP DATABASE IF EXISTS {} CASCADE',
-            'CREATE DATABASE {}',
-            'CREATE TABLE {}.t_full (a int, b int)',
-            'CREATE TABLE {}.t_no (a int, b int)',
-            'CREATE TABLE {}.t_partial (a int, b int)',
-            'CREATE TABLE {}.t_select (a int, b int)',
-            'CREATE TABLE {}.t_update (a int, b int)',
-            'CREATE TABLE {}.t_create (a int, b int)',
-            'CREATE TABLE {}.t_drop (a int, b int)',
-            'CREATE TABLE {}.t_alter (a int, b int)',
-            'CREATE TABLE {}.t_index (a int, b int)',
-            'CREATE TABLE {}.t_lock (a int, b int)',
-            'CREATE TABLE {}.t_mask_and_filter (name STRING, gender STRING)',
-            'INSERT INTO {}.t_full VALUES(1, 2)',
-            'INSERT INTO {}.t_no VALUES(1, 2)',
-            'INSERT INTO {}.t_partial VALUES(1, 2)',
-            'INSERT INTO {}.t_select VALUES(1, 2)',
-            'INSERT INTO {}.t_update VALUES(1, 2)',
-            'INSERT INTO {}.t_create VALUES(1, 2)',
-            'INSERT INTO {}.t_drop VALUES(1, 2)',
-            'INSERT INTO {}.t_alter VALUES(1, 2)',
-            'INSERT INTO {}.t_index VALUES(1, 2)',
-            'INSERT INTO {}.t_lock VALUES(1, 2)',
-            'INSERT INTO {}.t_mask_and_filter VALUES("Barack Obama", "M")',
-            'INSERT INTO {}.t_mask_and_filter VALUES("Michelle Obama", "F")',
-            'INSERT INTO {}.t_mask_and_filter VALUES("Hilary Clinton", "F")',
-            'INSERT INTO {}.t_mask_and_filter VALUES("Donald Trump", "M")',
+            'DROP DATABASE IF EXISTS {0} CASCADE',
+            'CREATE DATABASE {0}',
+            'CREATE TABLE {0}.t_full (a int, b int)',
+            'CREATE TABLE {0}.t_no (a int, b int)',
+            'CREATE TABLE {0}.t_partial (a int, b int)',
+            'CREATE TABLE {0}.t_select (a int, b int)',
+            'CREATE TABLE {0}.t_update (a int, b int)',
+            'CREATE TABLE {0}.t_create (a int, b int)',
+            'CREATE TABLE {0}.t_drop (a int, b int)',
+            'CREATE TABLE {0}.t_alter (a int, b int)',
+            'CREATE TABLE {0}.t_index (a int, b int)',
+            'CREATE TABLE {0}.t_lock (a int, b int)',
+            'CREATE TABLE {0}.t_mask_and_filter (name STRING, gender STRING)',
+            'INSERT INTO {0}.t_full VALUES(1, 2)',
+            'INSERT INTO {0}.t_no VALUES(1, 2)',
+            'INSERT INTO {0}.t_partial VALUES(1, 2)',
+            'INSERT INTO {0}.t_select VALUES(1, 2)',
+            'INSERT INTO {0}.t_update VALUES(1, 2)',
+            'INSERT INTO {0}.t_create VALUES(1, 2)',
+            'INSERT INTO {0}.t_drop VALUES(1, 2)',
+            'INSERT INTO {0}.t_alter VALUES(1, 2)',
+            'INSERT INTO {0}.t_index VALUES(1, 2)',
+            'INSERT INTO {0}.t_lock VALUES(1, 2)',
+            'INSERT INTO {0}.t_mask_and_filter VALUES("Barack Obama", "M")',
+            'INSERT INTO {0}.t_mask_and_filter VALUES("Michelle Obama", "F")',
+            'INSERT INTO {0}.t_mask_and_filter VALUES("Hilary Clinton", "F")',
+            'INSERT INTO {0}.t_mask_and_filter VALUES("Donald Trump", "M")',
         ]
         statements = ';'.join(map(lambda x: x.format(testdb), sqls))
-        cmd = 'beeline --silent=true -u "{}" -e \'{}\''
+        cmd = 'beeline --silent=true -u "{0}" -e \'{1}\''
         os.system(cmd.format(hiveJdbcUrl, statements))
 
     def test_00_show(self):
