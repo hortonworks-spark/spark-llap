@@ -1,0 +1,77 @@
+{
+   "policies":[
+      {
+         "service":"cl1_hive",
+         "name":"spark_system",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "default"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "tmp_*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"all",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":61,
+         "isEnabled":true,
+         "version":2
+      }
+  ],
+   "startIndex":0,
+   "pageSize":0,
+   "totalCount":0,
+   "resultSize":0,
+   "queryTimeMS":1490155345618
+}
