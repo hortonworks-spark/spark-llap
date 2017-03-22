@@ -1,0 +1,621 @@
+{
+   "policies":[
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_full",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_full"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"all",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":81,
+         "isEnabled":true,
+         "version":1
+      },
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_partial",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_partial"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "t_full*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"all",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":91,
+         "isEnabled":true,
+         "version":1
+      },
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_select",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_select"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"select",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":101,
+         "isEnabled":true,
+         "version":1
+      },
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_update",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_update"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"update",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":111,
+         "isEnabled":true,
+         "version":1
+      },
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_create",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_create"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"create",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":121,
+         "isEnabled":true,
+         "version":2
+      },
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_drop",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_drop"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"drop",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":131,
+         "isEnabled":true,
+         "version":1
+      },
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_alter",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_alter"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"alter",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":141,
+         "isEnabled":true,
+         "version":1
+      },
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_index",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_index"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"index",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":151,
+         "isEnabled":true,
+         "version":1
+      },
+      {
+         "service":"cl1_hive",
+         "name":"spark_db_lock",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "database":{
+               "values":[
+                  "db_lock"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "column":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            },
+            "table":{
+               "values":[
+                  "*"
+               ],
+               "isExcludes":false,
+               "isRecursive":false
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"lock",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":161,
+         "isEnabled":true,
+         "version":1
+      }
+   ],
+   "startIndex":0,
+   "pageSize":0,
+   "totalCount":0,
+   "resultSize":0,
+   "queryTimeMS":1490155345618
+}
