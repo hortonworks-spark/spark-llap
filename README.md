@@ -1,3 +1,4 @@
+
 # Apache Spark&trade; connector for Apache Hive&trade; LLAP
 
 A library to load data into Apache Spark&trade; SQL DataFrames from
