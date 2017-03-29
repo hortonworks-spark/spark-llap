@@ -1,0 +1,173 @@
+From f630837de380004d3e8044316f5f22c3db723edd Mon Sep 17 00:00:00 2001
+From: Dongjoon Hyun <dongjoon@apache.org>
+Date: Tue, 24 Jan 2017 21:10:50 -0800
+Subject: [PATCH] SPARK-LLAP-RANGER Integration
+
+---
+ .../apache/spark/sql/internal/StaticSQLConf.scala  |  5 ++++
+ .../scala/org/apache/spark/sql/SparkSession.scala  | 27 ++++++++++++++++++++--
+ .../apache/spark/sql/internal/SharedState.scala    | 10 ++++++--
+ .../hive/thriftserver/SparkSQLSessionManager.scala |  1 +
+ .../apache/spark/sql/hive/HiveSessionState.scala   |  9 ++++++++
+ .../execution/CreateHiveTableAsSelectCommand.scala |  7 ++++--
+ 6 files changed, 53 insertions(+), 6 deletions(-)
+
+diff --git a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
+index 52ca17414e..fb593df056 100644
+--- a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
++++ b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
+@@ -49,6 +49,11 @@ object StaticSQLConf {
+     .checkValues(Set("hive", "in-memory"))
+     .createWithDefault("in-memory")
+ 
++  val LLAP_ENABLED = buildConf("spark.sql.hive.llap")
++    .internal()
++    .booleanConf
++    .createWithDefault(false)
++
+   val GLOBAL_TEMP_DATABASE = buildConf("spark.sql.globalTempDatabase")
+     .internal()
+     .stringConf
+diff --git a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+index f3dde480ea..54e7240a3b 100644
+--- a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
++++ b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+@@ -41,7 +41,7 @@ import org.apache.spark.sql.execution._
+ import org.apache.spark.sql.execution.datasources.LogicalRelation
+ import org.apache.spark.sql.execution.ui.SQLListener
+ import org.apache.spark.sql.internal.{CatalogImpl, SessionState, SharedState}
+-import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
++import org.apache.spark.sql.internal.StaticSQLConf.{CATALOG_IMPLEMENTATION, LLAP_ENABLED}
+ import org.apache.spark.sql.sources.BaseRelation
+ import org.apache.spark.sql.streaming._
+ import org.apache.spark.sql.types.{DataType, LongType, StructType}
+@@ -957,10 +957,12 @@ object SparkSession {
+   private val defaultSession = new AtomicReference[SparkSession]
+ 
+   private val HIVE_SESSION_STATE_CLASS_NAME = "org.apache.spark.sql.hive.HiveSessionState"
++  private val LLAP_SESSION_STATE_CLASS_NAME = "org.apache.spark.sql.hive.llap.LlapSessionState"
+ 
+   private def sessionStateClassName(conf: SparkConf): String = {
+     conf.get(CATALOG_IMPLEMENTATION) match {
+-      case "hive" => HIVE_SESSION_STATE_CLASS_NAME
++      case "hive" =>
++        if (isLLAPEnabled(conf)) LLAP_SESSION_STATE_CLASS_NAME else HIVE_SESSION_STATE_CLASS_NAME
+       case "in-memory" => classOf[SessionState].getCanonicalName
+     }
+   }
+@@ -995,4 +997,25 @@ object SparkSession {
+     }
+   }
+ 
++  /**
++   * Return true if `spark.sql.hive.llap=true` and classes can be loaded.
++   * On class loading errors, it will fails.
++   * Return false if `spark.sql.hive.llap=false`.
++   */
++  private[spark] def isLLAPEnabled(conf: SparkConf): Boolean = {
++    if (conf.get(LLAP_ENABLED.key, "false") == "true") {
++      try {
++        Utils.classForName(LLAP_SESSION_STATE_CLASS_NAME)
++        Utils.classForName("org.apache.hadoop.hive.conf.HiveConf")
++        true
++      } catch {
++        case _: ClassNotFoundException | _: NoClassDefFoundError =>
++          throw new IllegalArgumentException(
++            "Unable to instantiate SparkSession with LLAP support because " +
++              "LLAP or Hive classes are not found.")
++      }
++    } else {
++      false
++    }
++  }
+ }
+diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
+index 8de95fe64e..386ab90495 100644
+--- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
++++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
+@@ -141,10 +141,16 @@ private[sql] class SharedState(val sparkContext: SparkContext) extends Logging {
+ object SharedState {
+ 
+   private val HIVE_EXTERNAL_CATALOG_CLASS_NAME = "org.apache.spark.sql.hive.HiveExternalCatalog"
+-
++  private val LLAP_EXTERNAL_CATALOG_CLASS_NAME =
++    "org.apache.spark.sql.hive.llap.LlapExternalCatalog"
+   private def externalCatalogClassName(conf: SparkConf): String = {
+     conf.get(CATALOG_IMPLEMENTATION) match {
+-      case "hive" => HIVE_EXTERNAL_CATALOG_CLASS_NAME
++      case "hive" =>
++        if (SparkSession.isLLAPEnabled(conf)) {
++          LLAP_EXTERNAL_CATALOG_CLASS_NAME
++        } else {
++          HIVE_EXTERNAL_CATALOG_CLASS_NAME
++        }
+       case "in-memory" => classOf[InMemoryCatalog].getCanonicalName
+     }
+   }
+diff --git a/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLSessionManager.scala b/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLSessionManager.scala
+index 226b7e175a..326cb8390a 100644
+--- a/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLSessionManager.scala
++++ b/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLSessionManager.scala
+@@ -78,6 +78,7 @@ private[hive] class SparkSQLSessionManager(hiveServer: HiveServer2, sqlContext:
+     } else {
+       sqlContext.newSession()
+     }
++    ctx.sessionState.asInstanceOf[HiveSessionState].setUser(session.getUserName())
+     ctx.setConf("spark.sql.hive.version", HiveUtils.hiveExecutionVersion)
+     if (sessionConf != null && sessionConf.containsKey("use:database")) {
+       ctx.sql(s"use ${sessionConf.get("use:database")}")
+diff --git a/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveSessionState.scala b/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveSessionState.scala
+index 6d4fe1a941..f286b0df18 100644
+--- a/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveSessionState.scala
++++ b/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveSessionState.scala
+@@ -147,4 +147,13 @@ private[hive] class HiveSessionState(sparkSession: SparkSession)
+       "spark.sql.hive.thriftServer.singleSession", defaultValue = false)
+   }
+ 
++  private var userName = System.getProperty("user.name")
++
++  def setUser(user: String): Unit = {
++    userName = user
++  }
++
++  def getUser(): String = {
++    userName
++  }
+ }
+diff --git a/sql/hive/src/main/scala/org/apache/spark/sql/hive/execution/CreateHiveTableAsSelectCommand.scala b/sql/hive/src/main/scala/org/apache/spark/sql/hive/execution/CreateHiveTableAsSelectCommand.scala
+index cac43597ae..8ad83dac36 100644
+--- a/sql/hive/src/main/scala/org/apache/spark/sql/hive/execution/CreateHiveTableAsSelectCommand.scala
++++ b/sql/hive/src/main/scala/org/apache/spark/sql/hive/execution/CreateHiveTableAsSelectCommand.scala
+@@ -21,9 +21,11 @@ import scala.util.control.NonFatal
+ 
+ import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
+ import org.apache.spark.sql.catalyst.catalog.CatalogTable
+-import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoTable, LogicalPlan, OverwriteOptions}
++import org.apache.spark.sql.catalyst.plans.logical._
+ import org.apache.spark.sql.execution.command.RunnableCommand
++import org.apache.spark.sql.execution.datasources.LogicalRelation
+ import org.apache.spark.sql.hive.MetastoreRelation
++import org.apache.spark.sql.sources.InsertableRelation
+ 
+ 
+ /**
+@@ -45,7 +47,7 @@ case class CreateHiveTableAsSelectCommand(
+   override def innerChildren: Seq[LogicalPlan] = Seq(query)
+ 
+   override def run(sparkSession: SparkSession): Seq[Row] = {
+-    lazy val metastoreRelation: MetastoreRelation = {
++    lazy val metastoreRelation = {
+       import org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+       import org.apache.hadoop.hive.serde2.`lazy`.LazySimpleSerDe
+       import org.apache.hadoop.io.Text
+@@ -74,6 +76,7 @@ case class CreateHiveTableAsSelectCommand(
+       // Get the Metastore Relation
+       sparkSession.sessionState.catalog.lookupRelation(tableIdentifier) match {
+         case r: MetastoreRelation => r
++        case SubqueryAlias(_, r @ LogicalRelation(_: InsertableRelation, _, _), _) => r
+       }
+     }
+     // TODO ideally, we should get the output data ready first and then
+-- 
+2.12.2
+
