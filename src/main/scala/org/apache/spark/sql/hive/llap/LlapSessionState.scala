@@ -122,7 +122,7 @@ object LlapSessionState {
     } else if (sparkSession.sparkContext.conf.contains(HIVESERVER2_JDBC_URL_PRINCIPAL.key)) {
       // 2. YARN Client mode for kerberized clusters
       s"${sparkSession.conf.get(HIVESERVER2_JDBC_URL.key)};" +
-        sparkSession.conf.get(HIVESERVER2_JDBC_URL_PRINCIPAL.key)
+        s"principal=${sparkSession.conf.get(HIVESERVER2_JDBC_URL_PRINCIPAL.key)}"
     } else {
       // 3. For non-kerberized cluster
       sparkSession.conf.get(HIVESERVER2_JDBC_URL.key)
