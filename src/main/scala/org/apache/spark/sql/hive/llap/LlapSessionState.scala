@@ -25,7 +25,7 @@ import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.hive.{HiveContext, HiveSessionState}
+import org.apache.spark.sql.hive.HiveSessionState
 import org.apache.spark.sql.internal.SQLConf.SQLConfigBuilder
 
 /**
@@ -50,10 +50,16 @@ class LlapSessionState(sparkSession: SparkSession)
       newHadoopConf())
   }
 
+  /**
+   * Return connection.
+   */
   def connection: Connection = {
     DefaultJDBCWrapper.getConnector(None, getConnectionUrl(), getUserString())
   }
 
+  /**
+   * Return connection URL (with replaced proxy user name if exists).
+   */
   def getConnectionUrl(): String = {
     var userString = getUserString()
     if (userString == null) {
@@ -76,16 +82,51 @@ class LlapSessionState(sparkSession: SparkSession)
 }
 
 object LlapSessionState {
-  val HIVESERVER2_URL = SQLConfigBuilder("spark.sql.hive.hiveserver2.url")
-    .doc("HiveServer2 URL.")
-    .stringConf
-    .createWithDefault("")
+  val HIVESERVER2_JDBC_URL =
+    SQLConfigBuilder("spark.sql.hive.hiveserver2.jdbc.url")
+      .doc("HiveServer2 JDBC URL.")
+      .stringConf
+      .createWithDefault("")
 
+  val HIVESERVER2_JDBC_URL_PRINCIPAL =
+    SQLConfigBuilder("spark.sql.hive.hiveserver2.jdbc.url.principal")
+      .doc("HiveServer2 JDBC Principal.")
+      .stringConf
+      .createWithDefault("")
+
+  val HIVESERVER2_CREDENTIAL_ENABLED =
+    SQLConfigBuilder("spark.yarn.security.credentials.hiveserver2.enabled")
+      .doc("When true, HiveServer2 credential provider is enabled.")
+      .booleanConf
+      .createWithDefault(false)
+
+  /**
+   * For the given HiveServer2 JDBC URLs, attach the postfix strings if needed.
+   *
+   * For kerberized clusters,
+   *
+   * 1. YARN cluster mode: ";auth=delegationToken"
+   * 2. YARN client mode: ";principal=hive/_HOST@EXAMPLE.COM"
+   *
+   * Non-kerberied clusters,
+   * 3. Use the given URLs.
+   */
   def getConnectionUrlFromConf(sparkSession: SparkSession): String = {
-    if (!sparkSession.sparkContext.conf.contains(HIVESERVER2_URL.key)) {
-      throw new Exception("Spark conf does not contain config " + HIVESERVER2_URL.key)
+    if (!sparkSession.conf.contains(HIVESERVER2_JDBC_URL.key)) {
+      throw new Exception("Spark conf does not contain config " + HIVESERVER2_JDBC_URL.key)
     }
-    sparkSession.sparkContext.conf.get(HIVESERVER2_URL.key)
+
+    if (sparkSession.conf.get(HIVESERVER2_CREDENTIAL_ENABLED, false)) {
+      // 1. YARN Cluster mode for kerberized clusters
+      s"${sparkSession.conf.get(HIVESERVER2_JDBC_URL.key)};auth=delegationToken"
+    } else if (sparkSession.sparkContext.conf.contains(HIVESERVER2_JDBC_URL_PRINCIPAL.key)) {
+      // 2. YARN Client mode for kerberized clusters
+      s"${sparkSession.conf.get(HIVESERVER2_JDBC_URL.key)};" +
+        sparkSession.conf.get(HIVESERVER2_JDBC_URL_PRINCIPAL.key)
+    } else {
+      // 3. For non-kerberized cluster
+      sparkSession.conf.get(HIVESERVER2_JDBC_URL.key)
+    }
   }
 
   private[llap] lazy val getUserMethod = findGetUserMethod()
