@@ -98,7 +98,11 @@ private[spark] class LlapExternalCatalog(
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
     val ifNotExistsString = if (ignoreIfExists) "IF NOT EXISTS" else ""
-    stmt.executeUpdate(s"CREATE DATABASE $ifNotExistsString `${dbDefinition.name}`")
+    try {
+      stmt.executeUpdate(s"CREATE DATABASE $ifNotExistsString `${dbDefinition.name}`")
+    } finally {
+      stmt.close()
+    }
   }
 
   override def dropDatabase(
@@ -110,7 +114,11 @@ private[spark] class LlapExternalCatalog(
     val stmt = sessionState.connection.createStatement()
     val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
     val cascadeString = if (cascade) "CASCADE" else ""
-    stmt.executeUpdate(s"DROP DATABASE $ifExistsString `$db` $cascadeString")
+    try {
+      stmt.executeUpdate(s"DROP DATABASE $ifExistsString `$db` $cascadeString")
+    } finally {
+      stmt.close()
+    }
   }
 
   override def databaseExists(db: String): Boolean = {
@@ -118,9 +126,14 @@ private[spark] class LlapExternalCatalog(
     if (sparkSession.isDefined) {
       val sessionState = sparkSession.get.sessionState.asInstanceOf[LlapSessionState]
       val stmt = sessionState.connection.createStatement()
-      val rs = stmt.executeQuery(s"SHOW DATABASES LIKE '$db'")
-      val isExist = rs.next()
-      rs.close()
+      var isExist = false
+      try {
+        val rs = stmt.executeQuery(s"SHOW DATABASES LIKE '$db'")
+        isExist = rs.next()
+        rs.close()
+      } finally {
+        stmt.close()
+      }
       isExist
     } else {
       // This happens only once at the initialization of SparkSession.
@@ -141,12 +154,16 @@ private[spark] class LlapExternalCatalog(
   override def listDatabases(pattern: String): Seq[String] = withClient {
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
-    val rs = stmt.executeQuery(s"SHOW DATABASES LIKE '$pattern'")
     val databases = new ArrayBuffer[String]()
-    while (rs.next()) {
-      databases += rs.getString("database_name")
+    try {
+      val rs = stmt.executeQuery(s"SHOW DATABASES LIKE '$pattern'")
+      while (rs.next()) {
+        databases += rs.getString("database_name")
+      }
+      rs.close()
+    } finally {
+      stmt.close()
     }
-    rs.close()
     databases
   }
 
@@ -170,7 +187,11 @@ private[spark] class LlapExternalCatalog(
         SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
       val stmt = sessionState.connection.createStatement()
       // Check the privilege by creating a dummy table with the given name.
-      stmt.executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT)")
+      try {
+        stmt.executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT)")
+      } finally {
+        stmt.close()
+      }
       super.dropTable(db, tableDefinition.identifier.table, true, true)
       super.createTable(tableDefinition, ignoreIfExists)
     }
@@ -191,7 +212,11 @@ private[spark] class LlapExternalCatalog(
       val stmt = sessionState.connection.createStatement()
       val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
       val purgeString = if (purge) "PURGE" else ""
-      stmt.executeUpdate(s"DROP TABLE $ifExistsString $db.$table $purgeString")
+      try {
+        stmt.executeUpdate(s"DROP TABLE $ifExistsString $db.$table $purgeString")
+      } finally {
+        stmt.close()
+      }
     }
   }
 
@@ -264,14 +289,22 @@ private[spark] class LlapExternalCatalog(
     requireDbExists(db)
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
-    stmt.executeUpdate(s"ALTER TABLE $db.$oldName RENAME TO $db.$newName")
+    try {
+      stmt.executeUpdate(s"ALTER TABLE $db.$oldName RENAME TO $db.$newName")
+    } finally {
+      stmt.close()
+    }
   }
 
   override def alterTable(tableDefinition: CatalogTable): Unit = {
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
     val tableName = tableDefinition.identifier.quotedString
-    stmt.executeUpdate(s"ALTER TABLE $tableName TOUCH")
+    try {
+      stmt.executeUpdate(s"ALTER TABLE $tableName TOUCH")
+    } finally {
+      stmt.close()
+    }
     super.alterTable(tableDefinition)
   }
 
@@ -282,7 +315,11 @@ private[spark] class LlapExternalCatalog(
       ignoreIfExists: Boolean): Unit = {
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
-    stmt.executeUpdate(s"ALTER TABLE `$db`.`$table` TOUCH")
+    try {
+      stmt.executeUpdate(s"ALTER TABLE `$db`.`$table` TOUCH")
+    } finally {
+      stmt.close()
+    }
     super.createPartitions(db, table, parts, ignoreIfExists)
   }
 
@@ -300,8 +337,12 @@ private[spark] class LlapExternalCatalog(
     val partitionString =
       parts.map(_.map{ case (k, v) => s"$k=$v" }.mkString("PARTITION (", ", ", ")")).mkString(", ")
     val purgeString = if (purge) "PURGE" else ""
-    stmt.executeUpdate(
-      s"ALTER TABLE `$db`.`$table` DROP $ifExistsString $partitionString $purgeString")
+    try {
+      stmt.executeUpdate(
+        s"ALTER TABLE `$db`.`$table` DROP $ifExistsString $partitionString $purgeString")
+    } finally {
+      stmt.close()
+    }
   }
 
   override def renamePartitions(
@@ -311,7 +352,11 @@ private[spark] class LlapExternalCatalog(
       newSpecs: Seq[CatalogTypes.TablePartitionSpec]): Unit = withClient {
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
-    stmt.executeUpdate(s"ALTER TABLE `$db`.`$table` TOUCH")
+    try {
+      stmt.executeUpdate(s"ALTER TABLE `$db`.`$table` TOUCH")
+    } finally {
+      stmt.close()
+    }
     super.renamePartitions(db, table, specs, newSpecs)
   }
 
@@ -321,7 +366,11 @@ private[spark] class LlapExternalCatalog(
       newParts: Seq[CatalogTablePartition]): Unit = withClient {
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val stmt = sessionState.connection.createStatement()
-    stmt.executeUpdate(s"ALTER TABLE `$db`.`$table` TOUCH")
+    try {
+      stmt.executeUpdate(s"ALTER TABLE `$db`.`$table` TOUCH")
+    } finally {
+      stmt.close()
+    }
     super.alterPartitions(db, table, newParts)
   }
 }
