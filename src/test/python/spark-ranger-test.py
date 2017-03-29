@@ -60,6 +60,7 @@ class SparkRangerTestSuite(unittest.TestCase):
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
             out, err = p.communicate()
+            p.terminate()
         except:
             pass
         finally:
