@@ -1,6 +1,6 @@
 
 name := "spark-llap"
-version := "1.0.9-2.1.1-rc2"
+version := "1.0.10-2.1.1-rc2"
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
@@ -30,6 +30,8 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force(),
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
+  "jline" % "jline" % "2.12.1" % "compile",
 
   "org.scala-lang" % "scala-library" % scalaVersion.value % "compile",
   "org.scalatest" %% "scalatest" % scalatestVersion % "test",
