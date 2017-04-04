@@ -17,9 +17,7 @@
 
 package org.apache.spark.sql.hive.llap
 
-import java.io.PrintStream
 import java.sql.Connection
-import java.util.{Map => JMap}
 import java.util.regex.Pattern
 
 import scala.reflect.runtime.{universe => ru}
@@ -27,22 +25,16 @@ import scala.reflect.runtime.{universe => ru}
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.SQLConf
-import org.apache.spark.sql.SQLConf.SQLConfEntry.stringConf
+import org.apache.spark.sql.SQLConf.SQLConfEntry.{booleanConf, stringConf}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.OverrideCatalog
-import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.catalyst.plans.logical.Subquery
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Subquery}
 import org.apache.spark.sql.execution.CacheManager
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.datasources.ResolvedDataSource
+import org.apache.spark.sql.execution.datasources.{LogicalRelation, ResolvedDataSource}
 import org.apache.spark.sql.execution.ui.SQLListener
-import org.apache.spark.sql.hive.HiveContext
-import org.apache.spark.sql.hive.HiveMetastoreCatalog
-import org.apache.spark.sql.hive.MetastoreRelation
-import org.apache.spark.sql.hive.client.{ClientInterface, ClientWrapper, HiveDatabase, HiveTable}
+import org.apache.spark.sql.hive.{HiveContext, HiveMetastoreCatalog, MetastoreRelation}
+import org.apache.spark.sql.hive.client.{ClientInterface, ClientWrapper}
 
 class LlapContext(sc: SparkContext,
     cacheManager: CacheManager,
@@ -157,20 +149,52 @@ class LlapCatalog(override val client: ClientInterface, hive: LlapContext)
 }
 
 object LlapContext {
-  val HIVESERVER2_URL = stringConf(
-    key = "spark.sql.hive.hiveserver2.url",
+  val HIVESERVER2_JDBC_URL = stringConf(
+    key = "spark.sql.hive.hiveserver2.jdbc.url",
     defaultValue = None,
-    doc = "HiveServer2 URL.")
+    doc = "HiveServer2 JDBC URL.")
+
+  val HIVESERVER2_JDBC_URL_PRINCIPAL = stringConf(
+    key = "spark.sql.hive.hiveserver2.jdbc.url.principal",
+    defaultValue = None,
+    doc = "HiveServer2 JDBC Principal.")
+
+  val HIVESERVER2_CREDENTIAL_ENABLED = booleanConf(
+    key = "spark.yarn.security.credentials.hiveserver2.enabled",
+    defaultValue = Some(false),
+    doc = "When true, HiveServer2 credential provider is enabled.")
+
+  /**
+   * For the given HiveServer2 JDBC URLs, attach the postfix strings if needed.
+   *
+   * For kerberized clusters,
+   *
+   * 1. YARN cluster mode: ";auth=delegationToken"
+   * 2. YARN client mode: ";principal=hive/_HOST@EXAMPLE.COM"
+   *
+   * Non-kerberied clusters,
+   * 3. Use the given URLs.
+   */
+  def getConnectionUrlFromConf(sparkContext: SparkContext): String = {
+    if (!sparkContext.conf.contains(HIVESERVER2_JDBC_URL.key)) {
+      throw new Exception("Spark conf does not contain config " + HIVESERVER2_JDBC_URL.key)
+    }
+
+    if (sparkContext.conf.getBoolean(HIVESERVER2_CREDENTIAL_ENABLED.key, false)) {
+      // 1. YARN Cluster mode for kerberized clusters
+      s"${sparkContext.conf.get(HIVESERVER2_JDBC_URL.key)};auth=delegationToken"
+    } else if (sparkContext.conf.contains(HIVESERVER2_JDBC_URL_PRINCIPAL.key)) {
+      // 2. YARN Client mode for kerberized clusters
+      s"${sparkContext.conf.get(HIVESERVER2_JDBC_URL.key)};" +
+        s"principal=${sparkContext.conf.get(HIVESERVER2_JDBC_URL_PRINCIPAL.key)}"
+    } else {
+      // 3. For non-kerberized cluster
+      sparkContext.conf.get(HIVESERVER2_JDBC_URL.key)
+    }
+  }
 
   def getUser(): String = {
     System.getProperty("hive_user", System.getProperty("user.name"))
-  }
-
-  def getConnectionUrlFromConf(sparkContext: SparkContext): String = {
-    if (!sparkContext.conf.contains(HIVESERVER2_URL.key)) {
-      throw new Exception("Spark conf does not contain config " + HIVESERVER2_URL.key)
-    }
-    sparkContext.conf.get(HIVESERVER2_URL.key)
   }
 
   private[llap] val getUserMethod = findGetUserMethod()
