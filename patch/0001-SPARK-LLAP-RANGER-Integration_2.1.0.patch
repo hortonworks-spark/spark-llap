@@ -1,16 +1,20 @@
-From 90977153c36a0351e54c5fd8ff8f620176e02c49 Mon Sep 17 00:00:00 2001
+From 65adfc925263f79366631ebac9b780a05031ff6c Mon Sep 17 00:00:00 2001
 From: Dongjoon Hyun <dongjoon@apache.org>
 Date: Tue, 24 Jan 2017 21:10:50 -0800
 Subject: [PATCH] SPARK-LLAP-RANGER Integration
 
 ---
- .../scala/org/apache/spark/sql/SparkSession.scala  | 27 ++++++++++++++++++++--
- .../org/apache/spark/sql/internal/SQLConf.scala    |  5 ++++
- .../apache/spark/sql/internal/SharedState.scala    | 10 ++++++--
- .../hive/thriftserver/SparkSQLSessionManager.scala |  1 +
- .../apache/spark/sql/hive/HiveSessionState.scala   |  9 ++++++++
- .../execution/CreateHiveTableAsSelectCommand.scala |  7 ++++--
- 6 files changed, 53 insertions(+), 6 deletions(-)
+ .../scala/org/apache/spark/sql/SparkSession.scala  |  27 +++++-
+ .../org/apache/spark/sql/internal/SQLConf.scala    |   5 +
+ .../apache/spark/sql/internal/SharedState.scala    |  10 +-
+ .../hive/thriftserver/SparkSQLSessionManager.scala |   1 +
+ .../apache/spark/sql/hive/HiveSessionState.scala   |   9 ++
+ .../execution/CreateHiveTableAsSelectCommand.scala |   7 +-
+ ....deploy.yarn.security.ServiceCredentialProvider |   1 +
+ .../security/ConfigurableCredentialManager.scala   |   2 +-
+ .../security/HiveServer2CredentialProvider.scala   | 107 +++++++++++++++++++++
+ 9 files changed, 162 insertions(+), 7 deletions(-)
+ create mode 100644 yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
 
 diff --git a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
 index f3dde480ea..54e7240a3b 100644
@@ -66,10 +70,10 @@ index f3dde480ea..54e7240a3b 100644
 +  }
  }
 diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
-index 8d493e0d56..db3f0f0ae5 100644
+index 5454be4c01..6bea7ab32b 100644
 --- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
 +++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
-@@ -960,6 +960,11 @@ object StaticSQLConf {
+@@ -942,6 +942,11 @@ object StaticSQLConf {
      .checkValues(Set("hive", "in-memory"))
      .createWithDefault("in-memory")
  
@@ -168,6 +172,141 @@ index cac43597ae..8ad83dac36 100644
        }
      }
      // TODO ideally, we should get the output data ready first and then
+diff --git a/yarn/src/main/resources/META-INF/services/org.apache.spark.deploy.yarn.security.ServiceCredentialProvider b/yarn/src/main/resources/META-INF/services/org.apache.spark.deploy.yarn.security.ServiceCredentialProvider
+index 22ead56d23..d63d5ce911 100644
+--- a/yarn/src/main/resources/META-INF/services/org.apache.spark.deploy.yarn.security.ServiceCredentialProvider
++++ b/yarn/src/main/resources/META-INF/services/org.apache.spark.deploy.yarn.security.ServiceCredentialProvider
+@@ -1,3 +1,4 @@
+ org.apache.spark.deploy.yarn.security.HDFSCredentialProvider
+ org.apache.spark.deploy.yarn.security.HBaseCredentialProvider
+ org.apache.spark.deploy.yarn.security.HiveCredentialProvider
++org.apache.spark.deploy.yarn.security.HiveServer2CredentialProvider
+diff --git a/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala b/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
+index c4c07b4930..b6d858a23a 100644
+--- a/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
++++ b/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
+@@ -58,7 +58,7 @@ private[yarn] final class ConfigurableCredentialManager(
+               s"using ${providerEnabledConfig.format(p.serviceName)} instead")
+             c
+           }
+-        }.map(_.toBoolean).getOrElse(true)
++        }.map(_.toBoolean).getOrElse { if (p.serviceName == "hiveserver2") false else true }
+     }.map { p => (p.serviceName, p) }.toMap
+   }
+ 
+diff --git a/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala b/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
+new file mode 100644
+index 0000000000..32802ddd56
+--- /dev/null
++++ b/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
+@@ -0,0 +1,107 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one or more
++ * contributor license agreements.  See the NOTICE file distributed with
++ * this work for additional information regarding copyright ownership.
++ * The ASF licenses this file to You under the Apache License, Version 2.0
++ * (the "License"); you may not use this file except in compliance with
++ * the License.  You may obtain a copy of the License at
++ *
++ *    http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.spark.deploy.yarn.security
++
++import java.lang.reflect.UndeclaredThrowableException
++import java.security.PrivilegedExceptionAction
++import java.sql.{Connection, DriverManager}
++
++import scala.reflect.runtime.universe
++import scala.util.control.NonFatal
++
++import org.apache.hadoop.conf.Configuration
++import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier
++import org.apache.hadoop.io.Text
++import org.apache.hadoop.security.{Credentials, UserGroupInformation}
++import org.apache.hadoop.security.token.Token
++
++import org.apache.spark.SparkConf
++import org.apache.spark.internal.Logging
++import org.apache.spark.util.Utils
++
++private[security] class HiveServer2CredentialProvider extends ServiceCredentialProvider
++    with Logging {
++
++  override def serviceName: String = "hiveserver2"
++
++  override def obtainCredentials(
++      hadoopConf: Configuration,
++      sparkConf: SparkConf,
++      creds: Credentials): Option[Long] = {
++
++    var con: Connection = null
++    try {
++      Utils.classForName("org.apache.hive.jdbc.HiveDriver")
++
++      val currentUser = UserGroupInformation.getCurrentUser()
++      val userName = if (sparkConf.getBoolean(
++          "spark.yarn.security.credentials.hiveserver2.useShortUserName", true)) {
++        currentUser.getShortUserName
++      } else {
++        currentUser.getUserName
++      }
++
++      val hs2Url = sparkConf.get("spark.sql.hive.hiveserver2.jdbc.url")
++      val principal = sparkConf.get("spark.sql.hive.hiveserver2.jdbc.url.principal")
++      require(hs2Url != null, "spark.sql.hive.hiveserver2.jdbc.url is not configured.")
++      require(principal != null,
++        "spark.sql.hive.hiveserver2.jdbc.url.principal is not configured.")
++
++      val jdbcUrl = s"$hs2Url;principal=$principal"
++      logInfo(s"Getting HS2 delegation token for $userName via $jdbcUrl")
++
++      doAsRealUser {
++        con = DriverManager.getConnection(jdbcUrl)
++        val method = con.getClass.getMethod("getDelegationToken", classOf[String], classOf[String])
++        val tokenStr = method.invoke(con, userName, principal).asInstanceOf[String]
++        val token = new Token[DelegationTokenIdentifier]()
++        token.decodeFromUrlString(tokenStr)
++        creds.addToken(new Text("hive.jdbc.delegation.token"), token)
++        logInfo(s"Added HS2 delegation token for $userName via $jdbcUrl")
++      }
++    } catch {
++      case NonFatal(e) => logWarning(s"Failed to get HS2 delegation token", e)
++    } finally {
++      if (con != null) {
++        con.close()
++        con = null
++      }
++    }
++
++    None
++  }
++
++  /**
++   * Run some code as the real logged in user (which may differ from the current user, for
++   * example, when using proxying).
++   */
++  private def doAsRealUser[T](fn: => T): T = {
++    val currentUser = UserGroupInformation.getCurrentUser()
++    val realUser = Option(currentUser.getRealUser()).getOrElse(currentUser)
++
++    // For some reason the Scala-generated anonymous class ends up causing an
++    // UndeclaredThrowableException, even if you annotate the method with @throws.
++    try {
++      realUser.doAs(new PrivilegedExceptionAction[T]() {
++        override def run(): T = fn
++      })
++    } catch {
++      case e: UndeclaredThrowableException => throw Option(e.getCause()).getOrElse(e)
++    }
++  }
++}
 -- 
-2.11.0
+2.12.2
 
