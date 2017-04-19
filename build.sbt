@@ -92,6 +92,7 @@ libraryDependencies ++= Seq(
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
 dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
+dependencyOverrides += "io.netty" % "netty-all" % "4.0.42.Final"
 
 // Assembly rules for shaded JAR
 assemblyShadeRules in assembly := Seq(
@@ -111,7 +112,8 @@ assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.hadoop.hive.shims.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.thrift.**" -> "shadehive.@0").inAll,
 
-  ShadeRule.rename("org.apache.derby.**" -> "shadederby.@0").inAll
+  ShadeRule.rename("org.apache.derby.**" -> "shadederby.@0").inAll,
+  ShadeRule.rename("io.netty.**" -> "shadenetty.@0").inAll
 )
 test in assembly := {}
 assemblyMergeStrategy in assembly := {
