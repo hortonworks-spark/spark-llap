@@ -36,31 +36,23 @@ class LlapMetastoreCatalog(sparkSession: SparkSession)
       tableIdentifier: TableIdentifier,
       alias: Option[String] = None): LogicalPlan = {
     val qualifiedTableName = getQualifiedTableName(tableIdentifier)
+
+    // Use metastore catalog to lookup tables
     val catalog = sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog]
     val table = catalog.getTable(qualifiedTableName.database, qualifiedTableName.name)
 
-    // Use metastore catalog to lookup tables, then convert to our relations
-    val client = sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog].client
-    val qualifiedTable = MetastoreRelation(
-      qualifiedTableName.database, qualifiedTableName.name)(table, sparkSession)
-    val relation = alias.map(a => SubqueryAlias(a, qualifiedTable, None)).getOrElse(qualifiedTable)
-
     // Now convert to LlapRelation
-    val logicalRelation = relation match {
-      case MetastoreRelation(dbName, tabName) =>
-        val sessionState = sparkSession.sessionState.asInstanceOf[LlapSessionState]
-        LogicalRelation(
-          DataSource(
-            sparkSession = sparkSession,
-            className = "org.apache.spark.sql.hive.llap",
-            options = Map(
-              "table" -> (dbName + "." + tabName),
-              "url" -> sessionState.getConnectionUrl())
-          ).resolveRelation())
-      case _ => throw new Exception("Expected MetastoreRelation")
-    }
+    val sessionState = sparkSession.sessionState.asInstanceOf[LlapSessionState]
+    val logicalRelation = LogicalRelation(
+      DataSource(
+        sparkSession = sparkSession,
+        className = "org.apache.spark.sql.hive.llap",
+        options = Map(
+          "table" -> (qualifiedTableName.database + "." + qualifiedTableName.name),
+          "url" -> sessionState.getConnectionUrl())
+      ).resolveRelation())
 
-    val tableWithQualifiers = SubqueryAlias(tableIdentifier.table, logicalRelation, None)
+    val tableWithQualifiers = SubqueryAlias(qualifiedTableName.name, logicalRelation, None)
     alias.map(a => SubqueryAlias(a, tableWithQualifiers, None)).getOrElse(tableWithQualifiers)
   }
 }
