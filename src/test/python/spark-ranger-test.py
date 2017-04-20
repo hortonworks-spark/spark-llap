@@ -282,6 +282,10 @@ class TableTestSuite(SparkRangerTestSuite):
         self.execute('SELECT * FROM t_mask_and_filter', 'filter_1')
         self.execute('SELECT * FROM t_mask_and_filter', 'filter_2', 'hive')
 
+    def test_B0_alias(self):
+        self.execute('SELECT * FROM t_mask_and_filter t', 'alias_1')
+        self.execute('SELECT t.name a, t.gender b FROM t_mask_and_filter t', 'alias_2')
+        self.execute('SELECT t.gender g, count(*) cnt FROM t_mask_and_filter t GROUP BY t.gender', 'alias_3')
 
 
 
