@@ -16,6 +16,7 @@
  */
 package com.hortonworks.spark.sql.hive.llap
 
+import collection.JavaConverters._
 import org.apache.hadoop.hive.llap.{Schema, TypeDesc}
 import org.apache.hadoop.hive.llap.TypeDesc.Type
 import org.apache.hadoop.hive.serde2.io.{ByteWritable, DateWritable, DoubleWritable, HiveDecimalWritable,
@@ -28,7 +29,6 @@ import org.apache.spark.sql.Row
 object RowConverter {
 
   def llapRowToSparkRow(llapRow: org.apache.hadoop.hive.llap.Row, schema: Schema): Row = {
-    import collection.JavaConverters._
 
     Row.fromSeq({
       var idx = 0
@@ -40,29 +40,39 @@ object RowConverter {
     })
   }
 
-  def convertValue(value: Any, colType: TypeDesc): Any = {
-    try {
-      val t = colType.getType
-      t match {
-        case Type.BOOLEAN => value.asInstanceOf[BooleanWritable].get()
-        case Type.TINYINT => value.asInstanceOf[ByteWritable].get()
-        case Type.SMALLINT => value.asInstanceOf[ShortWritable].get()
-        case Type.INT => value.asInstanceOf[IntWritable].get()
-        case Type.BIGINT => value.asInstanceOf[LongWritable].get()
-        case Type.FLOAT => value.asInstanceOf[FloatWritable].get()
-        case Type.DOUBLE => value.asInstanceOf[DoubleWritable].get()
-        case Type.STRING => value.asInstanceOf[Text].toString()
-        case Type.CHAR => value.asInstanceOf[Text].toString()
-        case Type.VARCHAR => value.asInstanceOf[Text].toString()
-        case Type.DATE => value.asInstanceOf[DateWritable].get()
-        case Type.TIMESTAMP => value.asInstanceOf[TimestampWritable].getTimestamp()
-        case Type.BINARY => value.asInstanceOf[BytesWritable].getBytes()
-        case Type.DECIMAL =>
-          value.asInstanceOf[HiveDecimalWritable].getHiveDecimal().bigDecimalValue()
-        case _ => null
+  private def convertValue(value: Any, colType: TypeDesc): Any = {
+    val t = colType.getType
+    t match {
+      // The primitives should not require conversion
+      case Type.BOOLEAN   => value.asInstanceOf[Boolean]
+      case Type.TINYINT   => value.asInstanceOf[Byte]
+      case Type.SMALLINT  => value.asInstanceOf[Short]
+      case Type.INT       => value.asInstanceOf[Integer]
+      case Type.BIGINT    => value.asInstanceOf[Long]
+      case Type.FLOAT     => value.asInstanceOf[Float]
+      case Type.DOUBLE    => value.asInstanceOf[Double]
+      case Type.STRING    => value.asInstanceOf[String]
+      case Type.CHAR      => value.asInstanceOf[String]
+      case Type.VARCHAR   => value.asInstanceOf[String]
+      case Type.DATE      => value.asInstanceOf[java.sql.Date]
+      case Type.TIMESTAMP => value.asInstanceOf[java.sql.Timestamp]
+      case Type.BINARY    => value.asInstanceOf[Array[Byte]]
+      case Type.DECIMAL   => value.asInstanceOf[BigDecimal]
+      // Complex types require conversion
+      case Type.LIST      => value.asInstanceOf[java.util.List[Any]].asScala.map(
+        listElement => convertValue(listElement, colType.getListElementTypeDesc))
+      case Type.MAP       => {
+        // Try LinkedHashMap to preserve order of elements - is that necessary?
+        var convertedMap = scala.collection.mutable.LinkedHashMap.empty[Any, Any]
+        value.asInstanceOf[java.util.Map[Any, Any]].asScala.foreach((tuple) =>
+          convertedMap(convertValue(tuple._1, colType.getMapKeyTypeDesc)) =
+            convertValue(tuple._2, colType.getMapValueTypeDesc))
+        convertedMap
       }
-    } catch {
-      case _: Throwable => null
+      case Type.STRUCT    => llapRowToSparkRow(
+        value.asInstanceOf[org.apache.hadoop.hive.llap.Row],
+        colType.getStructSchema)
+      case _ => null
     }
   }
 }
