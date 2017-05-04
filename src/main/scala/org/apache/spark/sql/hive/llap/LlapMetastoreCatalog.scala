@@ -21,7 +21,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.datasources.{DataSource, LogicalRelation}
-import org.apache.spark.sql.hive.{HiveMetastoreCatalog, MetastoreRelation}
+import org.apache.spark.sql.hive.{HiveMetastoreCatalog}
 
 
 /**
@@ -52,7 +52,7 @@ class LlapMetastoreCatalog(sparkSession: SparkSession)
           "url" -> sessionState.getConnectionUrl())
       ).resolveRelation())
 
-    val tableWithQualifiers = SubqueryAlias(qualifiedTableName.name, logicalRelation, None)
-    alias.map(a => SubqueryAlias(a, tableWithQualifiers, None)).getOrElse(tableWithQualifiers)
+    val tableWithQualifiers = SubqueryAlias(qualifiedTableName.name, logicalRelation)
+    alias.map(a => SubqueryAlias(a, tableWithQualifiers)).getOrElse(tableWithQualifiers)
   }
 }

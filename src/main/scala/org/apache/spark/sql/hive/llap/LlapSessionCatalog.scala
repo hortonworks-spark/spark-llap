@@ -19,12 +19,10 @@ package org.apache.spark.sql.hive.llap
 
 import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hive.ql.exec.{UDAF, UDF}
 import org.apache.hadoop.hive.ql.exec.{FunctionRegistry => HiveFunctionRegistry}
 import org.apache.hadoop.hive.ql.udf.generic.{AbstractGenericUDAFResolver, GenericUDF, GenericUDTF}
-
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
@@ -32,8 +30,9 @@ import org.apache.spark.sql.catalyst.analysis.FunctionRegistry
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, ExpressionInfo}
+import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
-import org.apache.spark.sql.hive.{HiveGenericUDF, HiveGenericUDTF, HiveSessionCatalog, HiveSimpleUDF, HiveUDAFFunction}
+import org.apache.spark.sql.hive._
 import org.apache.spark.sql.hive.HiveShim.HiveFunctionWrapper
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{DecimalType, DoubleType}
@@ -42,23 +41,26 @@ import org.apache.spark.sql.types.{DecimalType, DoubleType}
 private[sql] class LlapSessionCatalog(
     externalCatalog: LlapExternalCatalog,
     globalTempViewManager: GlobalTempViewManager,
+    metastoreCatalog: HiveMetastoreCatalog,
     sparkSession: SparkSession,
     functionResourceLoader: FunctionResourceLoader,
     functionRegistry: FunctionRegistry,
     conf: SQLConf,
+    parser: ParserInterface,
     hadoopConf: Configuration)
   extends HiveSessionCatalog(
-    externalCatalog,
-    globalTempViewManager,
-    sparkSession,
-    functionResourceLoader,
-    functionRegistry,
-    conf,
-    hadoopConf) with Logging {
+      externalCatalog,
+      globalTempViewManager,
+      metastoreCatalog,
+      functionRegistry,
+      conf,
+      hadoopConf,
+      parser,
+      functionResourceLoader) with Logging {
 
   private val metastoreCatalog = new LlapMetastoreCatalog(sparkSession)
 
-  override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
+   def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
     val table = formatTableName(name.table)
     if (name.database.isDefined || !tempTables.contains(table)) {
       val database = name.database.map(formatDatabaseName)
@@ -66,10 +68,10 @@ private[sql] class LlapSessionCatalog(
       metastoreCatalog.lookupRelation(newName, alias)
     } else {
       val relation = tempTables(table)
-      val tableWithQualifiers = SubqueryAlias(table, relation, None)
+      val tableWithQualifiers = SubqueryAlias(table, relation)
       // If an alias was specified by the lookup, wrap the plan in a subquery so that
       // attributes are properly qualified with this alias.
-      alias.map(a => SubqueryAlias(a, tableWithQualifiers, None)).getOrElse(tableWithQualifiers)
+      alias.map(a => SubqueryAlias(a, tableWithQualifiers)).getOrElse(tableWithQualifiers)
     }
   }
 
