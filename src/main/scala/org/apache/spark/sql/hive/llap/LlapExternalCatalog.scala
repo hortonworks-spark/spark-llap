@@ -17,10 +17,10 @@
 
 package org.apache.spark.sql.hive.llap
 
+import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
+import java.sql.Connection
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.NonFatal
-
-import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
 
 import org.apache.spark.internal.Logging
@@ -68,6 +68,18 @@ private[spark] class LlapExternalCatalog(
   }
 
   /**
+    * @return the connection to the HIVE LLAP
+    */
+  private def createConnection(): Connection = {
+    val sparkSession = SparkSession.getActiveSession.get.sqlContext.sparkSession
+    val sessionState = SparkSession.getActiveSession.get.sessionState
+    val connectionUrl = sessionState.getConnectionUrl(sparkSession)
+    val user = sessionState.getUserString()
+    val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
+    connection
+  }
+
+  /**
    * Run some code involving `client` in a [[synchronized]] block and wrap certain
    * exceptions thrown in the process in [[AnalysisException]].
    */
@@ -89,11 +101,10 @@ private[spark] class LlapExternalCatalog(
     }
   }
 
-  override def createDatabase(
+  override def doCreateDatabase(
       dbDefinition: CatalogDatabase,
       ignoreIfExists: Boolean): Unit = withClient {
-    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
-    tryWithResource(sessionState.connection) { conn =>
+    tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
         val ifNotExistsString = if (ignoreIfExists) "IF NOT EXISTS" else ""
         stmt.executeUpdate(s"CREATE DATABASE $ifNotExistsString `${dbDefinition.name}`")
@@ -101,13 +112,12 @@ private[spark] class LlapExternalCatalog(
     }
   }
 
-  override def dropDatabase(
+  override def doDropDatabase(
       db: String,
       ignoreIfNotExists: Boolean,
       cascade: Boolean): Unit = withClient {
     requireDbExists(db)
-    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
-    tryWithResource(sessionState.connection) { conn =>
+    tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
         val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
         val cascadeString = if (cascade) "CASCADE" else ""
@@ -119,9 +129,8 @@ private[spark] class LlapExternalCatalog(
   override def databaseExists(db: String): Boolean = {
     val sparkSession = SparkSession.getActiveSession
     if (sparkSession.isDefined) {
-      val sessionState = sparkSession.get.sessionState.asInstanceOf[LlapSessionState]
       var isExist = false
-      tryWithResource(sessionState.connection) { conn =>
+      tryWithResource(createConnection()) { conn =>
         tryWithResource(conn.createStatement()) { stmt =>
           tryWithResource(stmt.executeQuery(s"SHOW DATABASES LIKE '$db'")) { rs =>
             isExist = rs.next()
@@ -146,9 +155,8 @@ private[spark] class LlapExternalCatalog(
   }
 
   override def listDatabases(pattern: String): Seq[String] = withClient {
-    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     val databases = new ArrayBuffer[String]()
-    tryWithResource(sessionState.connection) { conn =>
+    tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
         tryWithResource(stmt.executeQuery(s"SHOW DATABASES LIKE '$pattern'")) { rs =>
           while (rs.next()) {
@@ -160,7 +168,7 @@ private[spark] class LlapExternalCatalog(
     databases
   }
 
-  override def createTable(
+  override def doCreateTable(
       tableDefinition: CatalogTable,
       ignoreIfExists: Boolean): Unit = {
     logInfo(tableDefinition.toString)
@@ -176,19 +184,14 @@ private[spark] class LlapExternalCatalog(
         throw new TableAlreadyExistsException(db = db, table = tableDefinition.identifier.table)
       }
     } else {
-      val location = if (tableDefinition.storage.locationUri.isDefined) {
-        s"LOCATION '${tableDefinition.storage.locationUri.get}'"
-      } else {
-        ""
-      }
-      executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT) " +
-        location)
-      super.dropTable(db, tableDefinition.identifier.table, ignoreIfNotExists = true, purge = true)
-      super.createTable(tableDefinition, ignoreIfExists)
+      executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT)")
+      super.doDropTable(db, tableDefinition.identifier.table,
+        ignoreIfNotExists = true, purge = true)
+      super.doCreateTable(tableDefinition, ignoreIfExists)
     }
   }
 
-  override def dropTable(
+  override def doDropTable(
       db: String,
       table: String,
       ignoreIfNotExists: Boolean,
@@ -198,9 +201,7 @@ private[spark] class LlapExternalCatalog(
       super.dropTable(db, table, ignoreIfNotExists, purge)
     } else {
       requireDbExists(db)
-      val sessionState =
-        SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
-      tryWithResource(sessionState.connection) { conn =>
+      tryWithResource(createConnection()) { conn =>
         tryWithResource(conn.createStatement()) { stmt =>
           val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
           val purgeString = if (purge) "PURGE" else ""
@@ -217,9 +218,7 @@ private[spark] class LlapExternalCatalog(
     } catch {
       case NonFatal(_) =>
         // Try to create a dummy table. This table cannot be used for ALTER TABLE.
-        val sessionState =
-          SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
-        tryWithResource(sessionState.connection) { conn =>
+        tryWithResource(createConnection()) { conn =>
           tryWithResource(conn.getMetaData.getColumns(null, db, table, null)) { rs =>
             val schema = new StructType()
             while (rs.next()) {
@@ -252,8 +251,7 @@ private[spark] class LlapExternalCatalog(
   }
 
   override def tableExists(db: String, table: String): Boolean = withClient {
-    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
-    tryWithResource(sessionState.connection) { conn =>
+    tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.getMetaData.getTables(null, db, table, null)) { rs =>
         rs.next()
       }
@@ -263,9 +261,8 @@ private[spark] class LlapExternalCatalog(
   override def listTables(db: String): Seq[String] = listTables(db, "*")
 
   override def listTables(db: String, pattern: String): Seq[String] = withClient {
-    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     var tableList: List[String] = Nil
-    tryWithResource(sessionState.connection) { conn =>
+    tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.getMetaData.getTables(null, db, pattern, null)) { rs =>
         while (rs.next()) {
           tableList = rs.getString(3) :: tableList
@@ -275,55 +272,7 @@ private[spark] class LlapExternalCatalog(
     tableList.reverse
   }
 
-  override def loadTable(
-      db: String,
-      table: String,
-      loadPath: String,
-      isOverwrite: Boolean,
-      isSrcLocal: Boolean): Unit = {
-    requireDbExists(db)
-    requireTableExists(db, table)
-
-    val localString = if (isSrcLocal) "LOCAL" else ""
-    val overwriteString = if (isOverwrite) "OVERWRITE" else ""
-
-    executeUpdate(
-      s"""
-        |LOAD DATA $localString
-        |INPATH '$loadPath'
-        |$overwriteString
-        |INTO TABLE $db.$table
-        |""".stripMargin)
-  }
-
-  override def loadPartition(
-      db: String,
-      table: String,
-      loadPath: String,
-      partition: TablePartitionSpec,
-      isOverwrite: Boolean,
-      inheritTableSpecs: Boolean,
-      isSrcLocal: Boolean): Unit = {
-    requireDbExists(db)
-    requireTableExists(db, table)
-
-    val localString = if (isSrcLocal) "LOCAL" else ""
-    val overwriteString = if (isOverwrite) "OVERWRITE" else ""
-    val partitionString = partition.map { case (k, v) =>
-      s"${k.toLowerCase}=$v"
-    }.mkString("PARTITION (", ",", ")")
-
-    executeUpdate(
-      s"""
-        |LOAD DATA $localString
-        |INPATH '$loadPath'
-        |$overwriteString
-        |INTO TABLE $db.$table
-        |$partitionString
-        |""".stripMargin)
-  }
-
-  override def renameTable(db: String, oldName: String, newName: String): Unit = {
+  override def doRenameTable(db: String, oldName: String, newName: String): Unit = {
     requireDbExists(db)
     executeUpdate(s"ALTER TABLE $db.$oldName RENAME TO $db.$newName")
   }
@@ -377,8 +326,7 @@ private[spark] class LlapExternalCatalog(
 
   private def executeUpdate(sql: String): Unit = {
     logDebug(sql)
-    val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
-    tryWithResource(sessionState.connection) { conn =>
+    tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
         stmt.executeUpdate(sql)
       }
