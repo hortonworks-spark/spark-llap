@@ -17,25 +17,17 @@
 
 package org.apache.spark.sql.hive.llap
 
-import scala.util.{Failure, Success, Try}
-import scala.util.control.NonFatal
+import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.hive.ql.exec.{UDAF, UDF}
-import org.apache.hadoop.hive.ql.exec.{FunctionRegistry => HiveFunctionRegistry}
-import org.apache.hadoop.hive.ql.udf.generic.{AbstractGenericUDAFResolver, GenericUDF, GenericUDTF}
+
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.{AnalysisException, SparkSession}
-import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry
-import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
 import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, ExpressionInfo}
 import org.apache.spark.sql.catalyst.parser.ParserInterface
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.hive._
-import org.apache.spark.sql.hive.HiveShim.HiveFunctionWrapper
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.types.{DecimalType, DoubleType}
 
 
 private[sql] class LlapSessionCatalog(
@@ -58,34 +50,23 @@ private[sql] class LlapSessionCatalog(
       parser,
       functionResourceLoader) with Logging {
 
-  private val metastoreCatalog = new LlapMetastoreCatalog(sparkSession)
-
-   def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
-    val table = formatTableName(name.table)
-    if (name.database.isDefined || !tempTables.contains(table)) {
-      val database = name.database.map(formatDatabaseName)
-      val newName = name.copy(database = database, table = table)
-      metastoreCatalog.lookupRelation(newName, alias)
-    } else {
-      val relation = tempTables(table)
-      val tableWithQualifiers = SubqueryAlias(table, relation)
-      // If an alias was specified by the lookup, wrap the plan in a subquery so that
-      // attributes are properly qualified with this alias.
-      alias.map(a => SubqueryAlias(a, tableWithQualifiers)).getOrElse(tableWithQualifiers)
-    }
-  }
 
   /**
    * Retrieve the metadata of an existing permanent table/view. If no database is specified,
    * assume the table/view is in the current database. If the specified table/view is not found
-   * in the database then a [[NoSuchTableException]] is thrown.
+   * in the database then a
+    *  [[org.apache.spark.sql.catalyst.analysis.NoSuchTableException]] is thrown.
    */
   override def getTableMetadata(name: TableIdentifier): CatalogTable = {
     if (Thread.currentThread().getStackTrace()(2).toString().contains("DescribeTableCommand")) {
       val db = formatDatabaseName(name.database.getOrElse(getCurrentDatabase))
       val table = formatTableName(name.table)
-      val sessionState = sparkSession.sessionState.asInstanceOf[LlapSessionState]
-      val stmt = sessionState.connection.createStatement()
+      val sparkSession = SparkSession.getActiveSession.get.sqlContext.sparkSession
+      val sessionState = SparkSession.getActiveSession.get.sessionState
+      val connectionUrl = sessionState.getConnectionUrl(sparkSession)
+      val user = sessionState.getUserString()
+      val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
+      val stmt = connection.createStatement()
       stmt.executeUpdate(s"DESC `$db`.`$table`")
     }
 

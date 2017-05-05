@@ -19,13 +19,32 @@ package org.apache.spark.sql.hive.llap
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.hive.HiveSessionStateBuilder
+import org.apache.spark.sql.hive.{HiveMetastoreCatalog, HiveSessionStateBuilder}
 import org.apache.spark.sql.internal.SessionState
 
 
-class LlapSessionStateBuilder(session: SparkSession, parentState: Option[SessionState] = None)
-  extends HiveSessionStateBuilder(session, parentState)  {
+class LlapSessionStateBuilder(sparkSession: SparkSession, parentState: Option[SessionState] = None)
+  extends HiveSessionStateBuilder(sparkSession, parentState) with Logging {
 
+  self =>
+  /**
+    * Create a [[LlapSessionCatalog]] for Llap related data processing
+    */
+  override protected lazy val catalog: LlapSessionCatalog = {
+    val catalog = new LlapSessionCatalog(
+      sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog],
+      session.sharedState.globalTempViewManager,
+      new HiveMetastoreCatalog(session),
+      sparkSession,
+      resourceLoader,
+      functionRegistry,
+      conf,
+      sqlParser,
+      SessionState.newHadoopConf(session.sparkContext.hadoopConfiguration, conf)
+    )
+    parentState.foreach(_.catalog.copyStateTo(catalog))
+    catalog
+  }
 
 }
 
