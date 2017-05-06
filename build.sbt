@@ -7,8 +7,8 @@ val scalatestVersion = "2.2.6"
 
 sparkVersion := sys.props.getOrElse("spark.version", "2.1.1")
 
-val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3")
-val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.0.3-8")
+val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.0.10-21")
+val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.5.3.0-37")
 val log4j2Version = sys.props.getOrElse("log4j2.version", "2.4.1")
 val tezVersion = sys.props.getOrElse("tez.version", "0.8.4")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
@@ -147,6 +147,8 @@ addArtifact(artifact in (Compile, assembly), assembly)
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 resolvers += "Additional Maven Repository" at repoUrl
 resolvers += "Hortonworks Maven Repository" at "http://repo.hortonworks.com/content/groups/public/"
+resolvers += "Hortonworks Nexus Repository" at "http://nexus-private.hortonworks.com/nexus/content/groups/public"
+resolvers += "Hortonworks Private Maven Repository" at "http://nexus-private.hortonworks.com:8081/nexus/content/repositories/IN-QA/"
 
 publishMavenStyle := true
 pomIncludeRepository := { _ => false } // Remove repositories from pom
