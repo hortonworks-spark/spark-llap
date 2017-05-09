@@ -21,10 +21,15 @@ import java.net.URI
 import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData,
   SQLException}
 
+import collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 import org.slf4j.LoggerFactory
 
+import org.apache.hadoop.hive.llap.FieldDesc
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
+import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory
+import org.apache.hadoop.hive.serde2.typeinfo._
 import org.apache.spark.sql.types._
 
 
@@ -109,11 +114,12 @@ class JDBCWrapper {
       while (rs.next()) {
         val columnName = rs.getString(4)
         val dataType = rs.getInt(5)
+        val typeName = rs.getString(6)
         val fieldSize = rs.getInt(7)
         val fieldScale = rs.getInt(9)
         val nullable = true // Hive cols nullable
         val isSigned = true
-        val columnType = getCatalystType(dataType, fieldSize, fieldScale, isSigned)
+        val columnType = getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
         fields += StructField(columnName, columnType, nullable)
       }
       new StructType(fields.toArray)
@@ -140,7 +146,7 @@ class JDBCWrapper {
         val fieldScale = rsmd.getScale(i + 1)
         val isSigned = true
         val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
-        val columnType = getCatalystType(dataType, fieldSize, fieldScale, isSigned)
+        val columnType = getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
         fields(i) = StructField(columnName, columnType, nullable)
         i = i + 1
       }
@@ -217,57 +223,82 @@ class JDBCWrapper {
    */
   def getCatalystType(
       sqlType: Int,
+      typeName: String,
       precision: Int,
       scale: Int,
       signed: Boolean): DataType = {
     log.debug(s"getCatalystType $sqlType")
+    // For primitive types, we can just use the sqlType passed in.
+    // Complex types require use of the typeName.
     val answer = sqlType match {
       // scalastyle:off
-      case java.sql.Types.ARRAY         => null
-      case java.sql.Types.BIGINT        => if (signed) { LongType } else { DecimalType(20,0) }
-      case java.sql.Types.BINARY        => BinaryType
-      case java.sql.Types.BIT           => BooleanType // @see JdbcDialect for quirks
-      case java.sql.Types.BLOB          => BinaryType
       case java.sql.Types.BOOLEAN       => BooleanType
-      case java.sql.Types.CHAR          => StringType
-      case java.sql.Types.CLOB          => StringType
-      case java.sql.Types.DATALINK      => null
-      case java.sql.Types.DATE          => DateType
-      case java.sql.Types.DECIMAL
-        if precision != 0 || scale != 0 => DecimalType(precision, scale)
-      case java.sql.Types.DECIMAL       => DecimalType(38, 18) // Spark 1.5.0 default
-      case java.sql.Types.DISTINCT      => null
-      case java.sql.Types.DOUBLE        => DoubleType
-      case java.sql.Types.FLOAT         => FloatType
-      case java.sql.Types.INTEGER       => if (signed) { IntegerType } else { LongType }
-      case java.sql.Types.JAVA_OBJECT   => null
-      case java.sql.Types.LONGNVARCHAR  => StringType
-      case java.sql.Types.LONGVARBINARY => BinaryType
-      case java.sql.Types.LONGVARCHAR   => StringType
-      case java.sql.Types.NCHAR         => StringType
-      case java.sql.Types.NCLOB         => StringType
-      case java.sql.Types.NULL          => null
-      case java.sql.Types.NUMERIC
-        if precision != 0 || scale != 0 => DecimalType(precision, scale)
-      case java.sql.Types.NUMERIC       => DecimalType(38, 18) // Spark 1.5.0 default
-      case java.sql.Types.NVARCHAR      => StringType
-      case java.sql.Types.OTHER         => null
-      case java.sql.Types.REAL          => DoubleType
-      case java.sql.Types.REF           => StringType
-      case java.sql.Types.ROWID         => LongType
-      case java.sql.Types.SMALLINT      => ShortType
-      case java.sql.Types.SQLXML        => StringType
-      case java.sql.Types.STRUCT        => StringType
-      case java.sql.Types.TIME          => TimestampType
-      case java.sql.Types.TIMESTAMP     => TimestampType
       case java.sql.Types.TINYINT       => ByteType
-      case java.sql.Types.VARBINARY     => BinaryType
+      case java.sql.Types.SMALLINT      => ShortType
+      case java.sql.Types.INTEGER       => IntegerType
+      case java.sql.Types.BIGINT        => LongType
+      case java.sql.Types.FLOAT         => FloatType
+      case java.sql.Types.DOUBLE        => DoubleType
+      case java.sql.Types.CHAR          => StringType
       case java.sql.Types.VARCHAR       => StringType
+      case java.sql.Types.DATE          => DateType
+      case java.sql.Types.TIMESTAMP     => TimestampType
+      case java.sql.Types.BINARY        => BinaryType
+      case java.sql.Types.DECIMAL       => DecimalType(precision, scale)
+      case java.sql.Types.ARRAY         => getCatalystType(typeName)
+      case java.sql.Types.STRUCT        => getCatalystType(typeName)
+      case java.sql.Types.JAVA_OBJECT
+        if (typeName.toLowerCase().startsWith("map")) => getCatalystType(typeName)
       case _                            => null
       // scalastyle:on
     }
 
     if (answer == null) throw new SQLException("Unsupported type " + sqlType)
     answer
+  }
+
+  private def getCatalystType(typeInfo: TypeInfo) : DataType = {
+    typeInfo.getCategory match {
+      case Category.PRIMITIVE => getCatalystType(typeInfo.asInstanceOf[PrimitiveTypeInfo])
+      case Category.LIST      => ArrayType(
+          getCatalystType(typeInfo.asInstanceOf[ListTypeInfo].getListElementTypeInfo))
+      case Category.MAP       => MapType(
+          getCatalystType(typeInfo.asInstanceOf[MapTypeInfo].getMapKeyTypeInfo),
+          getCatalystType(typeInfo.asInstanceOf[MapTypeInfo].getMapValueTypeInfo))
+      case Category.STRUCT    => StructType(getCatalystStructFields(typeInfo.asInstanceOf[StructTypeInfo]))
+      case _                  => throw new SQLException("Unsupported type " + typeInfo)
+    }
+  }
+
+  private def getCatalystType(primitiveTypeInfo: PrimitiveTypeInfo) : DataType = {
+    primitiveTypeInfo.getPrimitiveCategory match {
+      case PrimitiveCategory.BOOLEAN   => BooleanType
+      case PrimitiveCategory.BYTE      => ByteType
+      case PrimitiveCategory.SHORT     => ShortType
+      case PrimitiveCategory.INT       => IntegerType
+      case PrimitiveCategory.LONG      => LongType
+      case PrimitiveCategory.FLOAT     => FloatType
+      case PrimitiveCategory.DOUBLE    => DoubleType
+      case PrimitiveCategory.STRING    => StringType
+      case PrimitiveCategory.CHAR      => StringType
+      case PrimitiveCategory.VARCHAR   => StringType
+      case PrimitiveCategory.DATE      => DateType
+      case PrimitiveCategory.TIMESTAMP => TimestampType
+      case PrimitiveCategory.BINARY    => BinaryType
+      case PrimitiveCategory.DECIMAL   => DecimalType(
+          primitiveTypeInfo.asInstanceOf[DecimalTypeInfo].getPrecision,
+          primitiveTypeInfo.asInstanceOf[DecimalTypeInfo].getScale)
+      case _ => throw new SQLException("Unsupported type " + primitiveTypeInfo)
+    }
+  }
+
+  private def getCatalystStructFields(structTypeInfo: StructTypeInfo) : Array[StructField] = {
+    structTypeInfo.getAllStructFieldNames.asScala.zip(structTypeInfo.getAllStructFieldTypeInfos.asScala).map(
+        { case (fieldName, fieldType) => new StructField(fieldName, getCatalystType(fieldType)) }
+    ).toArray
+  }
+
+  private def getCatalystType(typeName: String) : DataType = {
+    getCatalystType(TypeInfoUtils.getTypeInfoFromTypeString(typeName))
   }
 }
