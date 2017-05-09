@@ -17,14 +17,10 @@
 package com.hortonworks.spark.sql.hive.llap
 
 import collection.JavaConverters._
-import org.apache.hadoop.hive.llap.{Schema, TypeDesc}
-import org.apache.hadoop.hive.llap.TypeDesc.Type
-import org.apache.hadoop.hive.serde2.io.{ByteWritable, DateWritable, DoubleWritable, HiveDecimalWritable,
-ShortWritable, TimestampWritable}
-import org.apache.hadoop.io.{BooleanWritable, BytesWritable, FloatWritable, IntWritable, LongWritable, Text}
-
+import org.apache.hadoop.hive.llap.{Schema}
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
+import org.apache.hadoop.hive.serde2.typeinfo._
 import org.apache.spark.sql.Row
-
 
 object RowConverter {
 
@@ -33,45 +29,36 @@ object RowConverter {
     Row.fromSeq({
       var idx = 0
       schema.getColumns.asScala.map(colDesc => {
-        val sparkValue = convertValue(llapRow.getValue(idx), colDesc.getTypeDesc)
+        val sparkValue = convertValue(llapRow.getValue(idx), colDesc.getTypeInfo)
         idx += 1
         sparkValue
       })
     })
   }
 
-  private def convertValue(value: Any, colType: TypeDesc): Any = {
-    val t = colType.getType
-    t match {
+  private def convertValue(value: Any, colType: TypeInfo): Any = {
+    colType.getCategory match {
       // The primitives should not require conversion
-      case Type.BOOLEAN   => value.asInstanceOf[Boolean]
-      case Type.TINYINT   => value.asInstanceOf[Byte]
-      case Type.SMALLINT  => value.asInstanceOf[Short]
-      case Type.INT       => value.asInstanceOf[Integer]
-      case Type.BIGINT    => value.asInstanceOf[Long]
-      case Type.FLOAT     => value.asInstanceOf[Float]
-      case Type.DOUBLE    => value.asInstanceOf[Double]
-      case Type.STRING    => value.asInstanceOf[String]
-      case Type.CHAR      => value.asInstanceOf[String]
-      case Type.VARCHAR   => value.asInstanceOf[String]
-      case Type.DATE      => value.asInstanceOf[java.sql.Date]
-      case Type.TIMESTAMP => value.asInstanceOf[java.sql.Timestamp]
-      case Type.BINARY    => value.asInstanceOf[Array[Byte]]
-      case Type.DECIMAL   => value.asInstanceOf[BigDecimal]
-      // Complex types require conversion
-      case Type.LIST      => value.asInstanceOf[java.util.List[Any]].asScala.map(
-        listElement => convertValue(listElement, colType.getListElementTypeDesc))
-      case Type.MAP       => {
+      case Category.PRIMITIVE => value
+      case Category.LIST => value.asInstanceOf[java.util.List[Any]].asScala.map(
+        listElement => convertValue(
+            listElement,
+            colType.asInstanceOf[ListTypeInfo].getListElementTypeInfo))
+      case Category.MAP => {
         // Try LinkedHashMap to preserve order of elements - is that necessary?
         var convertedMap = scala.collection.mutable.LinkedHashMap.empty[Any, Any]
         value.asInstanceOf[java.util.Map[Any, Any]].asScala.foreach((tuple) =>
-          convertedMap(convertValue(tuple._1, colType.getMapKeyTypeDesc)) =
-            convertValue(tuple._2, colType.getMapValueTypeDesc))
+          convertedMap(convertValue(tuple._1, colType.asInstanceOf[MapTypeInfo].getMapKeyTypeInfo)) =
+            convertValue(tuple._2, colType.asInstanceOf[MapTypeInfo].getMapValueTypeInfo))
         convertedMap
       }
-      case Type.STRUCT    => llapRowToSparkRow(
-        value.asInstanceOf[org.apache.hadoop.hive.llap.Row],
-        colType.getStructSchema)
+      case Category.STRUCT =>
+        // Struct value is just a list of values. Convert each value based on corresponding typeinfo
+        Row.fromSeq(
+          colType.asInstanceOf[StructTypeInfo].getAllStructFieldTypeInfos.asScala.zip(
+            value.asInstanceOf[java.util.List[Any]].asScala).map({
+              case (fieldType, fieldValue) => convertValue(fieldValue, fieldType)
+            }))
       case _ => null
     }
   }
