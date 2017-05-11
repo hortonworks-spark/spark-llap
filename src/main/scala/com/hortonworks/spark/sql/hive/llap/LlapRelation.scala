@@ -61,7 +61,6 @@ case class LlapRelation(
     {
        conn.close()
     }
-
   }
 
   override def schema(): StructType = {
