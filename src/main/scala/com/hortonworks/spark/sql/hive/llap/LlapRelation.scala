@@ -47,11 +47,17 @@ case class LlapRelation(
 
   @transient val tableSchema: StructType = {
     val queryKey = getQueryType()
-    if (queryKey == "table") {
-      val (dbName, tableName) = getDbTableNames(parameters("table"))
-      DefaultJDBCWrapper.resolveTable(getConnection(), dbName, tableName)
-    } else {
-      DefaultJDBCWrapper.resolveQuery(getConnection(), parameters("query"))
+    val conn = getConnection()
+    try{
+      if (queryKey == "table") {
+        val (dbName, tableName) = getDbTableNames(parameters("table"))
+        DefaultJDBCWrapper.resolveTable(conn, dbName, tableName)
+      } else {
+        DefaultJDBCWrapper.resolveQuery(conn, parameters("query"))
+      }
+    } finally
+    {
+       conn.close()
     }
   }
 
@@ -218,6 +224,7 @@ class HiveWriter(sc: SQLContext) {
         var fs = FileSystem.get(new URI(tmpPath), sc.sparkContext.hadoopConfiguration)
         fs.delete(new Path(tmpPath), true)
       }
+      conn.close()
     }
   }
 
