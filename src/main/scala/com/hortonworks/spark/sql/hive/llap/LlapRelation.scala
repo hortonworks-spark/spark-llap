@@ -35,8 +35,7 @@ import org.apache.spark.sql.types.StructType
 
 case class LlapRelation(
     @transient sc: SQLContext,
-    @transient parameters: Map[String, String],
-    @transient conn: Connection)
+    @transient parameters: Map[String, String])
   extends BaseRelation
   with InsertableRelation
   with PrunedFilteredScan {
@@ -46,12 +45,21 @@ case class LlapRelation(
   }
 
   @transient val tableSchema: StructType = {
+    val connectionUrl = parameters("connectionUrl")
+    val user = parameters("user.name")
+    val conn = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
     val queryKey = getQueryType()
-    if (queryKey == "table") {
-      val (dbName, tableName) = getDbTableNames(parameters("table"))
-      DefaultJDBCWrapper.resolveTable(conn, dbName, tableName)
-    } else {
-      DefaultJDBCWrapper.resolveQuery(conn, parameters("query"))
+
+    try {
+      if (queryKey == "table") {
+        val (dbName, tableName) = getDbTableNames(parameters("table"))
+        DefaultJDBCWrapper.resolveTable(conn, dbName, tableName)
+      } else {
+        DefaultJDBCWrapper.resolveQuery(conn, parameters("query"))
+      }
+    } finally
+    {
+       conn.close()
     }
   }
 
@@ -109,6 +117,10 @@ case class LlapRelation(
     val (dbName, tableName) = getDbTableNames(parameters("table"))
 
     val writer = new HiveWriter(sc)
+
+    val connectionUrl = parameters("connectionUrl")
+    val user = parameters("user.name")
+    val conn = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
     writer.saveDataFrameToHiveTable(data, dbName, tableName, conn, overwrite)
   }
 
@@ -189,6 +201,7 @@ class HiveWriter(sc: SQLContext) {
         var fs = FileSystem.get(new URI(tmpPath), sc.sparkContext.hadoopConfiguration)
         fs.delete(new Path(tmpPath), true)
       }
+      conn.close()
     }
   }
 
