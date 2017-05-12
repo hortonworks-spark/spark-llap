@@ -30,10 +30,10 @@ class DefaultSource extends RelationProvider {
     val sessionState = sqlContext.sparkSession.sessionState.asInstanceOf[LlapSessionState]
     val params = parameters +
       ("user.name" -> sessionState.getUserString()) +
-      ("user.password" -> "password")
+      ("user.password" -> "password") +
+      ("connectionUrl" -> sessionState.getConnectionUrl())
     LlapRelation(
       sqlContext,
-      params,
-      sessionState.connection)
+      params)
   }
 }
