@@ -217,14 +217,14 @@ private[spark] class LlapExternalCatalog(
             while (rs.next()) {
               val columnName = rs.getString(4)
               val dataType = rs.getInt(5)
+              val typeName = rs.getString(6)
               val fieldSize = rs.getInt(7)
               val fieldScale = rs.getInt(9)
               val nullable = true // Hive cols nullable
               val isSigned = true
               val columnType =
-                DefaultJDBCWrapper.getCatalystType(dataType, fieldSize, fieldScale, isSigned)
-              val columnTypeString = DefaultJDBCWrapper.columnString(columnType, Some(fieldSize))
-              schema.add(columnName, columnTypeString, nullable)
+                DefaultJDBCWrapper.getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
+              schema.add(columnName, columnType, nullable)
             }
             CatalogTable(
               identifier = TableIdentifier(table, Option(db)),
