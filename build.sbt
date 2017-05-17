@@ -26,22 +26,25 @@ checksums in update := Nil
 
 libraryDependencies ++= Seq(
 
-  "org.apache.spark" %% "spark-core" % testSparkVersion.value % "provided" force(),
-  "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" force(),
-  "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
-  "org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force(),
+  "org.apache.spark" %% "spark-core" % testSparkVersion.value % "provided" ,
+  "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" ,
+  "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" ,
+  "org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" ,
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
 
-  "org.scala-lang" % "scala-library" % scalaVersion.value % "compile",
+  "org.scala-lang" % "scala-library" % scalaVersion.value % "provided",
   "org.scalatest" %% "scalatest" % scalatestVersion % "test",
 
-  ("org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion % "compile")
+  ("org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion % "provided")
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
-    .exclude("org.apache.avro", "avro"),
+    .exclude("org.apache.avro", "avro")
+    .exclude("commons-beanutils", "commons-beanutils-core")
+    .exclude("commons-collections", "commons-collections")
+    .exclude("commons-logging", "commons-logging"),
 
-  ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "compile")
+  ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "provided")
     .exclude("commons-beanutils", "commons-beanutils")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("javax.servlet", "servlet-api")
@@ -50,7 +53,10 @@ libraryDependencies ++= Seq(
 
   ("org.apache.tez" % "tez-runtime-internals" % tezVersion % "compile")
     .exclude("javax.servlet", "servlet-api")
-    .exclude("stax", "stax-api"),
+    .exclude("stax", "stax-api")
+    .exclude("commons-beanutils", "commons-beanutils-core")
+    .exclude("commons-collections", "commons-collections")
+    .exclude("commons-logging", "commons-logging"),
 
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
@@ -87,7 +93,11 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hadoop", "hadoop-yarn-server-common")
     .exclude("org.apache.hadoop", "hadoop-yarn-server-applicationhistoryservice")
     .exclude("org.apache.hadoop", "hadoop-yarn-server-web-proxy")
+    .exclude("org.apache.hadoop", "hadoop-common")
     .exclude("org.apache.hbase", "hbase-client")
+    .exclude("commons-beanutils", "commons-beanutils-core")
+    .exclude("commons-collections", "commons-collections")
+    .exclude("commons-logging", "commons-logging")
 )
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
