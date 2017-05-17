@@ -158,7 +158,7 @@ class LlapCatalog(override val client: ClientInterface, hive: LlapContext)
 
 object LlapContext {
   val HIVESERVER2_URL = stringConf(
-    key = "spark.sql.hive.hiveserver2.url",
+    key = "spark.sql.hive.hiveserver2.jdbc.url",
     defaultValue = None,
     doc = "HiveServer2 URL.")
 
