@@ -101,12 +101,16 @@ assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.hadoop.hive.conf.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.io.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hive.jdbc.**" -> "shadehive.@0").inAll,
+  ShadeRule.rename("org.apache.hive.service.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.metastore.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.ql.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.serde.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.serde2.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.shims.**" -> "shadehive.@0").inAll,
-  ShadeRule.rename("org.apache.hadoop.hive.thrift.**" -> "shadehive.@0").inAll
+  ShadeRule.rename("org.apache.hadoop.hive.thrift.**" -> "shadehive.@0").inAll,
+
+  ShadeRule.rename("org.apache.derby.**" -> "shadederby.@0").inAll,
+  ShadeRule.rename("io.netty.**" -> "shadenetty.@0").inAll
 )
 test in assembly := {}
 assemblyMergeStrategy in assembly := {
