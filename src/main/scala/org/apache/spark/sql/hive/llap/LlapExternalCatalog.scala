@@ -183,8 +183,9 @@ private[spark] class LlapExternalCatalog(
       }
     } else {
       executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT)")
-      super.dropTable(db, tableDefinition.identifier.table, ignoreIfNotExists = true, purge = true)
-      super.createTable(tableDefinition, ignoreIfExists)
+      super.doDropTable(db, tableDefinition.identifier.table,
+        ignoreIfNotExists = true, purge = true)
+      super.doCreateTable(tableDefinition, ignoreIfExists)
     }
   }
 
