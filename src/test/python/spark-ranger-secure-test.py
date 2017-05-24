@@ -275,6 +275,15 @@ class TableTestSuite(SparkRangerTestSuite):
             self.execute('INSERT INTO ' + t + ' VALUES(3, 4)', 'insert_1_' + t)
             self.execute('SELECT * FROM ' + t, 'insert_2_' + t, 'hive')
 
+    def test_71_load(self):
+        for t in tables:
+            os.system("hadoop fs -touchz hdfs:///user/hive/empty.txt")
+            os.system("hadoop fs -chmod 700 hdfs:///user/hive/empty.txt")
+            self.execute("LOAD DATA INPATH 'hdfs:///user/hive/empty.txt' INTO TABLE " + t, 'load_1_' + t)
+            os.system("hadoop fs -touchz hdfs:///user/hive/empty.txt")
+            os.system("hadoop fs -chmod 700 hdfs:///user/hive/empty.txt")
+            self.execute("LOAD DATA INPATH 'hdfs:///user/hive/empty.txt' INTO TABLE " + t, 'load_2_' + t, 'hive')
+
     def test_80_truncate(self):
         for t in tables:
             self.execute('TRUNCATE TABLE ' + t, 'truncate_1_' + t)
