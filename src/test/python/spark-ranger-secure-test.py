@@ -8,7 +8,7 @@ import filecmp
 import tempfile
 
 testdb = "spark_ranger_test"
-hiveJdbcUrl = 'jdbc:hive2://ctr-e126-1485243696039-11019-01-000004.hwx.site:10500/default;principal=hive/_HOST@EXAMPLE.COM'
+hiveJdbcUrl = 'jdbc:hive2://hdp26-3.openstacklocal:10500/default;principal=hive/_HOST@EXAMPLE.COM'
 generateGoldenFiles = False
 answerPath = "../resources/answer"
 dirPath = tempfile.mkdtemp()
@@ -107,7 +107,7 @@ class SparkRangerTestSuite(unittest.TestCase):
 
 
 class DbTestSuite(SparkRangerTestSuite):
-    sparkJdbcUrl = 'jdbc:hive2://ctr-e126-1485243696039-11019-01-000004.hwx.site:10016/;principal=hive/_HOST@EXAMPLE.COM;hive.server2.proxy.user='
+    sparkJdbcUrl = 'jdbc:hive2://hdp26-6.openstacklocal:10016/;principal=hive/_HOST@EXAMPLE.COM;hive.server2.proxy.user='
 
     def setUp(self):
         sqls = map(lambda db: 'DROP DATABASE IF EXISTS ' + db + ' CASCADE', dbs + [testdb])
@@ -140,7 +140,7 @@ class DbTestSuite(SparkRangerTestSuite):
 
 
 class TableTestSuite(SparkRangerTestSuite):
-    sparkJdbcUrl = 'jdbc:hive2://ctr-e126-1485243696039-11019-01-000004.hwx.site:10016/' + testdb + ';principal=hive/_HOST@EXAMPLE.COM;hive.server2.proxy.user='
+    sparkJdbcUrl = 'jdbc:hive2://hdp26-6.openstacklocal:10016/' + testdb + ';principal=hive/_HOST@EXAMPLE.COM;hive.server2.proxy.user='
 
     def setUp(self):
         sqls = [
@@ -194,6 +194,12 @@ class TableTestSuite(SparkRangerTestSuite):
         for t in tables + ['t_ctas']:
             self.execute('CREATE TABLE ' + t + '_create_as AS SELECT * FROM t_full', 'create_as_1_' + t)
             self.execute('SHOW TABLES \'' + t + '_create_as\'', 'create_as_2_' + t, 'hive')
+
+    def test_22_create_location(self):
+        for t in tables:
+            self.execute('CREATE TABLE ' + t + '_create_location_success(a INT) LOCATION \'/tmp/' + t + '\'', 'create_location_1_' + t)
+            self.execute('CREATE TABLE ' + t + '_create_location_error(a INT) LOCATION \'/apps/hive\'', 'create_location_2_' + t)
+            self.execute('SHOW TABLES \'' + t + '_create_location%\'', 'create_location_3_' + t, 'hive')
 
     def test_30_drop(self):
         for t in tables:
