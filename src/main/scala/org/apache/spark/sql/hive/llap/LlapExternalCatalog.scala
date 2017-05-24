@@ -174,7 +174,13 @@ private[spark] class LlapExternalCatalog(
         throw new TableAlreadyExistsException(db = db, table = tableDefinition.identifier.table)
       }
     } else {
-      executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT)")
+      val location = if (tableDefinition.storage.locationUri.isDefined) {
+        s"LOCATION '${tableDefinition.storage.locationUri.get}'"
+      } else {
+        ""
+      }
+      executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT) " +
+        location)
       super.dropTable(db, tableDefinition.identifier.table, ignoreIfNotExists = true, purge = true)
       super.createTable(tableDefinition, ignoreIfExists)
     }
@@ -319,6 +325,7 @@ private[spark] class LlapExternalCatalog(
   }
 
   private def executeUpdate(sql: String): Unit = {
+    logDebug(sql)
     val sessionState = SparkSession.getActiveSession.get.sessionState.asInstanceOf[LlapSessionState]
     tryWithResource(sessionState.connection) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
