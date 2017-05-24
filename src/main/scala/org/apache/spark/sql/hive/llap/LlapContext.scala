@@ -154,6 +154,19 @@ class LlapCatalog(override val client: ClientInterface, hive: LlapContext)
     val tableWithQualifiers = Subquery(tableIdentifier.table, logicalRelation)
     alias.map(a => Subquery(a, tableWithQualifiers)).getOrElse(tableWithQualifiers)
   }
+
+  override def getTables(databaseName: Option[String]): Seq[(String, Boolean)] = {
+    val db = databaseName.getOrElse(client.currentDatabase)
+    val pattern = "*"
+    val result = new scala.collection.mutable.ArrayBuffer[String]
+    val conn = hive.connection
+    val rs = conn.getMetaData.getTables(null, db, pattern, null)
+    while(rs.next()) {
+      result += rs.getString(3)
+    }
+    rs.close()
+    result.map(name => (name, false))
+  }
 }
 
 object LlapContext {
