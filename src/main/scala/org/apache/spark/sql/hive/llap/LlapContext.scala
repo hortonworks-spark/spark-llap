@@ -186,9 +186,9 @@ object LlapContext {
     sparkContext.conf.get(HIVESERVER2_URL.key)
   }
 
-  private[llap] val getUserMethod = findGetUserMethod()
+  private[llap] lazy val getUserMethod = findGetUserMethod()
 
-  private def findGetUserMethod(): ru.MethodSymbol = {
+  private def findGetUserMethod(): ru.MethodSymbol = synchronized {
     val symbol = ru.typeOf[HiveContext].declaration(ru.stringToTermName("getUser"))
     val methodSymbol = symbol match {
       case ru.NoSymbol => null
