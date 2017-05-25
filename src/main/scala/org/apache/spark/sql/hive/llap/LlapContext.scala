@@ -90,13 +90,15 @@ class LlapContext(sc: SparkContext,
     LlapContext.getUserMethod match {
       case null => null
       case _ =>
-        val instanceMirror = ru.runtimeMirror(this.getClass.getClassLoader).reflect(this)
-        val methodMirror = instanceMirror.reflectMethod(LlapContext.getUserMethod)
-        val user = methodMirror().asInstanceOf[String]
-        if (user == null) {
-          LlapContext.getUser()
-        } else {
-          user
+        synchronized {
+          val instanceMirror = ru.runtimeMirror(this.getClass.getClassLoader).reflect(this)
+          val methodMirror = instanceMirror.reflectMethod(LlapContext.getUserMethod)
+          val user = methodMirror().asInstanceOf[String]
+          if (user == null) {
+            LlapContext.getUser()
+          } else {
+            user
+          }
         }
     }
   }
