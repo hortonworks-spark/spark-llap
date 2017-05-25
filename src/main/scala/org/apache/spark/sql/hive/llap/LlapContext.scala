@@ -86,11 +86,10 @@ class LlapContext(sc: SparkContext,
     urlString.replace("${user}", userString)
   }
 
-  def getUserString(): String = {
+  def getUserString(): String = synchronized {
     LlapContext.getUserMethod match {
       case null => null
       case _ =>
-        synchronized {
           val instanceMirror = ru.runtimeMirror(this.getClass.getClassLoader).reflect(this)
           val methodMirror = instanceMirror.reflectMethod(LlapContext.getUserMethod)
           val user = methodMirror().asInstanceOf[String]
@@ -99,7 +98,6 @@ class LlapContext(sc: SparkContext,
           } else {
             user
           }
-        }
     }
   }
 
