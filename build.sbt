@@ -56,7 +56,13 @@ libraryDependencies ++= Seq(
     .exclude("stax", "stax-api")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
-    .exclude("commons-logging", "commons-logging"),
+    .exclude("commons-logging", "commons-logging")
+    .exclude("org.apache.hadoop", "hadoop-yarn-client")
+    .exclude("org.apache.hadoop", "hadoop-yarn-common")
+    .exclude("org.apache.hadoop", "hadoop-yarn-api")
+    .exclude("org.apache.hadoop", "hadoop-annotations")
+    .exclude("org.apache.hadoop", "hadoop-auth")
+    .exclude("org.apache.hadoop", "hadoop-hdfs"),
 
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
@@ -94,7 +100,8 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hadoop", "hadoop-yarn-server-applicationhistoryservice")
     .exclude("org.apache.hadoop", "hadoop-yarn-server-web-proxy")
     .exclude("org.apache.hadoop", "hadoop-common")
-    .exclude("org.apache.hbase", "hbase-client")
+    .exclude("org.apache.hadoop", "hadoop-hdfs")
+    .exclude("org.apache.hbase", "*")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging")
