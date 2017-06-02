@@ -128,12 +128,11 @@ class LlapContext(sc: SparkContext,
     super.executePlan(plan)
   }
 
-  /** Extends QueryExecution with hive specific features. */
   private[sql] class QueryExecution(logicalPlan: LogicalPlan)
     extends org.apache.spark.sql.execution.QueryExecution(this, logicalPlan) {
     /**
-      * Access control for the desc table
-      */
+     * Access control for Desc Table Function
+     */
     val checkDesc = executedPlan match {
       case ExecutedCommand(desc: DescribeHiveTableCommand) =>
         val database = metadataHive.currentDatabase
