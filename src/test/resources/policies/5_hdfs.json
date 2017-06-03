@@ -1,0 +1,71 @@
+{
+   "policies":[
+      {
+         "service":"cl1_hadoop",
+         "name":"spark_tmp",
+         "policyType":0,
+         "description":"",
+         "isAuditEnabled":true,
+         "resources":{
+            "path":{
+               "values":[
+                  "/tmp"
+               ],
+               "isExcludes":false,
+               "isRecursive":true
+            }
+         },
+         "policyItems":[
+            {
+               "accesses":[
+                  {
+                     "type":"read",
+                     "isAllowed":true
+                  },
+                  {
+                     "type":"write",
+                     "isAllowed":true
+                  },
+                  {
+                     "type":"execute",
+                     "isAllowed":true
+                  }
+               ],
+               "users":[
+                  "spark"
+               ],
+               "groups":[
+
+               ],
+               "conditions":[
+
+               ],
+               "delegateAdmin":false
+            }
+         ],
+         "denyPolicyItems":[
+
+         ],
+         "allowExceptions":[
+
+         ],
+         "denyExceptions":[
+
+         ],
+         "dataMaskPolicyItems":[
+
+         ],
+         "rowFilterPolicyItems":[
+
+         ],
+         "id":30,
+         "isEnabled":true,
+         "version":1
+      }
+   ],
+   "startIndex":0,
+   "pageSize":0,
+   "totalCount":0,
+   "resultSize":0,
+   "queryTimeMS":1490156630296
+}
