@@ -16,10 +16,12 @@
  */
 package com.hortonworks.spark.sql.hive.llap
 
-import collection.JavaConverters._
-import org.apache.hadoop.hive.llap.{Schema}
+import scala.collection.JavaConverters._
+
+import org.apache.hadoop.hive.llap.Schema
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.typeinfo._
+
 import org.apache.spark.sql.Row
 
 object RowConverter {
@@ -44,14 +46,13 @@ object RowConverter {
         listElement => convertValue(
             listElement,
             colType.asInstanceOf[ListTypeInfo].getListElementTypeInfo))
-      case Category.MAP => {
+      case Category.MAP =>
         // Try LinkedHashMap to preserve order of elements - is that necessary?
-        var convertedMap = scala.collection.mutable.LinkedHashMap.empty[Any, Any]
+        var map = scala.collection.mutable.LinkedHashMap.empty[Any, Any]
         value.asInstanceOf[java.util.Map[Any, Any]].asScala.foreach((tuple) =>
-          convertedMap(convertValue(tuple._1, colType.asInstanceOf[MapTypeInfo].getMapKeyTypeInfo)) =
+          map(convertValue(tuple._1, colType.asInstanceOf[MapTypeInfo].getMapKeyTypeInfo)) =
             convertValue(tuple._2, colType.asInstanceOf[MapTypeInfo].getMapValueTypeInfo))
-        convertedMap
-      }
+        map
       case Category.STRUCT =>
         // Struct value is just a list of values. Convert each value based on corresponding typeinfo
         Row.fromSeq(
