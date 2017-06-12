@@ -1,6 +1,6 @@
 
 name := "spark-llap"
-version := "1.1.2-2.1"
+version := "1.1.3-2.1-SNAPSHOT"
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
