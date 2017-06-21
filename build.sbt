@@ -26,10 +26,10 @@ checksums in update := Nil
 
 libraryDependencies ++= Seq(
 
-  "org.apache.spark" %% "spark-core" % testSparkVersion.value % "provided" ,
-  "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" ,
-  "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" ,
-  "org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" ,
+  "org.apache.spark" %% "spark-core" % testSparkVersion.value % "provided" force(),
+  "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" force(),
+  "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
+  "org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force(),
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
 
@@ -110,6 +110,14 @@ dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
 dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
 dependencyOverrides += "io.netty" % "netty-all" % "4.0.42.Final"
+dependencyOverrides += "org.apache.httpcomponents" % "httpclient" % "4.5.2"
+dependencyOverrides += "org.apache.httpcomponents" % "httpcore" % "4.4.4"
+dependencyOverrides += "org.codehaus.jackson" % "jackson-core-asl" % "1.9.13"
+dependencyOverrides += "org.codehaus.jackson" % "jackson-jaxrs" % "1.9.13"
+dependencyOverrides += "org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.13"
+dependencyOverrides += "org.codehaus.jackson" % "jackson-xc" % "1.9.13"
+dependencyOverrides += "org.apache.commons" % "commons-lang3" % "3.4"
+
 
 // Assembly rules for shaded JAR
 assemblyShadeRules in assembly := Seq(
@@ -128,6 +136,7 @@ assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.hadoop.hive.serde2.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.shims.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.thrift.**" -> "shadehive.@0").inAll,
+  ShadeRule.rename("org.apache.curator.**" -> "shadecurator.@0").inAll,
 
   ShadeRule.rename("org.apache.derby.**" -> "shadederby.@0").inAll,
   ShadeRule.rename("io.netty.**" -> "shadenetty.@0").inAll
