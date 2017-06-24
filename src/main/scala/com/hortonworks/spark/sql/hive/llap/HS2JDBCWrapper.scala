@@ -251,32 +251,33 @@ class JDBCWrapper {
   private def getCatalystType(typeInfo: TypeInfo) : DataType = {
     typeInfo.getCategory match {
       case Category.PRIMITIVE => getCatalystType(typeInfo.asInstanceOf[PrimitiveTypeInfo])
-      case Category.LIST      => ArrayType(
+      case Category.LIST => ArrayType(
           getCatalystType(typeInfo.asInstanceOf[ListTypeInfo].getListElementTypeInfo))
-      case Category.MAP       => MapType(
+      case Category.MAP => MapType(
           getCatalystType(typeInfo.asInstanceOf[MapTypeInfo].getMapKeyTypeInfo),
           getCatalystType(typeInfo.asInstanceOf[MapTypeInfo].getMapValueTypeInfo))
-      case Category.STRUCT    => StructType(getCatalystStructFields(typeInfo.asInstanceOf[StructTypeInfo]))
-      case _                  => throw new SQLException("Unsupported type " + typeInfo)
+      case Category.STRUCT => StructType(
+        getCatalystStructFields(typeInfo.asInstanceOf[StructTypeInfo]))
+      case _ => throw new SQLException("Unsupported type " + typeInfo)
     }
   }
 
   private def getCatalystType(primitiveTypeInfo: PrimitiveTypeInfo) : DataType = {
     primitiveTypeInfo.getPrimitiveCategory match {
-      case PrimitiveCategory.BOOLEAN   => BooleanType
-      case PrimitiveCategory.BYTE      => ByteType
-      case PrimitiveCategory.SHORT     => ShortType
-      case PrimitiveCategory.INT       => IntegerType
-      case PrimitiveCategory.LONG      => LongType
-      case PrimitiveCategory.FLOAT     => FloatType
-      case PrimitiveCategory.DOUBLE    => DoubleType
-      case PrimitiveCategory.STRING    => StringType
-      case PrimitiveCategory.CHAR      => StringType
-      case PrimitiveCategory.VARCHAR   => StringType
-      case PrimitiveCategory.DATE      => DateType
+      case PrimitiveCategory.BOOLEAN => BooleanType
+      case PrimitiveCategory.BYTE => ByteType
+      case PrimitiveCategory.SHORT => ShortType
+      case PrimitiveCategory.INT => IntegerType
+      case PrimitiveCategory.LONG => LongType
+      case PrimitiveCategory.FLOAT => FloatType
+      case PrimitiveCategory.DOUBLE => DoubleType
+      case PrimitiveCategory.STRING => StringType
+      case PrimitiveCategory.CHAR => StringType
+      case PrimitiveCategory.VARCHAR => StringType
+      case PrimitiveCategory.DATE => DateType
       case PrimitiveCategory.TIMESTAMP => TimestampType
-      case PrimitiveCategory.BINARY    => BinaryType
-      case PrimitiveCategory.DECIMAL   => DecimalType(
+      case PrimitiveCategory.BINARY => BinaryType
+      case PrimitiveCategory.DECIMAL => DecimalType(
           primitiveTypeInfo.asInstanceOf[DecimalTypeInfo].getPrecision,
           primitiveTypeInfo.asInstanceOf[DecimalTypeInfo].getScale)
       case _ => throw new SQLException("Unsupported type " + primitiveTypeInfo)
@@ -284,7 +285,8 @@ class JDBCWrapper {
   }
 
   private def getCatalystStructFields(structTypeInfo: StructTypeInfo) : Array[StructField] = {
-    structTypeInfo.getAllStructFieldNames.asScala.zip(structTypeInfo.getAllStructFieldTypeInfos.asScala).map(
+    structTypeInfo.getAllStructFieldNames.asScala.zip(
+      structTypeInfo.getAllStructFieldTypeInfos.asScala).map(
         { case (fieldName, fieldType) => new StructField(fieldName, getCatalystType(fieldType)) }
     ).toArray
   }
