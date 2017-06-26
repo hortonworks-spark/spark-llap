@@ -88,6 +88,7 @@ case class LlapRelation(
   // PrunedFilteredScan implementation
   override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
     val queryString = getQueryString(requiredColumns, filters)
+    val countStar = requiredColumns.isEmpty
 
     @transient val inputFormatClass = classOf[LlapRowInputFormat]
     @transient val jobConf = new JobConf(sc.sparkContext.hadoopConfiguration)
@@ -105,7 +106,11 @@ case class LlapRelation(
         .asInstanceOf[HadoopRDD[NullWritable, org.apache.hadoop.hive.llap.Row]]
 
     // Convert from RDD into Spark Rows
-    rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToRows, preservesPartitioning = false)
+    if (countStar) {
+      rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToCountStarRows, preservesPartitioning = false)
+    } else {
+      rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToRows, preservesPartitioning = false)
+    }
   }
 
   // InsertableRelation implementation
@@ -133,7 +138,7 @@ case class LlapRelation(
   }
 
   private def getQueryString(requiredColumns: Array[String], filters: Array[Filter]): String = {
-    var selectCols = "*"
+    var selectCols = "1"
     if (requiredColumns.length > 0) {
       selectCols = requiredColumns.mkString(",")
     }
@@ -161,6 +166,14 @@ object LlapRelation {
     iterator.map((tuple) => {
       val row = RowConverter.llapRowToSparkRow(tuple._2, schema)
       row
+    })
+  }
+
+  def llapRowRddToCountStarRows(inputSplit: InputSplit,
+      iterator: Iterator[(NullWritable, org.apache.hadoop.hive.llap.Row)]): Iterator[Row] = {
+    // For count(*), no need to inspect/convert values, can just convert to empty row.
+    iterator.map((tuple) => {
+      Row.empty
     })
   }
 }
