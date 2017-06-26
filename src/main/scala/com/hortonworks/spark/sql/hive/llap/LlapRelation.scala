@@ -87,25 +87,30 @@ case class LlapRelation(
 
   // PrunedFilteredScan implementation
   override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
+    val countStar = requiredColumns.isEmpty
     val queryString = getQueryString(requiredColumns, filters)
 
-    @transient val inputFormatClass = classOf[LlapRowInputFormat]
-    @transient val jobConf = new JobConf(sc.sparkContext.hadoopConfiguration)
-    jobConf.set("hive.llap.zk.registry.user", "hive")
-    // Set JDBC url/etc
-    jobConf.set("llap.if.hs2.connection", parameters("url"))
-    jobConf.set("llap.if.query", queryString)
-    jobConf.set("llap.if.user", parameters("user.name"))
-    jobConf.set("llap.if.pwd", parameters("user.password"))
+    if (countStar) {
+      handleCountStar(queryString)
+    } else {
+      @transient val inputFormatClass = classOf[LlapRowInputFormat]
+      @transient val jobConf = new JobConf(sc.sparkContext.hadoopConfiguration)
+      jobConf.set("hive.llap.zk.registry.user", "hive")
+      // Set JDBC url/etc
+      jobConf.set("llap.if.hs2.connection", parameters("url"))
+      jobConf.set("llap.if.query", queryString)
+      jobConf.set("llap.if.user", parameters("user.name"))
+      jobConf.set("llap.if.pwd", parameters("user.password"))
 
-    // This should be set to the number of executors
-    val numPartitions = sc.sparkContext.defaultMinPartitions
-    val rdd = sc.sparkContext.hadoopRDD(jobConf, inputFormatClass,
-        classOf[NullWritable], classOf[org.apache.hadoop.hive.llap.Row], numPartitions)
-        .asInstanceOf[HadoopRDD[NullWritable, org.apache.hadoop.hive.llap.Row]]
+      // This should be set to the number of executors
+      val numPartitions = sc.sparkContext.defaultMinPartitions
+      val rdd = sc.sparkContext.hadoopRDD(jobConf, inputFormatClass,
+          classOf[NullWritable], classOf[org.apache.hadoop.hive.llap.Row], numPartitions)
+          .asInstanceOf[HadoopRDD[NullWritable, org.apache.hadoop.hive.llap.Row]]
 
-    // Convert from RDD into Spark Rows
-    rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToRows, preservesPartitioning = false)
+      // Convert from RDD into Spark Rows
+      rdd.mapPartitionsWithInputSplit(LlapRelation.llapRowRddToRows, preservesPartitioning = false)
+    }
   }
 
   // InsertableRelation implementation
@@ -117,11 +122,14 @@ case class LlapRelation(
     val (dbName, tableName) = getDbTableNames(parameters("table"))
 
     val writer = new HiveWriter(sc)
+    val conn = getConnection()
+    writer.saveDataFrameToHiveTable(data, dbName, tableName, conn, overwrite)
+  }
 
+  private def getConnection(): Connection = {
     val connectionUrl = parameters("connectionUrl")
     val user = parameters("user.name")
-    val conn = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
-    writer.saveDataFrameToHiveTable(data, dbName, tableName, conn, overwrite)
+    DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
   }
 
   private def getDbTableNames(nameStr: String): Tuple2[String, String] = {
@@ -133,7 +141,7 @@ case class LlapRelation(
   }
 
   private def getQueryString(requiredColumns: Array[String], filters: Array[Filter]): String = {
-    var selectCols = "*"
+    var selectCols = "count(*)"
     if (requiredColumns.length > 0) {
       selectCols = requiredColumns.mkString(",")
     }
@@ -150,6 +158,25 @@ case class LlapRelation(
       s"""select $selectCols from ($baseQuery) as $baseQueryAlias $whereClause"""
 
     queryString
+  }
+
+  private def handleCountStar(queryString: String): RDD[Row] = {
+    tryWithResource(getConnection()) { conn =>
+      tryWithResource(conn.createStatement()) { stmt =>
+        val rs = stmt.executeQuery(queryString)
+        if (rs.next()) {
+          val countStarValue = rs.getLong(1)
+          sqlContext.sparkContext.parallelize(1L to countStarValue).map(_ => Row.empty)
+        } else {
+          throw new IllegalStateException("Failed to read count star value")
+        }
+      }
+    }
+  }
+
+  private def tryWithResource[R <: AutoCloseable, T](createResource: => R)(f: R => T): T = {
+    val resource = createResource
+    try f.apply(resource) finally resource.close()
   }
 }
 
