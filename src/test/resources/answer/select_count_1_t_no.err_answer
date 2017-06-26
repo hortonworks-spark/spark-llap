@@ -1,1 +1,1 @@
-Error: org.apache.spark.sql.catalyst.errors.package$TreeNodeException: execute, tree:
+Error: Error while compiling statement: FAILED: HiveAccessControlException Permission denied: user [spark] does not have [SELECT] privilege on [spark_ranger_test/t_no] (state=42000,code=40000)
