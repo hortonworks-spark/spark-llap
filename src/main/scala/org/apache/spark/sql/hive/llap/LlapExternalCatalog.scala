@@ -43,6 +43,8 @@ private[spark] class LlapExternalCatalog(
     hadoopConf: Configuration)
   extends HiveExternalCatalog(conf, hadoopConf) with Logging {
 
+  import CatalogTypes.TablePartitionSpec
+
   // Exceptions thrown by the hive client that we would like to wrap
   private val clientExceptions = Set(
     "org.apache.hadoop.hive.ql.metadata.HiveException",
@@ -271,6 +273,54 @@ private[spark] class LlapExternalCatalog(
       }
     }
     tableList.reverse
+  }
+
+  override def loadTable(
+      db: String,
+      table: String,
+      loadPath: String,
+      isOverwrite: Boolean,
+      isSrcLocal: Boolean): Unit = {
+    requireDbExists(db)
+    requireTableExists(db, table)
+
+    val localString = if (isSrcLocal) "LOCAL" else ""
+    val overwriteString = if (isOverwrite) "OVERWRITE" else ""
+
+    executeUpdate(
+      s"""
+        |LOAD DATA $localString
+        |INPATH '$loadPath'
+        |$overwriteString
+        |INTO TABLE $db.$table
+        |""".stripMargin)
+  }
+
+  override def loadPartition(
+      db: String,
+      table: String,
+      loadPath: String,
+      partition: TablePartitionSpec,
+      isOverwrite: Boolean,
+      inheritTableSpecs: Boolean,
+      isSrcLocal: Boolean): Unit = {
+    requireDbExists(db)
+    requireTableExists(db, table)
+
+    val localString = if (isSrcLocal) "LOCAL" else ""
+    val overwriteString = if (isOverwrite) "OVERWRITE" else ""
+    val partitionString = partition.map { case (k, v) =>
+      s"${k.toLowerCase}=$v"
+    }.mkString("PARTITION (", ",", ")")
+
+    executeUpdate(
+      s"""
+        |LOAD DATA $localString
+        |INPATH '$loadPath'
+        |$overwriteString
+        |INTO TABLE $db.$table
+        |$partitionString
+        |""".stripMargin)
   }
 
   override def renameTable(db: String, oldName: String, newName: String): Unit = {
