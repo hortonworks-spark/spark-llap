@@ -32,15 +32,15 @@ import org.apache.spark.sql.catalyst.analysis.OverrideCatalog
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.plans.logical.Subquery
-import org.apache.spark.sql.execution.{CacheManager, ExecutedCommand, SetCommand}
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.datasources.ResolvedDataSource
+import org.apache.spark.sql.execution.{RunnableCommand, _}
+import org.apache.spark.sql.execution.datasources.{LogicalRelation, ResolvedDataSource}
 import org.apache.spark.sql.execution.ui.SQLListener
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.sql.hive.HiveMetastoreCatalog
 import org.apache.spark.sql.hive.MetastoreRelation
 import org.apache.spark.sql.hive.client.{ClientInterface, ClientWrapper, HiveDatabase, HiveTable}
 import org.apache.spark.sql.hive.execution.{DescribeHiveTableCommand, HiveNativeCommand}
+
 
 class LlapContext(sc: SparkContext,
     cacheManager: CacheManager,
@@ -124,19 +124,36 @@ class LlapContext(sc: SparkContext,
   }
 
   override protected[sql] def executePlan(plan: LogicalPlan): super.QueryExecution = {
-    new QueryExecution(plan)
+    new this.QueryExecution(plan)
     super.executePlan(plan)
   }
 
   private[sql] class QueryExecution(logicalPlan: LogicalPlan)
-    extends org.apache.spark.sql.execution.QueryExecution(this, logicalPlan) {
+    extends super.QueryExecution(logicalPlan)  {
+
     /**
      * Access control for Desc Table Function
      */
     val checkDesc = executedPlan match {
-      case ExecutedCommand(desc: DescribeHiveTableCommand) =>
-        val database = metadataHive.currentDatabase
-        val tablename = desc.table.tableName
+      case ExecutedCommand(desc: DescribeCommand) =>
+        var database = ""
+        var tablename = ""
+        val args = desc.argString
+        args.split(",").foreach{
+          s =>
+            if (s.contains("table"))
+              {
+                val tables = s.split("->")
+                val nameParts = tables{1}.split("\\.")
+                if (nameParts.length != 2) {
+                  throw new IllegalArgumentException
+                  ("Expected " + s + " to be in the form db.table")
+                }
+                database = nameParts(0).trim
+                tablename = nameParts(1).trim
+              }
+        }
+        val conn = connection
         val stmt = conn.createStatement()
         stmt.executeUpdate(s"DESC `$database`.`$tablename`")
       case other =>
