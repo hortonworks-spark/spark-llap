@@ -23,7 +23,9 @@ import java.util.{Map => JMap}
 import java.util.regex.Pattern
 
 import scala.reflect.runtime.{universe => ru}
+
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
+
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.{Row, SQLConf, SQLContext}
 import org.apache.spark.sql.SQLConf.SQLConfEntry.stringConf
@@ -39,7 +41,7 @@ import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.sql.hive.HiveMetastoreCatalog
 import org.apache.spark.sql.hive.MetastoreRelation
 import org.apache.spark.sql.hive.client.{ClientInterface, ClientWrapper, HiveDatabase, HiveTable}
-import org.apache.spark.sql.hive.execution.{DescribeHiveTableCommand, HiveNativeCommand}
+import org.apache.spark.sql.hive.execution._
 
 
 class LlapContext(sc: SparkContext,
@@ -139,15 +141,12 @@ class LlapContext(sc: SparkContext,
         var database = ""
         var tablename = ""
         val args = desc.argString
-        args.split(",").foreach{
-          s =>
-            if (s.contains("table"))
-              {
+        args.split(",").foreach{ s =>
+            if (s.contains("table")) {
                 val tables = s.split("->")
                 val nameParts = tables{1}.split("\\.")
                 if (nameParts.length != 2) {
-                  throw new IllegalArgumentException
-                  ("Expected " + s + " to be in the form db.table")
+                  throw new IllegalArgumentException("Expected " + s + " to be form of db.table")
                 }
                 database = nameParts(0).trim
                 tablename = nameParts(1).trim
