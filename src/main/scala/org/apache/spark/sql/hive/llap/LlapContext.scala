@@ -27,22 +27,22 @@ import scala.reflect.runtime.{universe => ru}
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.SQLConf
+import org.apache.spark.sql.{Row, SQLConf, SQLContext}
 import org.apache.spark.sql.SQLConf.SQLConfEntry.stringConf
-import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.OverrideCatalog
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.plans.logical.Subquery
-import org.apache.spark.sql.execution.CacheManager
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.datasources.ResolvedDataSource
+import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.datasources.{LogicalRelation, ResolvedDataSource}
 import org.apache.spark.sql.execution.ui.SQLListener
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.sql.hive.HiveMetastoreCatalog
 import org.apache.spark.sql.hive.MetastoreRelation
 import org.apache.spark.sql.hive.client.{ClientInterface, ClientWrapper, HiveDatabase, HiveTable}
+import org.apache.spark.sql.hive.execution._
+
 
 class LlapContext(sc: SparkContext,
     cacheManager: CacheManager,
@@ -122,6 +122,44 @@ class LlapContext(sc: SparkContext,
     } else {
       connection.createStatement().executeUpdate(sql)
       Seq.empty
+    }
+  }
+
+  override protected[sql] def executePlan(plan: LogicalPlan): super.QueryExecution = {
+    new this.QueryExecution(plan).checkDesc()
+    super.executePlan(plan)
+  }
+
+  private class QueryExecution(logicalPlan: LogicalPlan)
+    extends super.QueryExecution(logicalPlan)  {
+
+    /**
+     * Access Control for Desc Table Function
+     */
+    def checkDesc (): Unit = {
+      executedPlan match {
+        case ExecutedCommand(desc: DescribeCommand) =>
+          var database = ""
+          var tablename = ""
+          val args = desc.argString
+          args.split(",").foreach { s =>
+            if (s.contains("table")) {
+              val tables = s.split("->")
+              val nameParts = tables {
+                1
+              }.split("\\.")
+              if (nameParts.length != 2) {
+                throw new IllegalArgumentException("Expected " + s + " to be form of db.table")
+              }
+              database = nameParts(0).trim
+              tablename = nameParts(1).trim
+            }
+          }
+          val conn = connection
+          val stmt = conn.createStatement()
+          stmt.executeUpdate(s"DESC `$database`.`$tablename`")
+        case other =>
+      }
     }
   }
 }
