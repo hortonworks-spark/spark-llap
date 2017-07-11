@@ -1,15 +1,29 @@
-From 8de93e4e38576b996354a14ecec3e1e1e90ae849 Mon Sep 17 00:00:00 2001
+From 9a5975c60cf102735e7040d794ea68267fe68263 Mon Sep 17 00:00:00 2001
 From: Mingjie Tang <mtang@hortonworks.com>
 Date: Tue, 2 May 2017 15:58:56 -0700
-Subject: [PATCH 1/6] add the llap for the ranger
+Subject: [PATCH] add the llap for the ranger
 
+fix the compile scala style type issue
+
+fix for compliation
+
+update the datasource for find data source logical relation
+
+update the class name
+
+update the for create table
+
+update based on comments of dongjoon
 ---
  .../security/ConfigurableCredentialManager.scala   |   2 +-
  .../security/HiveServer2CredentialProvider.scala   | 107 +++++++++++++++++++++
+ .../org/apache/spark/sql/internal/SQLConf.scala    |  21 ++++
  .../apache/spark/sql/internal/StaticSQLConf.scala  |   6 ++
- .../scala/org/apache/spark/sql/SparkSession.scala  |  36 ++++++-
+ .../scala/org/apache/spark/sql/SparkSession.scala  |  35 ++++++-
+ .../execution/datasources/DataSourceStrategy.scala |  38 +++++---
+ .../apache/spark/sql/internal/SessionState.scala   |  52 ++++++++++
  .../apache/spark/sql/internal/SharedState.scala    |  10 +-
- 5 files changed, 157 insertions(+), 4 deletions(-)
+ 8 files changed, 254 insertions(+), 17 deletions(-)
  create mode 100644 resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
 
 diff --git a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
@@ -27,7 +41,7 @@ index 4f4be52..6df415f 100644
  
 diff --git a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
 new file mode 100644
-index 0000000..c8a4311
+index 0000000..5774eca
 --- /dev/null
 +++ b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
 @@ -0,0 +1,107 @@
@@ -120,9 +134,9 @@ index 0000000..c8a4311
 +  }
 +
 +  /**
-+    * Run some code as the real logged in user (which may differ from the current user, for
-+    * example, when using proxying).
-+    */
++   * Run some code as the real logged in user (which may differ from the current user, for
++   * example, when using proxying).
++   */
 +  private def doAsRealUser[T](fn: => T): T = {
 +    val currentUser = UserGroupInformation.getCurrentUser()
 +    val realUser = Option(currentUser.getRealUser()).getOrElse(currentUser)
@@ -138,173 +152,6 @@ index 0000000..c8a4311
 +    }
 +  }
 +}
-diff --git a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
-index c6c0a60..2ed4ae9 100644
---- a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
-+++ b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
-@@ -44,6 +44,12 @@ object StaticSQLConf {
-     .stringConf
-     .createWithDefault("global_temp")
- 
-+  // Llap enabled configuration for HDP
-+  val LLAP_ENABLED = buildStaticConf("spark.sql.hive.llap")
-+    .internal()
-+    .booleanConf
-+    .createWithDefault(false)
-+
-   // This is used to control when we will split a schema's JSON string to multiple pieces
-   // in order to fit the JSON string in metastore's table property (by default, the value has
-   // a length restriction of 4000 characters, so do not use a value larger than 4000 as the default
-diff --git a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-index a519492..76f71df 100644
---- a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-+++ b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-@@ -39,7 +39,7 @@ import org.apache.spark.sql.execution._
- import org.apache.spark.sql.execution.datasources.LogicalRelation
- import org.apache.spark.sql.execution.ui.SQLListener
- import org.apache.spark.sql.internal._
--import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
-+import org.apache.spark.sql.internal.StaticSQLConf.{CATALOG_IMPLEMENTATION, LLAP_ENABLED}
- import org.apache.spark.sql.sources.BaseRelation
- import org.apache.spark.sql.streaming._
- import org.apache.spark.sql.types.{DataType, StructType}
-@@ -1031,9 +1031,18 @@ object SparkSession {
-   private val HIVE_SESSION_STATE_BUILDER_CLASS_NAME =
-     "org.apache.spark.sql.hive.HiveSessionStateBuilder"
- 
-+  // HDP Llap SessionStateBuilder
-+  private val LLAP_SESSION_STATE_BUILDER_CLASS_NAME =
-+  "org.apache.spark.sql.hive.LlapSessionStateBuilder"
-+
-   private def sessionStateClassName(conf: SparkConf): String = {
-     conf.get(CATALOG_IMPLEMENTATION) match {
--      case "hive" => HIVE_SESSION_STATE_BUILDER_CLASS_NAME
-+      case "hive" =>
-+        if (isLLAPEnabled(conf)) {
-+          LLAP_SESSION_STATE_BUILDER_CLASS_NAME
-+        } else {
-+          HIVE_SESSION_STATE_BUILDER_CLASS_NAME
-+        }
-       case "in-memory" => classOf[SessionStateBuilder].getCanonicalName
-     }
-   }
-@@ -1069,4 +1078,27 @@ object SparkSession {
-     }
-   }
- 
-+
-+  /**
-+    * Return true if `spark.sql.hive.llap=true` and classes can be loaded.
-+    * On class loading errors, it will fails.
-+    * Return false if `spark.sql.hive.llap=false`.
-+    */
-+  private[spark] def isLLAPEnabled(conf: SparkConf): Boolean = {
-+    if (conf.get(LLAP_ENABLED.key, "false") == "true") {
-+      try {
-+        Utils.classForName(LLAP_SESSION_STATE_BUILDER_CLASS_NAME)
-+        Utils.classForName("org.apache.hadoop.hive.conf.HiveConf")
-+        true
-+      } catch {
-+        case _: ClassNotFoundException | _: NoClassDefFoundError =>
-+          throw new IllegalArgumentException(
-+            "Unable to instantiate SparkSession with LLAP support because " +
-+              "LLAP or Hive classes are not found.")
-+      }
-+    } else {
-+      false
-+    }
-+  }
-+
- }
-diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
-index a93b701..e0337ed 100644
---- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
-+++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
-@@ -166,9 +166,17 @@ object SharedState extends Logging {
- 
-   private val HIVE_EXTERNAL_CATALOG_CLASS_NAME = "org.apache.spark.sql.hive.HiveExternalCatalog"
- 
-+  private val LLAP_EXTERNAL_CATALOG_CLASS_NAME =
-+    "org.apache.spark.sql.hive.llap.LlapExternalCatalog"
-+
-   private def externalCatalogClassName(conf: SparkConf): String = {
-     conf.get(CATALOG_IMPLEMENTATION) match {
--      case "hive" => HIVE_EXTERNAL_CATALOG_CLASS_NAME
-+      case "hive" =>
-+        if (SparkSession.isLLAPEnabled(conf)) {
-+          LLAP_EXTERNAL_CATALOG_CLASS_NAME
-+        } else {
-+          HIVE_EXTERNAL_CATALOG_CLASS_NAME
-+        }
-       case "in-memory" => classOf[InMemoryCatalog].getCanonicalName
-     }
-   }
--- 
-2.10.1 (Apple Git-78)
-
-
-From 2745d748b39f8cdabc5149c1c214473132b81f81 Mon Sep 17 00:00:00 2001
-From: Mingjie Tang <mtang@hortonworks.com>
-Date: Tue, 2 May 2017 18:42:23 -0700
-Subject: [PATCH 2/6] fix the compile scala style type issue
-
----
- .../deploy/yarn/security/HiveServer2CredentialProvider.scala     | 6 +++---
- sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala  | 9 ++++-----
- 2 files changed, 7 insertions(+), 8 deletions(-)
-
-diff --git a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
-index c8a4311..5774eca 100644
---- a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
-+++ b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
-@@ -87,9 +87,9 @@ private[security] class HiveServer2CredentialProvider extends ServiceCredentialP
-   }
- 
-   /**
--    * Run some code as the real logged in user (which may differ from the current user, for
--    * example, when using proxying).
--    */
-+   * Run some code as the real logged in user (which may differ from the current user, for
-+   * example, when using proxying).
-+   */
-   private def doAsRealUser[T](fn: => T): T = {
-     val currentUser = UserGroupInformation.getCurrentUser()
-     val realUser = Option(currentUser.getRealUser()).getOrElse(currentUser)
-diff --git a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-index 76f71df..aeb57b5 100644
---- a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-+++ b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-@@ -1078,12 +1078,11 @@ object SparkSession {
-     }
-   }
- 
--
-   /**
--    * Return true if `spark.sql.hive.llap=true` and classes can be loaded.
--    * On class loading errors, it will fails.
--    * Return false if `spark.sql.hive.llap=false`.
--    */
-+   * Return true if `spark.sql.hive.llap=true` and classes can be loaded.
-+   * On class loading errors, it will fails.
-+   * Return false if `spark.sql.hive.llap=false`.
-+   */
-   private[spark] def isLLAPEnabled(conf: SparkConf): Boolean = {
-     if (conf.get(LLAP_ENABLED.key, "false") == "true") {
-       try {
--- 
-2.10.1 (Apple Git-78)
-
-
-From f7611c19388bde7bba3e2abbc75cf567d696fa68 Mon Sep 17 00:00:00 2001
-From: Mingjie Tang <mtang@hortonworks.com>
-Date: Mon, 8 May 2017 19:22:08 -0700
-Subject: [PATCH 3/6] fix for compliation
-
----
- .../org/apache/spark/sql/internal/SQLConf.scala    | 21 +++++++++
- .../apache/spark/sql/internal/SessionState.scala   | 52 ++++++++++++++++++++++
- 2 files changed, 73 insertions(+)
-
 diff --git a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
 index b24419a..e359160 100644
 --- a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
@@ -337,6 +184,132 @@ index b24419a..e359160 100644
    object Deprecated {
      val MAPRED_REDUCE_TASKS = "mapred.reduce.tasks"
    }
+diff --git a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
+index c6c0a60..2ed4ae9 100644
+--- a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
++++ b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
+@@ -44,6 +44,12 @@ object StaticSQLConf {
+     .stringConf
+     .createWithDefault("global_temp")
+ 
++  // Llap enabled configuration for HDP
++  val LLAP_ENABLED = buildStaticConf("spark.sql.hive.llap")
++    .internal()
++    .booleanConf
++    .createWithDefault(false)
++
+   // This is used to control when we will split a schema's JSON string to multiple pieces
+   // in order to fit the JSON string in metastore's table property (by default, the value has
+   // a length restriction of 4000 characters, so do not use a value larger than 4000 as the default
+diff --git a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+index a519492..4e23f24 100644
+--- a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
++++ b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+@@ -39,7 +39,7 @@ import org.apache.spark.sql.execution._
+ import org.apache.spark.sql.execution.datasources.LogicalRelation
+ import org.apache.spark.sql.execution.ui.SQLListener
+ import org.apache.spark.sql.internal._
+-import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
++import org.apache.spark.sql.internal.StaticSQLConf.{CATALOG_IMPLEMENTATION, LLAP_ENABLED}
+ import org.apache.spark.sql.sources.BaseRelation
+ import org.apache.spark.sql.streaming._
+ import org.apache.spark.sql.types.{DataType, StructType}
+@@ -1031,9 +1031,18 @@ object SparkSession {
+   private val HIVE_SESSION_STATE_BUILDER_CLASS_NAME =
+     "org.apache.spark.sql.hive.HiveSessionStateBuilder"
+ 
++  // Llap SessionStateBuilder
++  private val LLAP_SESSION_STATE_BUILDER_CLASS_NAME =
++    "org.apache.spark.sql.hive.llap.LlapSessionStateBuilder"
++
+   private def sessionStateClassName(conf: SparkConf): String = {
+     conf.get(CATALOG_IMPLEMENTATION) match {
+-      case "hive" => HIVE_SESSION_STATE_BUILDER_CLASS_NAME
++      case "hive" =>
++        if (isLLAPEnabled(conf)) {
++          LLAP_SESSION_STATE_BUILDER_CLASS_NAME
++        } else {
++          HIVE_SESSION_STATE_BUILDER_CLASS_NAME
++        }
+       case "in-memory" => classOf[SessionStateBuilder].getCanonicalName
+     }
+   }
+@@ -1069,4 +1078,26 @@ object SparkSession {
+     }
+   }
+ 
++  /**
++   * Return true if `spark.sql.hive.llap=true` and classes can be loaded.
++   * On class loading errors, it will fails.
++   * Return false if `spark.sql.hive.llap=false`.
++   */
++  private[spark] def isLLAPEnabled(conf: SparkConf): Boolean = {
++    if (conf.get(LLAP_ENABLED.key, "false") == "true") {
++      try {
++        Utils.classForName(LLAP_SESSION_STATE_BUILDER_CLASS_NAME)
++        Utils.classForName("org.apache.hadoop.hive.conf.HiveConf")
++        true
++      } catch {
++        case _: ClassNotFoundException | _: NoClassDefFoundError =>
++          throw new IllegalArgumentException(
++            "Unable to instantiate SparkSession with LLAP support because " +
++              "LLAP or Hive classes are not found.")
++      }
++    } else {
++      false
++    }
++  }
++
+ }
+diff --git a/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala b/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
+index d307122..3a748b5 100644
+--- a/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
++++ b/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
+@@ -219,19 +219,31 @@ class FindDataSourceTable(sparkSession: SparkSession) extends Rule[LogicalPlan]
+     val plan = cache.get(qualifiedTableName, new Callable[LogicalPlan]() {
+       override def call(): LogicalPlan = {
+         val pathOption = table.storage.locationUri.map("path" -> CatalogUtils.URIToString(_))
+-        val dataSource =
+-          DataSource(
+-            sparkSession,
+-            // In older version(prior to 2.1) of Spark, the table schema can be empty and should be
+-            // inferred at runtime. We should still support it.
+-            userSpecifiedSchema = if (table.schema.isEmpty) None else Some(table.schema),
+-            partitionColumns = table.partitionColumnNames,
+-            bucketSpec = table.bucketSpec,
+-            className = table.provider.get,
+-            options = table.storage.properties ++ pathOption,
+-            catalogTable = Some(table))
+-
+-        LogicalRelation(dataSource.resolveRelation(checkFilesExist = false), table)
++
++        if(SparkSession.isLLAPEnabled(sparkSession.sparkContext.conf)) {
++          val llapDataSource =
++            DataSource(
++            sparkSession = sparkSession,
++            className = "org.apache.spark.sql.hive.llap",
++            options = Map(
++              "table" -> (qualifiedTableName.database + "." + qualifiedTableName.name),
++              "url" -> sparkSession.sessionState.getConnectionUrl(sparkSession)))
++            LogicalRelation(llapDataSource.resolveRelation(checkFilesExist = false), table)
++          } else {
++            val dataSource =
++              DataSource(
++                sparkSession,
++                // In older version(prior to 2.1) of Spark, the table schema can be empty
++                // and should be inferred at runtime. We should still support it.
++                userSpecifiedSchema = if (table.schema.isEmpty) None else Some(table.schema),
++                partitionColumns = table.partitionColumnNames,
++                bucketSpec = table.bucketSpec,
++                className = table.provider.get,
++                options = table.storage.properties ++ pathOption,
++                catalogTable = Some(table))
++            LogicalRelation(dataSource.resolveRelation(checkFilesExist = false), table)
++          }
++
+       }
+     }).asInstanceOf[LogicalRelation]
+ 
 diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
 index 1b341a1..a90c096 100644
 --- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
@@ -400,130 +373,29 @@ index 1b341a1..a90c096 100644
  }
  
  private[sql] object SessionState {
--- 
-2.10.1 (Apple Git-78)
-
-
-From f4ab97c52a70057ea2524efd5e512f9177e2023d Mon Sep 17 00:00:00 2001
-From: Mingjie Tang <mtang@hortonworks.com>
-Date: Tue, 9 May 2017 15:21:00 -0700
-Subject: [PATCH 4/6] update the datasource for find data source logical
- relation
-
----
- .../execution/datasources/DataSourceStrategy.scala | 38 ++++++++++++++--------
- 1 file changed, 25 insertions(+), 13 deletions(-)
-
-diff --git a/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala b/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
-index d307122..3a748b5 100644
---- a/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
-+++ b/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
-@@ -219,19 +219,31 @@ class FindDataSourceTable(sparkSession: SparkSession) extends Rule[LogicalPlan]
-     val plan = cache.get(qualifiedTableName, new Callable[LogicalPlan]() {
-       override def call(): LogicalPlan = {
-         val pathOption = table.storage.locationUri.map("path" -> CatalogUtils.URIToString(_))
--        val dataSource =
--          DataSource(
--            sparkSession,
--            // In older version(prior to 2.1) of Spark, the table schema can be empty and should be
--            // inferred at runtime. We should still support it.
--            userSpecifiedSchema = if (table.schema.isEmpty) None else Some(table.schema),
--            partitionColumns = table.partitionColumnNames,
--            bucketSpec = table.bucketSpec,
--            className = table.provider.get,
--            options = table.storage.properties ++ pathOption,
--            catalogTable = Some(table))
--
--        LogicalRelation(dataSource.resolveRelation(checkFilesExist = false), table)
+diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
+index a93b701..e0337ed 100644
+--- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
++++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
+@@ -166,9 +166,17 @@ object SharedState extends Logging {
+ 
+   private val HIVE_EXTERNAL_CATALOG_CLASS_NAME = "org.apache.spark.sql.hive.HiveExternalCatalog"
+ 
++  private val LLAP_EXTERNAL_CATALOG_CLASS_NAME =
++    "org.apache.spark.sql.hive.llap.LlapExternalCatalog"
 +
-+        if(SparkSession.isLLAPEnabled(sparkSession.sparkContext.conf)) {
-+          val llapDataSource =
-+            DataSource(
-+            sparkSession = sparkSession,
-+            className = "org.apache.spark.sql.hive.llap",
-+            options = Map(
-+              "table" -> (qualifiedTableName.database + "." + qualifiedTableName.name),
-+              "url" -> sparkSession.sessionState.getConnectionUrl(sparkSession)))
-+            LogicalRelation(llapDataSource.resolveRelation(checkFilesExist = false), table)
-+          } else {
-+            val dataSource =
-+              DataSource(
-+                sparkSession,
-+                // In older version(prior to 2.1) of Spark, the table schema can be empty
-+                // and should be inferred at runtime. We should still support it.
-+                userSpecifiedSchema = if (table.schema.isEmpty) None else Some(table.schema),
-+                partitionColumns = table.partitionColumnNames,
-+                bucketSpec = table.bucketSpec,
-+                className = table.provider.get,
-+                options = table.storage.properties ++ pathOption,
-+                catalogTable = Some(table))
-+            LogicalRelation(dataSource.resolveRelation(checkFilesExist = false), table)
-+          }
-+
-       }
-     }).asInstanceOf[LogicalRelation]
- 
--- 
-2.10.1 (Apple Git-78)
-
-
-From bd6ed375641214cd7963e8d1135a51eb7c3123f8 Mon Sep 17 00:00:00 2001
-From: Mingjie Tang <mtang@hortonworks.com>
-Date: Thu, 18 May 2017 20:03:38 -0700
-Subject: [PATCH 5/6] update the class name
-
----
- sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-index aeb57b5..53ed700 100644
---- a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-+++ b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-@@ -1033,7 +1033,7 @@ object SparkSession {
- 
-   // HDP Llap SessionStateBuilder
-   private val LLAP_SESSION_STATE_BUILDER_CLASS_NAME =
--  "org.apache.spark.sql.hive.LlapSessionStateBuilder"
-+  "org.apache.spark.sql.hive.llap.LlapSessionStateBuilder"
- 
-   private def sessionStateClassName(conf: SparkConf): String = {
+   private def externalCatalogClassName(conf: SparkConf): String = {
      conf.get(CATALOG_IMPLEMENTATION) match {
--- 
-2.10.1 (Apple Git-78)
-
-
-From 29bf2859b4fec9488c5651ef4ce73b32e4eea22a Mon Sep 17 00:00:00 2001
-From: Mingjie Tang <mtang@hortonworks.com>
-Date: Thu, 18 May 2017 23:09:09 -0700
-Subject: [PATCH 6/6] update the for create table
-
----
- .../main/scala/org/apache/spark/sql/hive/HiveExternalCatalog.scala    | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveExternalCatalog.scala b/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveExternalCatalog.scala
-index ba48fac..a730364 100644
---- a/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveExternalCatalog.scala
-+++ b/sql/hive/src/main/scala/org/apache/spark/sql/hive/HiveExternalCatalog.scala
-@@ -210,7 +210,7 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
-   // Tables
-   // --------------------------------------------------------------------------
- 
--  override protected def doCreateTable(
-+  override def doCreateTable(
-       tableDefinition: CatalogTable,
-       ignoreIfExists: Boolean): Unit = withClient {
-     assert(tableDefinition.identifier.database.isDefined)
-@@ -473,7 +473,7 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
+-      case "hive" => HIVE_EXTERNAL_CATALOG_CLASS_NAME
++      case "hive" =>
++        if (SparkSession.isLLAPEnabled(conf)) {
++          LLAP_EXTERNAL_CATALOG_CLASS_NAME
++        } else {
++          HIVE_EXTERNAL_CATALOG_CLASS_NAME
++        }
+       case "in-memory" => classOf[InMemoryCatalog].getCanonicalName
      }
    }
- 
--  override protected def doDropTable(
-+  override def doDropTable(
-       db: String,
-       table: String,
-       ignoreIfNotExists: Boolean,
 -- 
 2.10.1 (Apple Git-78)
 
