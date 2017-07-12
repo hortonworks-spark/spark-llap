@@ -184,6 +184,11 @@ private[spark] class LlapExternalCatalog(
         throw new TableAlreadyExistsException(db = db, table = tableDefinition.identifier.table)
       }
     } else {
+      val location = if (tableDefinition.storage.locationUri.isDefined) {
+        s"LOCATION '${tableDefinition.storage.locationUri.get}'"
+      } else {
+        ""
+      }
       executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT)")
       super.doDropTable(db, tableDefinition.identifier.table,
         ignoreIfNotExists = true, purge = true)
