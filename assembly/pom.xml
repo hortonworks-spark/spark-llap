@@ -5,7 +5,7 @@
   <groupId>com.hortonworks.spark</groupId>
   <artifactId>spark-llap-assembly_2.10</artifactId>
   <packaging>pom</packaging>
-  <version>1.0.7-1.6-SNAPSHOT</version>
+  <version>1.0.7-1.6</version>
   <name>spark-llap-assembly_2.10</name>
   <url>https://github.com/hortonworks-spark/spark-llap</url>
 
@@ -21,7 +21,7 @@
     <dependency>
       <groupId>com.hortonworks.spark</groupId>
       <artifactId>spark-llap_2.10</artifactId>
-      <version>1.0.7-1.6-SNAPSHOT</version>
+      <version>1.0.7-1.6</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
