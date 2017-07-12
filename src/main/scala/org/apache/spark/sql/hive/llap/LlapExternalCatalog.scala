@@ -68,8 +68,8 @@ private[spark] class LlapExternalCatalog(
   }
 
   /**
-    * @return the connection to the HIVE LLAP
-    */
+   * @return the connection to the HIVE LLAP
+   */
   private def createConnection(): Connection = {
     val sparkSession = SparkSession.getActiveSession.get.sqlContext.sparkSession
     val sessionState = SparkSession.getActiveSession.get.sessionState
