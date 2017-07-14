@@ -63,8 +63,10 @@ private[sql] class LlapSessionCatalog(
       val table = formatTableName(name.table)
       val sparkSession = SparkSession.getActiveSession.get.sqlContext.sparkSession
       val sessionState = SparkSession.getActiveSession.get.sessionState
-      val connectionUrl = sessionState.getConnectionUrl(sparkSession)
-      val user = sessionState.getUserString()
+      val getConnectionUrlMethod = sessionState.getClass.getMethod("getConnectionUrl")
+      val connectionUrl = getConnectionUrlMethod.invoke(sparkSession).toString()
+      val getUserMethod = sessionState.getClass.getMethod("getUserString")
+      val user = getUserMethod.toString()
       val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
       val stmt = connection.createStatement()
       stmt.executeUpdate(s"DESC `$db`.`$table`")
