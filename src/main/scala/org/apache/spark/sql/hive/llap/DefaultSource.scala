@@ -26,12 +26,13 @@ class DefaultSource extends RelationProvider {
 
   override def createRelation(sqlContext: SQLContext, parameters: Map[String, String])
       : BaseRelation = {
-    val getConnectionUrlMethod = sqlContext.sparkSession.sessionState.
-      getClass.getMethod("getConnectionUrl", classOf[SparkSession])
-    val connectionUrl = getConnectionUrlMethod.invoke(sqlContext.sparkSession).toString()
-    val getUserMethod = sqlContext.sparkSession.sessionState.
-      getClass.getMethod("getUserString")
-    val user = getUserMethod.toString()
+    val sessionState = SparkSession.getActiveSession.get.sessionState
+    val getConnectionUrlMethod = sessionState.getClass.
+      getMethod("getConnectionUrl", classOf[SparkSession])
+    val connectionUrl = getConnectionUrlMethod.
+      invoke(sessionState, sqlContext.sparkSession).toString()
+    val getUserMethod = sessionState.getClass.getMethod("getUserString")
+    val user = getUserMethod.invoke(sessionState).toString()
     val params = parameters +
       ("user.name" -> user) +
       ("user.password" -> "password") +
