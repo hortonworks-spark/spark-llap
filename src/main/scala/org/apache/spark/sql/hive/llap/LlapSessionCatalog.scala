@@ -63,7 +63,8 @@ private[sql] class LlapSessionCatalog(
       val table = formatTableName(name.table)
       val sparkSession = SparkSession.getActiveSession.get.sqlContext.sparkSession
       val sessionState = SparkSession.getActiveSession.get.sessionState
-      val getConnectionUrlMethod = sessionState.getClass.getMethod("getConnectionUrl")
+      val getConnectionUrlMethod = sessionState.getClass.
+        getMethod("getConnectionUrl", classOf[SparkSession])
       val connectionUrl = getConnectionUrlMethod.invoke(sparkSession).toString()
       val getUserMethod = sessionState.getClass.getMethod("getUserString")
       val user = getUserMethod.toString()

@@ -73,7 +73,8 @@ private[spark] class LlapExternalCatalog(
   private def createConnection(): Connection = {
     val sparkSession = SparkSession.getActiveSession.get.sqlContext.sparkSession
     val sessionState = SparkSession.getActiveSession.get.sessionState
-    val getConnectionUrlMethod = sessionState.getClass.getMethod("getConnectionUrl")
+    val getConnectionUrlMethod = sessionState.getClass.
+      getMethod("getConnectionUrl", classOf[SparkSession])
     val connectionUrl = getConnectionUrlMethod.invoke(sparkSession).toString()
     val getUserMethod = sessionState.getClass.getMethod("getUserString")
     val user = getUserMethod.toString()

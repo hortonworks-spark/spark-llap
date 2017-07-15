@@ -18,8 +18,7 @@
 package org.apache.spark.sql.hive.llap
 
 import com.hortonworks.spark.sql.hive.llap.{DefaultJDBCWrapper, LlapRelation}
-
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.{SQLContext, SparkSession}
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.sources.RelationProvider
 
@@ -28,7 +27,7 @@ class DefaultSource extends RelationProvider {
   override def createRelation(sqlContext: SQLContext, parameters: Map[String, String])
       : BaseRelation = {
     val getConnectionUrlMethod = sqlContext.sparkSession.sessionState.
-      getClass.getMethod("getConnectionUrl")
+      getClass.getMethod("getConnectionUrl", classOf[SparkSession])
     val connectionUrl = getConnectionUrlMethod.invoke(sqlContext.sparkSession).toString()
     val getUserMethod = sqlContext.sparkSession.sessionState.
       getClass.getMethod("getUserString")
