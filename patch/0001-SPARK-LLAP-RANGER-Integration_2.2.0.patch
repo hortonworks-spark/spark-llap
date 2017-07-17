@@ -1,31 +1,3 @@
-From 9a5975c60cf102735e7040d794ea68267fe68263 Mon Sep 17 00:00:00 2001
-From: Mingjie Tang <mtang@hortonworks.com>
-Date: Tue, 2 May 2017 15:58:56 -0700
-Subject: [PATCH] add the llap for the ranger
-
-fix the compile scala style type issue
-
-fix for compliation
-
-update the datasource for find data source logical relation
-
-update the class name
-
-update the for create table
-
-update based on comments of dongjoon
----
- .../security/ConfigurableCredentialManager.scala   |   2 +-
- .../security/HiveServer2CredentialProvider.scala   | 107 +++++++++++++++++++++
- .../org/apache/spark/sql/internal/SQLConf.scala    |  21 ++++
- .../apache/spark/sql/internal/StaticSQLConf.scala  |   6 ++
- .../scala/org/apache/spark/sql/SparkSession.scala  |  35 ++++++-
- .../execution/datasources/DataSourceStrategy.scala |  38 +++++---
- .../apache/spark/sql/internal/SessionState.scala   |  52 ++++++++++
- .../apache/spark/sql/internal/SharedState.scala    |  10 +-
- 8 files changed, 254 insertions(+), 17 deletions(-)
- create mode 100644 resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
-
 diff --git a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
 index 4f4be52..6df415f 100644
 --- a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
@@ -153,10 +125,10 @@ index 0000000..5774eca
 +  }
 +}
 diff --git a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
-index b24419a..e359160 100644
+index 94244dd..bff325a 100644
 --- a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
 +++ b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
-@@ -787,6 +787,27 @@ object SQLConf {
+@@ -795,6 +795,27 @@ object SQLConf {
        .intConf
        .createWithDefault(UnsafeExternalSorter.DEFAULT_NUM_ELEMENTS_FOR_SPILL_THRESHOLD.toInt)
  
@@ -202,7 +174,7 @@ index c6c0a60..2ed4ae9 100644
    // in order to fit the JSON string in metastore's table property (by default, the value has
    // a length restriction of 4000 characters, so do not use a value larger than 4000 as the default
 diff --git a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
-index a519492..4e23f24 100644
+index cce8a1c..7eb941f 100644
 --- a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
 +++ b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
 @@ -39,7 +39,7 @@ import org.apache.spark.sql.execution._
@@ -214,7 +186,7 @@ index a519492..4e23f24 100644
  import org.apache.spark.sql.sources.BaseRelation
  import org.apache.spark.sql.streaming._
  import org.apache.spark.sql.types.{DataType, StructType}
-@@ -1031,9 +1031,18 @@ object SparkSession {
+@@ -1037,9 +1037,18 @@ object SparkSession {
    private val HIVE_SESSION_STATE_BUILDER_CLASS_NAME =
      "org.apache.spark.sql.hive.HiveSessionStateBuilder"
  
@@ -234,7 +206,7 @@ index a519492..4e23f24 100644
        case "in-memory" => classOf[SessionStateBuilder].getCanonicalName
      }
    }
-@@ -1069,4 +1078,26 @@ object SparkSession {
+@@ -1075,4 +1084,26 @@ object SparkSession {
      }
    }
  
@@ -262,11 +234,11 @@ index a519492..4e23f24 100644
 +
  }
 diff --git a/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala b/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
-index d307122..3a748b5 100644
+index ded9303..a6ab31e 100644
 --- a/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
 +++ b/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSourceStrategy.scala
-@@ -219,19 +219,31 @@ class FindDataSourceTable(sparkSession: SparkSession) extends Rule[LogicalPlan]
-     val plan = cache.get(qualifiedTableName, new Callable[LogicalPlan]() {
+@@ -218,19 +218,31 @@ class FindDataSourceTable(sparkSession: SparkSession) extends Rule[LogicalPlan]
+     val plan = catalogProxy.getCachedPlan(qualifiedTableName, new Callable[LogicalPlan]() {
        override def call(): LogicalPlan = {
          val pathOption = table.storage.locationUri.map("path" -> CatalogUtils.URIToString(_))
 -        val dataSource =
@@ -311,7 +283,7 @@ index d307122..3a748b5 100644
      }).asInstanceOf[LogicalRelation]
  
 diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
-index 1b341a1..a90c096 100644
+index 1b341a1..a6f2632 100644
 --- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
 +++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
 @@ -98,6 +98,58 @@ private[sql] class SessionState(
@@ -326,7 +298,7 @@ index 1b341a1..a90c096 100644
 +   * @return User name for the STS connection
 +   */
 +  def getUserString(): String = {
-+    System.getProperty("user")
++    System.getProperty("user.name")
 +  }
 +
 +  /**
@@ -374,7 +346,7 @@ index 1b341a1..a90c096 100644
  
  private[sql] object SessionState {
 diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
-index a93b701..e0337ed 100644
+index 7202f12..23d0f9c 100644
 --- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
 +++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
 @@ -166,9 +166,17 @@ object SharedState extends Logging {
@@ -396,6 +368,3 @@ index a93b701..e0337ed 100644
        case "in-memory" => classOf[InMemoryCatalog].getCanonicalName
      }
    }
--- 
-2.10.1 (Apple Git-78)
-
