@@ -36,7 +36,7 @@ class DefaultSource extends RelationProvider {
     val params = parameters +
       ("user.name" -> user) +
       ("user.password" -> "password") +
-      ("connectionUrl" -> connectionUrl)
+      ("url" -> connectionUrl)
 
     LlapRelation(
       sqlContext,

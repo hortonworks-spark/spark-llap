@@ -45,7 +45,7 @@ case class LlapRelation(
   }
 
   @transient val tableSchema: StructType = {
-    val connectionUrl = parameters("connectionUrl")
+    val connectionUrl = parameters("url")
     val user = parameters("user.name")
     val conn = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
     val queryKey = getQueryType()
@@ -127,7 +127,7 @@ case class LlapRelation(
   }
 
   private def getConnection(): Connection = {
-    val connectionUrl = parameters("connectionUrl")
+    val connectionUrl = parameters("url")
     val user = parameters("user.name")
     DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
   }
