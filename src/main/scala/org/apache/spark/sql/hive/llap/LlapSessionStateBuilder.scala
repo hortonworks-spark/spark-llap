@@ -26,7 +26,6 @@ import org.apache.spark.sql.internal.SessionState
 class LlapSessionStateBuilder(sparkSession: SparkSession, parentState: Option[SessionState] = None)
   extends HiveSessionStateBuilder(sparkSession, parentState) with Logging {
 
-  self =>
   /**
     * Create a [[LlapSessionCatalog]] for Llap related data processing
     */
@@ -46,5 +45,6 @@ class LlapSessionStateBuilder(sparkSession: SparkSession, parentState: Option[Se
     catalog
   }
 
+  override protected def newBuilder: NewBuilder = new LlapSessionStateBuilder(_, _)
 }
 

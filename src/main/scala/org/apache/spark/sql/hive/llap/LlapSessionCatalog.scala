@@ -19,13 +19,14 @@ package org.apache.spark.sql.hive.llap
 
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
-
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.FunctionRegistry
+import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, NoSuchTableException}
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.parser.ParserInterface
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias, View}
+import org.apache.spark.sql.execution.datasources.{DataSource, LogicalRelation}
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.internal.SQLConf
 
@@ -49,6 +50,38 @@ private[sql] class LlapSessionCatalog(
       hadoopConf,
       parser,
       functionResourceLoader) with Logging {
+
+  override def lookupRelation(name: TableIdentifier): LogicalPlan = {
+    synchronized {
+      val db = formatDatabaseName(name.database.getOrElse(currentDb))
+      val table = formatTableName(name.table)
+      if (db == globalTempViewManager.database) {
+        globalTempViewManager.get(table).map { viewDef =>
+          SubqueryAlias(table, viewDef)
+        }.getOrElse(throw new NoSuchTableException(db, table))
+      } else if (name.database.isDefined || !tempTables.contains(table)) {
+        val metadata = externalCatalog.getTable(db, table)
+        val sparkSession = SparkSession.getActiveSession.get.sqlContext.sparkSession
+        val sessionState = SparkSession.getActiveSession.get.sessionState
+        val getConnectionUrlMethod = sessionState.getClass.
+          getMethod("getConnectionUrl", classOf[SparkSession])
+        val connectionUrl = getConnectionUrlMethod.invoke(sessionState, sparkSession).toString()
+
+        val logicalRelation = LogicalRelation(
+          DataSource(
+            sparkSession = sparkSession,
+            className = "org.apache.spark.sql.hive.llap",
+            options = Map(
+              "table" -> (metadata.database + "." + table),
+              "url" -> connectionUrl)
+          ).resolveRelation())
+
+        SubqueryAlias(table, logicalRelation)
+      } else {
+        SubqueryAlias(table, tempTables(table))
+      }
+    }
+  }
 
 
   /**
