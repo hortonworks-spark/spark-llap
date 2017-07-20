@@ -42,7 +42,7 @@ libraryDependencies ++= Seq(
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging"),
 
-  ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "compile")
+  ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "provided")
     .exclude("commons-beanutils", "commons-beanutils")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("javax.servlet", "servlet-api")
