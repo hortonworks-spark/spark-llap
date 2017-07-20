@@ -18,7 +18,8 @@
 package org.apache.spark.sql.hive.llap
 
 import com.hortonworks.spark.sql.hive.llap.{DefaultJDBCWrapper, LlapRelation}
-import org.apache.spark.sql.{SQLContext, SparkSession}
+
+import org.apache.spark.sql._
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.sources.RelationProvider
 

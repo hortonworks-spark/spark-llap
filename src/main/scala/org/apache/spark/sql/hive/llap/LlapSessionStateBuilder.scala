@@ -27,8 +27,8 @@ class LlapSessionStateBuilder(sparkSession: SparkSession, parentState: Option[Se
   extends HiveSessionStateBuilder(sparkSession, parentState) with Logging {
 
   /**
-    * Create a [[LlapSessionCatalog]] for Llap related data processing
-    */
+   * Create a [[LlapSessionCatalog]] for Llap related data processing
+   */
   override protected lazy val catalog: LlapSessionCatalog = {
     val catalog = new LlapSessionCatalog(
       sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog],

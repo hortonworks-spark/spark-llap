@@ -19,6 +19,7 @@ package org.apache.spark.sql.hive.llap
 
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
+
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.TableIdentifier
