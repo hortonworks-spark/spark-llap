@@ -1,6 +1,6 @@
 
 name := "spark-llap"
-version := "1.1.4-2.2"
+version := "1.1.4-2.1-SNAPSHOT"
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
@@ -44,7 +44,7 @@ libraryDependencies ++= Seq(
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging"),
 
-  ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "compile")
+  ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "provided")
     .exclude("commons-beanutils", "commons-beanutils")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("javax.servlet", "servlet-api")

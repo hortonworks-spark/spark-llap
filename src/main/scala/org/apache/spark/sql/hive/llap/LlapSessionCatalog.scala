@@ -89,7 +89,7 @@ private[sql] class LlapSessionCatalog(
    * Retrieve the metadata of an existing permanent table/view. If no database is specified,
    * assume the table/view is in the current database. If the specified table/view is not found
    * in the database then a
-    *  [[org.apache.spark.sql.catalyst.analysis.NoSuchTableException]] is thrown.
+   *  [[org.apache.spark.sql.catalyst.analysis.NoSuchTableException]] is thrown.
    */
   override def getTableMetadata(name: TableIdentifier): CatalogTable = {
     if (Thread.currentThread().getStackTrace()(2).toString().contains("DescribeTableCommand")) {

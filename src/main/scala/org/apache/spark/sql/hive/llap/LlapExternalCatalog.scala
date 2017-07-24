@@ -297,11 +297,11 @@ private[spark] class LlapExternalCatalog(
 
     executeUpdate(
       s"""
-         |LOAD DATA $localString
-         |INPATH '$loadPath'
-         |$overwriteString
-         |INTO TABLE $db.$table
-         |""".stripMargin)
+        |LOAD DATA $localString
+        |INPATH '$loadPath'
+        |$overwriteString
+        |INTO TABLE $db.$table
+        |""".stripMargin)
   }
 
   override def loadPartition(
@@ -323,12 +323,12 @@ private[spark] class LlapExternalCatalog(
 
     executeUpdate(
       s"""
-         |LOAD DATA $localString
-         |INPATH '$loadPath'
-         |$overwriteString
-         |INTO TABLE $db.$table
-         |$partitionString
-         |""".stripMargin)
+        |LOAD DATA $localString
+        |INPATH '$loadPath'
+        |$overwriteString
+        |INTO TABLE $db.$table
+        |$partitionString
+        |""".stripMargin)
   }
 
 

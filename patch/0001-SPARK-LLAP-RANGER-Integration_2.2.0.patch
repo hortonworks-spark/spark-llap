@@ -13,7 +13,7 @@ index 4f4be52..6df415f 100644
  
 diff --git a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
 new file mode 100644
-index 0000000..5774eca
+index 0000000..46a4723
 --- /dev/null
 +++ b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
 @@ -0,0 +1,107 @@
@@ -58,9 +58,9 @@ index 0000000..5774eca
 +  override def serviceName: String = "hiveserver2"
 +
 +  override def obtainCredentials(
-+                                  hadoopConf: Configuration,
-+                                  sparkConf: SparkConf,
-+                                  creds: Credentials): Option[Long] = {
++      hadoopConf: Configuration,
++      sparkConf: SparkConf,
++      creds: Credentials): Option[Long] = {
 +
 +    var con: Connection = null
 +    try {
@@ -234,7 +234,7 @@ index cce8a1c..7eb941f 100644
 +
  }
 diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
-index 1b341a1..f756546 100644
+index 1b341a1..8b36973 100644
 --- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
 +++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
 @@ -98,6 +98,62 @@ private[sql] class SessionState(
@@ -257,8 +257,8 @@ index 1b341a1..f756546 100644
 +  }
 +
 +  /**
-+    * Return connection URL (with replaced proxy user name if exists).
-+    */
++   * Return connection URL (with replaced proxy user name if exists).
++   */
 +  def getConnectionUrl(sparkSession: SparkSession): String = {
 +    var userString = getUser()
 +    if (userString == null) {
