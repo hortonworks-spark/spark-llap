@@ -1,3 +1,37 @@
+From d8e5e81c14fbbe4a515aeff1352df766b1bb0c17 Mon Sep 17 00:00:00 2001
+From: Mingjie Tang <mtang@hortonworks.com>
+Date: Tue, 2 May 2017 15:58:56 -0700
+Subject: [PATCH] add the llap for the ranger
+
+fix the compile scala style type issue
+
+fix for compliation
+
+update the datasource for find data source logical relation
+
+update the class name
+
+update the for create table
+
+update based on comments of dongjoon
+
+Change user name
+
+Remove the update of datasource part
+
+Update the identification with Dongjoon's comments
+---
+ .../security/ConfigurableCredentialManager.scala   |   2 +-
+ .../security/HiveServer2CredentialProvider.scala   | 107 +++++++++++++++++++++
+ .../org/apache/spark/sql/internal/SQLConf.scala    |  21 ++++
+ .../apache/spark/sql/internal/StaticSQLConf.scala  |   6 ++
+ .../scala/org/apache/spark/sql/SparkSession.scala  |  35 ++++++-
+ .../apache/spark/sql/internal/SessionState.scala   |  56 +++++++++++
+ .../apache/spark/sql/internal/SharedState.scala    |  10 +-
+ .../hive/thriftserver/SparkSQLSessionManager.scala |   2 +
+ 8 files changed, 235 insertions(+), 4 deletions(-)
+ create mode 100644 resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
+
 diff --git a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
 index 4f4be52..6df415f 100644
 --- a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
@@ -343,3 +377,6 @@ index 7adaafe..9e57928 100644
      ctx.setConf("spark.sql.hive.version", HiveUtils.hiveExecutionVersion)
      if (sessionConf != null && sessionConf.containsKey("use:database")) {
        ctx.sql(s"use ${sessionConf.get("use:database")}")
+-- 
+2.10.1 (Apple Git-78)
+
