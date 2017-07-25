@@ -1,25 +1,8 @@
-From d8e5e81c14fbbe4a515aeff1352df766b1bb0c17 Mon Sep 17 00:00:00 2001
+From 7ec79399c9dbc57c919d9c8167ccad68734933a1 Mon Sep 17 00:00:00 2001
 From: Mingjie Tang <mtang@hortonworks.com>
 Date: Tue, 2 May 2017 15:58:56 -0700
-Subject: [PATCH] add the llap for the ranger
+Subject: [PATCH] SPARK-LLAP-RANGER Integration
 
-fix the compile scala style type issue
-
-fix for compliation
-
-update the datasource for find data source logical relation
-
-update the class name
-
-update the for create table
-
-update based on comments of dongjoon
-
-Change user name
-
-Remove the update of datasource part
-
-Update the identification with Dongjoon's comments
 ---
  .../security/ConfigurableCredentialManager.scala   |   2 +-
  .../security/HiveServer2CredentialProvider.scala   | 107 +++++++++++++++++++++
