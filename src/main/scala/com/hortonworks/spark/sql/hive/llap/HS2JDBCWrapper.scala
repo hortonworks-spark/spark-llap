@@ -20,16 +20,16 @@ package com.hortonworks.spark.sql.hive.llap
 import java.net.URI
 import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
-
-import org.slf4j.LoggerFactory
 
 import org.apache.hadoop.hive.llap.FieldDesc
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory
 import org.apache.hadoop.hive.serde2.typeinfo._
+import org.slf4j.LoggerFactory
+
 import org.apache.spark.sql.types._
 
 
