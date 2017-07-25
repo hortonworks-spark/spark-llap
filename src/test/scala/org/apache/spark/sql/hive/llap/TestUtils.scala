@@ -16,10 +16,11 @@
  */
 package org.apache.spark.sql.hive.llap
 
-import org.apache.spark.SparkContext
 import java.sql.Statement
 
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
+
+import org.apache.spark.SparkContext
 
 object TestUtils {
   lazy val sparkContext = new SparkContext("local", "test")
