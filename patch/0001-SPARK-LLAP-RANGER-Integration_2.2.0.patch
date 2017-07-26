@@ -1,0 +1,365 @@
+From 7ec79399c9dbc57c919d9c8167ccad68734933a1 Mon Sep 17 00:00:00 2001
+From: Mingjie Tang <mtang@hortonworks.com>
+Date: Tue, 25 July 2017 17:40:56 -0700
+Subject: [PATCH] SPARK-LLAP-RANGER Integration
+
+---
+ .../security/ConfigurableCredentialManager.scala   |   2 +-
+ .../security/HiveServer2CredentialProvider.scala   | 107 +++++++++++++++++++++
+ .../org/apache/spark/sql/internal/SQLConf.scala    |  21 ++++
+ .../apache/spark/sql/internal/StaticSQLConf.scala  |   6 ++
+ .../scala/org/apache/spark/sql/SparkSession.scala  |  35 ++++++-
+ .../apache/spark/sql/internal/SessionState.scala   |  56 +++++++++++
+ .../apache/spark/sql/internal/SharedState.scala    |  10 +-
+ .../hive/thriftserver/SparkSQLSessionManager.scala |   2 +
+ 8 files changed, 235 insertions(+), 4 deletions(-)
+ create mode 100644 resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
+
+diff --git a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
+index 4f4be52..6df415f 100644
+--- a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
++++ b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/ConfigurableCredentialManager.scala
+@@ -60,7 +60,7 @@ private[yarn] final class ConfigurableCredentialManager(
+               s"using ${providerEnabledConfig.format(p.serviceName)} instead")
+             c
+           }
+-        }.map(_.toBoolean).getOrElse(true)
++        }.map(_.toBoolean).getOrElse { if (p.serviceName == "hiveserver2") false else true }
+     }.map { p => (p.serviceName, p) }.toMap
+   }
+ 
+diff --git a/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
+new file mode 100644
+index 0000000..46a4723
+--- /dev/null
++++ b/resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/security/HiveServer2CredentialProvider.scala
+@@ -0,0 +1,107 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one or more
++ * contributor license agreements.  See the NOTICE file distributed with
++ * this work for additional information regarding copyright ownership.
++ * The ASF licenses this file to You under the Apache License, Version 2.0
++ * (the "License"); you may not use this file except in compliance with
++ * the License.  You may obtain a copy of the License at
++ *
++ *    http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.spark.deploy.yarn.security
++
++import java.lang.reflect.UndeclaredThrowableException
++import java.security.PrivilegedExceptionAction
++import java.sql.{Connection, DriverManager}
++
++import scala.reflect.runtime.universe
++
++import org.apache.hadoop.conf.Configuration
++import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier
++import org.apache.hadoop.io.Text
++import org.apache.hadoop.security.{Credentials, UserGroupInformation}
++import org.apache.hadoop.security.token.Token
++
++import org.apache.spark.SparkConf
++import org.apache.spark.internal.Logging
++import org.apache.spark.util.Utils
++
++private[security] class HiveServer2CredentialProvider extends ServiceCredentialProvider
++  with Logging {
++
++  override def serviceName: String = "hiveserver2"
++
++  override def obtainCredentials(
++      hadoopConf: Configuration,
++      sparkConf: SparkConf,
++      creds: Credentials): Option[Long] = {
++
++    var con: Connection = null
++    try {
++      Utils.classForName("org.apache.hive.jdbc.HiveDriver")
++
++      val mirror = universe.runtimeMirror(Utils.getContextOrSparkClassLoader)
++      val hiveConfClass = mirror.classLoader.loadClass("org.apache.hadoop.hive.conf.HiveConf")
++      val ctor = hiveConfClass.getDeclaredConstructor(classOf[Configuration],
++        classOf[Object].getClass)
++      val hiveConf = ctor.newInstance(hadoopConf, hiveConfClass).asInstanceOf[Configuration]
++
++      val hs2HostKey = "hive.server2.thrift.bind.host"
++      val hs2PortKey = "hive.server2.thrift.port"
++      val hs2PrincKey = "hive.server2.authentication.kerberos.principal"
++
++      require(hiveConf.get(hs2HostKey) != null, s"$hs2HostKey is not configured")
++      require(hiveConf.get(hs2PortKey) != null, s"$hs2PortKey is not configured")
++      require(hiveConf.get(hs2PrincKey) != null, s"$hs2PrincKey is not configured")
++
++      val jdbcUrl = s"jdbc:hive2://${hiveConf.get(hs2HostKey)}:${hiveConf.get(hs2PortKey)}/;" +
++        s"principal=${hiveConf.get(hs2PrincKey)}"
++
++      doAsRealUser {
++        con = DriverManager.getConnection(jdbcUrl)
++        val method = con.getClass.getMethod("getDelegationToken", classOf[String], classOf[String])
++        val currentUser = UserGroupInformation.getCurrentUser()
++        val realUser = Option(currentUser.getRealUser()).getOrElse(currentUser)
++        val tokenStr = method.invoke(con, realUser.getUserName, hiveConf.get(hs2PrincKey))
++          .asInstanceOf[String]
++        val token = new Token[DelegationTokenIdentifier]()
++        token.decodeFromUrlString(tokenStr)
++        creds.addToken(new Text("hive.jdbc.delegation.token"), token)
++        logInfo(s"Add HiveServer2 token $token to credentials")
++      }
++    } finally {
++      if (con != null) {
++        con.close()
++        con = null
++      }
++    }
++
++    None
++  }
++
++  /**
++   * Run some code as the real logged in user (which may differ from the current user, for
++   * example, when using proxying).
++   */
++  private def doAsRealUser[T](fn: => T): T = {
++    val currentUser = UserGroupInformation.getCurrentUser()
++    val realUser = Option(currentUser.getRealUser()).getOrElse(currentUser)
++
++    // For some reason the Scala-generated anonymous class ends up causing an
++    // UndeclaredThrowableException, even if you annotate the method with @throws.
++    try {
++      realUser.doAs(new PrivilegedExceptionAction[T]() {
++        override def run(): T = fn
++      })
++    } catch {
++      case e: UndeclaredThrowableException => throw Option(e.getCause()).getOrElse(e)
++    }
++  }
++}
+diff --git a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
+index 94244dd..bff325a 100644
+--- a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
++++ b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala
+@@ -795,6 +795,27 @@ object SQLConf {
+       .intConf
+       .createWithDefault(UnsafeExternalSorter.DEFAULT_NUM_ELEMENTS_FOR_SPILL_THRESHOLD.toInt)
+ 
++  // ------------------------------------------------------
++  //  Configuration for HDP Ranger with LLAP
++  // ------------------------------------------------------
++  val HIVESERVER2_JDBC_URL =
++  buildConf("spark.sql.hive.hiveserver2.jdbc.url")
++    .doc("HiveServer2 JDBC URL.")
++    .stringConf
++    .createWithDefault("")
++
++  val HIVESERVER2_JDBC_URL_PRINCIPAL =
++    buildConf("spark.sql.hive.hiveserver2.jdbc.url.principal")
++      .doc("HiveServer2 JDBC Principal.")
++      .stringConf
++      .createWithDefault("")
++
++  val HIVESERVER2_CREDENTIAL_ENABLED =
++    buildConf("spark.yarn.security.credentials.hiveserver2.enabled")
++      .doc("When true, HiveServer2 credential provider is enabled.")
++      .booleanConf
++      .createWithDefault(false)
++
+   object Deprecated {
+     val MAPRED_REDUCE_TASKS = "mapred.reduce.tasks"
+   }
+diff --git a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
+index c6c0a60..2ed4ae9 100644
+--- a/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
++++ b/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/StaticSQLConf.scala
+@@ -44,6 +44,12 @@ object StaticSQLConf {
+     .stringConf
+     .createWithDefault("global_temp")
+ 
++  // Llap enabled configuration for HDP
++  val LLAP_ENABLED = buildStaticConf("spark.sql.hive.llap")
++    .internal()
++    .booleanConf
++    .createWithDefault(false)
++
+   // This is used to control when we will split a schema's JSON string to multiple pieces
+   // in order to fit the JSON string in metastore's table property (by default, the value has
+   // a length restriction of 4000 characters, so do not use a value larger than 4000 as the default
+diff --git a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+index cce8a1c..7eb941f 100644
+--- a/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
++++ b/sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+@@ -39,7 +39,7 @@ import org.apache.spark.sql.execution._
+ import org.apache.spark.sql.execution.datasources.LogicalRelation
+ import org.apache.spark.sql.execution.ui.SQLListener
+ import org.apache.spark.sql.internal._
+-import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
++import org.apache.spark.sql.internal.StaticSQLConf.{CATALOG_IMPLEMENTATION, LLAP_ENABLED}
+ import org.apache.spark.sql.sources.BaseRelation
+ import org.apache.spark.sql.streaming._
+ import org.apache.spark.sql.types.{DataType, StructType}
+@@ -1037,9 +1037,18 @@ object SparkSession {
+   private val HIVE_SESSION_STATE_BUILDER_CLASS_NAME =
+     "org.apache.spark.sql.hive.HiveSessionStateBuilder"
+ 
++  // Llap SessionStateBuilder
++  private val LLAP_SESSION_STATE_BUILDER_CLASS_NAME =
++    "org.apache.spark.sql.hive.llap.LlapSessionStateBuilder"
++
+   private def sessionStateClassName(conf: SparkConf): String = {
+     conf.get(CATALOG_IMPLEMENTATION) match {
+-      case "hive" => HIVE_SESSION_STATE_BUILDER_CLASS_NAME
++      case "hive" =>
++        if (isLLAPEnabled(conf)) {
++          LLAP_SESSION_STATE_BUILDER_CLASS_NAME
++        } else {
++          HIVE_SESSION_STATE_BUILDER_CLASS_NAME
++        }
+       case "in-memory" => classOf[SessionStateBuilder].getCanonicalName
+     }
+   }
+@@ -1075,4 +1084,26 @@ object SparkSession {
+     }
+   }
+ 
++  /**
++   * Return true if `spark.sql.hive.llap=true` and classes can be loaded.
++   * On class loading errors, it will fails.
++   * Return false if `spark.sql.hive.llap=false`.
++   */
++  private[spark] def isLLAPEnabled(conf: SparkConf): Boolean = {
++    if (conf.get(LLAP_ENABLED.key, "false") == "true") {
++      try {
++        Utils.classForName(LLAP_SESSION_STATE_BUILDER_CLASS_NAME)
++        Utils.classForName("org.apache.hadoop.hive.conf.HiveConf")
++        true
++      } catch {
++        case _: ClassNotFoundException | _: NoClassDefFoundError =>
++          throw new IllegalArgumentException(
++            "Unable to instantiate SparkSession with LLAP support because " +
++              "LLAP or Hive classes are not found.")
++      }
++    } else {
++      false
++    }
++  }
++
+ }
+diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
+index 1b341a1..8b36973 100644
+--- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
++++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SessionState.scala
+@@ -98,6 +98,62 @@ private[sql] class SessionState(
+   def refreshTable(tableName: String): Unit = {
+     catalog.refreshTable(sqlParser.parseTableIdentifier(tableName))
+   }
++
++  // ------------------------------------------------------
++  //  Helper methods for HDP Ranger with LLAP
++  // ------------------------------------------------------
++
++  private var userName = System.getProperty("user.name")
++
++  def setUser(user: String): Unit = {
++    userName = user
++  }
++
++  def getUser(): String = {
++    userName
++  }
++
++  /**
++   * Return connection URL (with replaced proxy user name if exists).
++   */
++  def getConnectionUrl(sparkSession: SparkSession): String = {
++    var userString = getUser()
++    if (userString == null) {
++      userString = ""
++    }
++    val urlString = getConnectionUrlFromConf(sparkSession)
++    urlString.replace("${user}", userString)
++  }
++
++  import org.apache.spark.sql.internal.SQLConf._
++  /**
++   * For the given HiveServer2 JDBC URLs, attach the postfix strings if needed.
++   *
++   * For kerberized clusters,
++   *
++   * 1. YARN cluster mode: ";auth=delegationToken"
++   * 2. YARN client mode: ";principal=hive/_HOST@EXAMPLE.COM"
++   *
++   * Non-kerberied clusters,
++   * 3. Use the given URLs.
++   */
++  private def getConnectionUrlFromConf(sparkSession: SparkSession): String = {
++    if (!sparkSession.conf.contains(HIVESERVER2_JDBC_URL.key)) {
++      throw new Exception("Spark conf does not contain config " + HIVESERVER2_JDBC_URL.key)
++    }
++
++    if (sparkSession.conf.get(HIVESERVER2_CREDENTIAL_ENABLED, false)) {
++      // 1. YARN Cluster mode for kerberized clusters
++      s"${sparkSession.conf.get(HIVESERVER2_JDBC_URL.key)};auth=delegationToken"
++    } else if (sparkSession.sparkContext.conf.contains(HIVESERVER2_JDBC_URL_PRINCIPAL.key)) {
++      // 2. YARN Client mode for kerberized clusters
++      s"${sparkSession.conf.get(HIVESERVER2_JDBC_URL.key)};" +
++        s"principal=${sparkSession.conf.get(HIVESERVER2_JDBC_URL_PRINCIPAL.key)}"
++    } else {
++      // 3. For non-kerberized cluster
++      sparkSession.conf.get(HIVESERVER2_JDBC_URL.key)
++    }
++  }
+ }
+ 
+ private[sql] object SessionState {
+diff --git a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
+index 7202f12..23d0f9c 100644
+--- a/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
++++ b/sql/core/src/main/scala/org/apache/spark/sql/internal/SharedState.scala
+@@ -166,9 +166,17 @@ object SharedState extends Logging {
+ 
+   private val HIVE_EXTERNAL_CATALOG_CLASS_NAME = "org.apache.spark.sql.hive.HiveExternalCatalog"
+ 
++  private val LLAP_EXTERNAL_CATALOG_CLASS_NAME =
++    "org.apache.spark.sql.hive.llap.LlapExternalCatalog"
++
+   private def externalCatalogClassName(conf: SparkConf): String = {
+     conf.get(CATALOG_IMPLEMENTATION) match {
+-      case "hive" => HIVE_EXTERNAL_CATALOG_CLASS_NAME
++      case "hive" =>
++        if (SparkSession.isLLAPEnabled(conf)) {
++          LLAP_EXTERNAL_CATALOG_CLASS_NAME
++        } else {
++          HIVE_EXTERNAL_CATALOG_CLASS_NAME
++        }
+       case "in-memory" => classOf[InMemoryCatalog].getCanonicalName
+     }
+   }
+diff --git a/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLSessionManager.scala b/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLSessionManager.scala
+index 7adaafe..9e57928 100644
+--- a/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLSessionManager.scala
++++ b/sql/hive-thriftserver/src/main/scala/org/apache/spark/sql/hive/thriftserver/SparkSQLSessionManager.scala
+@@ -31,6 +31,7 @@ import org.apache.spark.sql.SQLContext
+ import org.apache.spark.sql.hive.HiveUtils
+ import org.apache.spark.sql.hive.thriftserver.ReflectionUtils._
+ import org.apache.spark.sql.hive.thriftserver.server.SparkSQLOperationManager
++import org.apache.spark.sql.internal.SessionState
+ 
+ 
+ private[hive] class SparkSQLSessionManager(hiveServer: HiveServer2, sqlContext: SQLContext)
+@@ -77,6 +78,7 @@ private[hive] class SparkSQLSessionManager(hiveServer: HiveServer2, sqlContext:
+     } else {
+       sqlContext.newSession()
+     }
++    ctx.sessionState.asInstanceOf[SessionState].setUser(session.getUserName())
+     ctx.setConf("spark.sql.hive.version", HiveUtils.hiveExecutionVersion)
+     if (sessionConf != null && sessionConf.containsKey("use:database")) {
+       ctx.sql(s"use ${sessionConf.get("use:database")}")
+-- 
+2.10.1 (Apple Git-78)
+

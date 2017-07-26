@@ -1,11 +1,11 @@
 
 name := "spark-llap"
-version := "1.1.4-2.1-SNAPSHOT"
+version := "1.1.4-2.2-SNAPSHOT"
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
-sparkVersion := sys.props.getOrElse("spark.version", "2.1.1")
+sparkVersion := sys.props.getOrElse("spark.version", "2.2.0")
 
 val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.1.0-129")
 val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.1.0-129")

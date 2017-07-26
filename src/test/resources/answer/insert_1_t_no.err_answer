@@ -1,1 +1,1 @@
-Error: org.apache.spark.sql.AnalysisException: Cannot insert into table unknown because the number of columns are different: need 0 columns, but query has 2 columns.; (state=,code=0)
+Error: org.apache.spark.sql.AnalysisException: unknown requires that the data to be inserted have the same number of columns as the target table: target table has 0 column(s) but the inserted data has 2 column(s), including 0 partition column(s) having constant value(s).; (state=,code=0)
