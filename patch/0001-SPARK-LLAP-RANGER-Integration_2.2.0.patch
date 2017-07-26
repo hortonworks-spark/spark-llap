@@ -1,6 +1,6 @@
 From 7ec79399c9dbc57c919d9c8167ccad68734933a1 Mon Sep 17 00:00:00 2001
 From: Mingjie Tang <mtang@hortonworks.com>
-Date: Tue, 2 May 2017 15:58:56 -0700
+Date: Tue, 25 July 2017 17:40:56 -0700
 Subject: [PATCH] SPARK-LLAP-RANGER Integration
 
 ---
