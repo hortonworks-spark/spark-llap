@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/hortonworks-spark/spark-llap.svg?branch=master)](https://travis-ci.org/hortonworks-spark/spark-llap)
+[![Build Status](https://travis-ci.org/hortonworks-spark/spark-llap.svg?branch=branch-2.2)](https://travis-ci.org/hortonworks-spark/spark-llap)
 
 # Apache Spark&trade; connector for Apache Hive&trade; LLAP
 
