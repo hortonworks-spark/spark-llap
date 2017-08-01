@@ -18,12 +18,12 @@
 package com.hortonworks.spark.sql.hive.llap
 
 import java.net.URI
-import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData,
-  SQLException}
+import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
+import org.apache.commons.dbcp.BasicDataSource
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory
 import org.apache.hadoop.hive.serde2.typeinfo._
@@ -53,6 +53,11 @@ class JDBCWrapper {
 
   private val log = LoggerFactory.getLogger(getClass)
 
+  private val connectionPool = new BasicDataSource;
+
+  private val initConnectionPool = {
+    connectionPool.setInitialSize(100)
+  }
   /**
    * Given a JDBC subprotocol, returns the appropriate driver class so that it can be registered
    * with Spark. If the user has explicitly specified a driver class in their configuration then
@@ -170,8 +175,11 @@ class JDBCWrapper {
     log.debug(s"${userProvidedDriverClass.getOrElse("")} $url $userName password")
     val subprotocol = new URI(url.stripPrefix("jdbc:")).getScheme
     val driverClass: Class[Driver] = getDriverClass(subprotocol, userProvidedDriverClass)
-    registerDriver(driverClass.getCanonicalName)
-    DriverManager.getConnection(url, userName, "password")
+    connectionPool.setDriverClassName(driverClass.getCanonicalName)
+    connectionPool.setUrl(url)
+    connectionPool.setUsername(userName)
+    connectionPool.setPassword("password")
+    connectionPool.getConnection
   }
 
   def columnString(dataType: DataType, dataSize: Option[Long]): String = dataType match {
