@@ -41,7 +41,8 @@ class LlapMetastoreCatalog(sparkSession: SparkSession)
     val catalog = sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog]
     val table = catalog.getTable(qualifiedTableName.database, qualifiedTableName.name)
 
-    val metastoreRelation = MetastoreRelation(qualifiedTableName.database, qualifiedTableName.name)(table, sparkSession)
+    val metastoreRelation =
+      MetastoreRelation(qualifiedTableName.database, qualifiedTableName.name)(table, sparkSession)
     val size = metastoreRelation.statistics.sizeInBytes
 
     // Now convert to LlapRelation
