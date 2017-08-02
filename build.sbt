@@ -117,6 +117,7 @@ dependencyOverrides += "org.codehaus.jackson" % "jackson-jaxrs" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-xc" % "1.9.13"
 dependencyOverrides += "org.apache.commons" % "commons-lang3" % "3.4"
+libraryDependencies += "org.apache.commons" % "commons-dbcp2" % "2.1"
 
 
 // Assembly rules for shaded JAR

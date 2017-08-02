@@ -23,7 +23,7 @@ import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet,
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-import org.apache.commons.dbcp.BasicDataSource
+import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory
 import org.apache.hadoop.hive.serde2.typeinfo._
@@ -53,7 +53,7 @@ class JDBCWrapper {
 
   private val log = LoggerFactory.getLogger(getClass)
 
-  private val connectionPool = new BasicDataSource;
+  private val connectionPool = new BasicDataSource
 
   private val initConnectionPool = {
     connectionPool.setInitialSize(100)
