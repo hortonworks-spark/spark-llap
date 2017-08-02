@@ -41,6 +41,9 @@ class LlapMetastoreCatalog(sparkSession: SparkSession)
     val catalog = sparkSession.sharedState.externalCatalog.asInstanceOf[LlapExternalCatalog]
     val table = catalog.getTable(qualifiedTableName.database, qualifiedTableName.name)
 
+    val metastoreRelation = MetastoreRelation(qualifiedTableName.database, qualifiedTableName.name)(table, sparkSession)
+    val size = metastoreRelation.statistics.sizeInBytes
+
     // Now convert to LlapRelation
     val sessionState = sparkSession.sessionState.asInstanceOf[LlapSessionState]
     val logicalRelation = LogicalRelation(
@@ -49,6 +52,7 @@ class LlapMetastoreCatalog(sparkSession: SparkSession)
         className = "org.apache.spark.sql.hive.llap",
         options = Map(
           "table" -> (qualifiedTableName.database + "." + qualifiedTableName.name),
+          "sizeinbytes" -> size.toString(),
           "url" -> sessionState.getConnectionUrl())
       ).resolveRelation())
 
