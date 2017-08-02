@@ -178,6 +178,14 @@ case class LlapRelation(
     val resource = createResource
     try f.apply(resource) finally resource.close()
   }
+
+  override def sizeInBytes(): Long = {
+    if (parameters.isDefinedAt("sizeinbytes")) {
+      parameters("sizeinbytes").toLong
+    } else {
+      super.sizeInBytes
+    }
+  }
 }
 
 object LlapRelation {
