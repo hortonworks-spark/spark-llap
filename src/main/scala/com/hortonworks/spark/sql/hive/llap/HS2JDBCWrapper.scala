@@ -22,6 +22,7 @@ import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet,
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
 
 import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
@@ -53,11 +54,8 @@ class JDBCWrapper {
 
   private val log = LoggerFactory.getLogger(getClass)
 
-  private val connectionPool = new BasicDataSource
+  private val connectionPools = new mutable.HashMap[String, BasicDataSource]
 
-  private val initConnectionPool = {
-    connectionPool.setInitialSize(100)
-  }
   /**
    * Given a JDBC subprotocol, returns the appropriate driver class so that it can be registered
    * with Spark. If the user has explicitly specified a driver class in their configuration then
@@ -175,11 +173,21 @@ class JDBCWrapper {
     log.debug(s"${userProvidedDriverClass.getOrElse("")} $url $userName password")
     val subprotocol = new URI(url.stripPrefix("jdbc:")).getScheme
     val driverClass: Class[Driver] = getDriverClass(subprotocol, userProvidedDriverClass)
-    connectionPool.setDriverClassName(driverClass.getCanonicalName)
-    connectionPool.setUrl(url)
-    connectionPool.setUsername(userName)
-    connectionPool.setPassword("password")
-    connectionPool.getConnection
+
+    connectionPools.get(userName) match
+    {
+      case Some(d) => d.getConnection
+      case None =>
+        val datasource = new BasicDataSource
+        datasource.setDriverClassName(driverClass.getCanonicalName)
+        datasource.setUrl(url)
+        datasource.setUsername(userName)
+        datasource.setPassword("password")
+        datasource.setMaxConnLifetimeMillis(1000)
+        connectionPools.put(userName, datasource)
+        datasource.getConnection
+    }
+
   }
 
   def columnString(dataType: DataType, dataSize: Option[Long]): String = dataType match {
