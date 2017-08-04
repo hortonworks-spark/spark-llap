@@ -22,7 +22,6 @@ import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet,
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable
 
 import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
