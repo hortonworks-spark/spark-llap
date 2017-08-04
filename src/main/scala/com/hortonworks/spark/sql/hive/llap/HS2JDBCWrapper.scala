@@ -53,7 +53,7 @@ class JDBCWrapper {
 
   private val log = LoggerFactory.getLogger(getClass)
 
-  private val connectionPools = new mutable.HashMap[String, BasicDataSource]
+  private val connectionPools = new scala.collection.mutable.HashMap[String, BasicDataSource]
 
   /**
    * Given a JDBC subprotocol, returns the appropriate driver class so that it can be registered
