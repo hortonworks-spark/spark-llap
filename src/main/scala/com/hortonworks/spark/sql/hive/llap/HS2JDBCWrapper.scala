@@ -183,7 +183,6 @@ class JDBCWrapper {
         datasource.setUrl(url)
         datasource.setUsername(userName)
         datasource.setPassword("password")
-        datasource.setMaxConnLifetimeMillis(1000)
         connectionPools.put(userName, datasource)
         datasource.getConnection
     }
