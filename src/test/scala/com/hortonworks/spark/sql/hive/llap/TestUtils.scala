@@ -25,8 +25,8 @@ object TestUtils {
       spark: SparkSession,
       connectionUrl: String,
       userName: String,
-      dbcp2Conf : String): Unit = {
-    val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName, dbcp2Conf)
+      dbcp2Confs : String): Unit = {
+    val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName, dbcp2Confs)
     val settings = Seq(
       "hive.llap.daemon.service.hosts",
       "hive.zookeeper.quorum",
