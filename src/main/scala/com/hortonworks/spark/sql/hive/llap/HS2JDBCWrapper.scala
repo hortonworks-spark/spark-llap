@@ -168,19 +168,33 @@ class JDBCWrapper {
   def getConnector(
       userProvidedDriverClass: Option[String],
       url: String,
-      userName: String): Connection = {
+      userName: String,
+      dbcp2Configs: String): Connection = {
     log.debug(s"${userProvidedDriverClass.getOrElse("")} $url $userName password")
     val subprotocol = new URI(url.stripPrefix("jdbc:")).getScheme
     val driverClass: Class[Driver] = getDriverClass(subprotocol, userProvidedDriverClass)
 
-    connectionPools.get(userName) match
-    {
-      case Some(d) => d.getConnection
+    connectionPools.get(userName) match {
+      case Some(d) =>
+        d.getConnection
       case None =>
         val datasource = new BasicDataSource
         datasource.setDriverClassName(driverClass.getCanonicalName)
         datasource.setUrl(url)
         datasource.setUsername(userName)
+        // for hdp older version support without dbcp2 configurations
+        if(dbcp2Configs == null) {
+            datasource.setInitialSize(2)
+            datasource.setMaxConnLifetimeMillis(2000)
+            datasource.setMaxTotal(100)
+            datasource.setMaxIdle(50)
+            datasource.setMaxWaitMillis(4000)
+          } else {
+              dbcp2Configs.split(" ").map(s => s.trim.split(":")).foreach {
+              conf => datasource.addConnectionProperty(conf(0), conf(1))
+              log.debug(conf(0) + ":" + conf(1))
+            }
+          }
         datasource.setPassword("password")
         connectionPools.put(userName, datasource)
         datasource.getConnection

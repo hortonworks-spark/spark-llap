@@ -54,7 +54,8 @@ class LlapSessionState(sparkSession: SparkSession)
    * Return connection.
    */
   def connection: Connection = {
-    DefaultJDBCWrapper.getConnector(None, getConnectionUrl(), getUserString())
+    val dbcp2Config = sparkSession.sqlContext.getConf("spark.sql.hive.llap.dbcp2", null)
+    DefaultJDBCWrapper.getConnector(None, getConnectionUrl(), getUserString(), dbcp2Config)
   }
 
   /**
