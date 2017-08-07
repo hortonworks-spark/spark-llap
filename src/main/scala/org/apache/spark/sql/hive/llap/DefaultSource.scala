@@ -32,7 +32,7 @@ class DefaultSource extends RelationProvider {
       getMethod("getConnectionUrl", classOf[SparkSession])
     val connectionUrl = getConnectionUrlMethod.
       invoke(sessionState, sqlContext.sparkSession).toString()
-    val getUserMethod = sessionState.getClass.getMethod("getUserString")
+    val getUserMethod = sessionState.getClass.getMethod("getUser")
     val user = getUserMethod.invoke(sessionState).toString()
     val params = parameters +
       ("user.name" -> user) +
