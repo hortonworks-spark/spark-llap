@@ -183,14 +183,14 @@ class JDBCWrapper {
         datasource.setUrl(url)
         datasource.setUsername(userName)
         // for hdp older version support without dbcp2 configurations
-        if(dbcp2Configs == null) {
-            datasource.setInitialSize(2)
-            datasource.setMaxConnLifetimeMillis(2000)
-            datasource.setMaxTotal(100)
-            datasource.setMaxIdle(50)
+        if (dbcp2Configs == null) {
+            datasource.setInitialSize(1)
+            datasource.setMaxConnLifetimeMillis(5000)
+            datasource.setMaxTotal(20)
+            datasource.setMaxIdle(10)
             datasource.setMaxWaitMillis(4000)
           } else {
-              dbcp2Configs.split(" ").map(s => s.trim.split(":")).foreach {
+            dbcp2Configs.split(" ").map(s => s.trim.split(":")).foreach {
               conf => datasource.addConnectionProperty(conf(0), conf(1))
               log.debug(conf(0) + ":" + conf(1))
             }
