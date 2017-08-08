@@ -24,8 +24,9 @@ object TestUtils {
   def updateConfWithMiniClusterSettings(
       spark: SparkSession,
       connectionUrl: String,
-      userName: String): Unit = {
-    val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName)
+      userName: String,
+      dbcp2Confs : String): Unit = {
+    val conn = DefaultJDBCWrapper.getConnector(None, url = connectionUrl, userName, dbcp2Confs)
     val settings = Seq(
       "hive.llap.daemon.service.hosts",
       "hive.zookeeper.quorum",

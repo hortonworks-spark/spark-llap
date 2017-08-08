@@ -34,9 +34,11 @@ class DefaultSource extends RelationProvider {
       invoke(sessionState, sqlContext.sparkSession).toString()
     val getUserMethod = sessionState.getClass.getMethod("getUser")
     val user = getUserMethod.invoke(sessionState).toString()
+    val dbcp2Config = sqlContext.getConf("spark.sql.hive.llap.dbcp2", null)
     val params = parameters +
       ("user.name" -> user) +
       ("user.password" -> "password") +
+      ("dbcp2.conf" -> dbcp2Config) +
       ("url" -> connectionUrl)
 
     LlapRelation(

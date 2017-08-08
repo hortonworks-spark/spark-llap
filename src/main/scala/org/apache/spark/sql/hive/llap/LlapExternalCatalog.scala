@@ -80,7 +80,8 @@ private[spark] class LlapExternalCatalog(
     val connectionUrl = getConnectionUrlMethod.invoke(sessionState, sparkSession).toString()
     val getUserMethod = sessionState.getClass.getMethod("getUser")
     val user = getUserMethod.invoke(sessionState).toString()
-    val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
+    val dbcp2Configs = sparkSession.sqlContext.getConf("spark.sql.hive.llap.dbcp2", null)
+    val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user, dbcp2Configs)
     connection
   }
 
