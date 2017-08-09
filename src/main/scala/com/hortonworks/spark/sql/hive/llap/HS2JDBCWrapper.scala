@@ -19,11 +19,13 @@ package com.hortonworks.spark.sql.hive.llap
 
 import java.net.URI
 import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
+import java.util.Properties
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.commons.dbcp2.BasicDataSource
+import org.apache.commons.dbcp2.BasicDataSourceFactory
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory
 import org.apache.hadoop.hive.serde2.typeinfo._
@@ -178,26 +180,28 @@ class JDBCWrapper {
       case Some(d) =>
         d.getConnection
       case None =>
-        val datasource = new BasicDataSource
-        datasource.setDriverClassName(driverClass.getCanonicalName)
-        datasource.setUrl(url)
-        datasource.setUsername(userName)
-        // for hdp older version support without dbcp2 configurations
+        val properties = new Properties()
+        // for older version of HDP which do not have dbcp2 configurations
         if (dbcp2Configs == null) {
-            datasource.setInitialSize(1)
-            datasource.setMaxConnLifetimeMillis(5000)
-            datasource.setMaxTotal(20)
-            datasource.setMaxIdle(10)
-            datasource.setMaxWaitMillis(4000)
-          } else {
-            dbcp2Configs.split(" ").map(s => s.trim.split(":")).foreach {
-              conf => datasource.addConnectionProperty(conf(0), conf(1))
+          properties.setProperty("initialSize", "1")
+          properties.setProperty("maxConnLifetimeMillis", "5000")
+          properties.setProperty("maxTotal", "40")
+          properties.setProperty("maxIdle", "10")
+          properties.setProperty("maxWaitMillis", "2000")
+        } else {
+          dbcp2Configs.split(" ").map(s => s.trim.split(":")).foreach {
+            conf =>
+              properties.setProperty(conf(0), conf(1))
               log.debug(conf(0) + ":" + conf(1))
-            }
           }
-        datasource.setPassword("password")
-        connectionPools.put(userName, datasource)
-        datasource.getConnection
+        }
+        properties.setProperty("driverClassName", driverClass.getCanonicalName)
+        properties.setProperty("url", url)
+        properties.setProperty("password", "password")
+        properties.setProperty("username", userName)
+        val dataSource = BasicDataSourceFactory.createDataSource(properties)
+        connectionPools.put(userName, dataSource)
+        dataSource.getConnection
     }
 
   }
