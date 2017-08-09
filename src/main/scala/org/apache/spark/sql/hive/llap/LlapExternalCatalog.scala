@@ -194,8 +194,9 @@ private[spark] class LlapExternalCatalog(
       } else {
         ""
       }
-      executeUpdate(s"CREATE TABLE ${tableDefinition.identifier.quotedString} (dummy INT) " +
-        location)
+      // Check with `EXTERNAL` keyword in order not to drop or change the existing location.
+      executeUpdate(
+        s"CREATE EXTERNAL TABLE ${tableDefinition.identifier.quotedString} (dummy INT) " + location)
       super.doDropTable(db, tableDefinition.identifier.table,
         ignoreIfNotExists = true, purge = true)
       super.doCreateTable(tableDefinition, ignoreIfExists)
