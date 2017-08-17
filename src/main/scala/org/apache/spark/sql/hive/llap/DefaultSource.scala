@@ -28,9 +28,11 @@ class DefaultSource extends RelationProvider {
   override def createRelation(sqlContext: SQLContext, parameters: Map[String, String])
       : BaseRelation = {
     val sessionState = sqlContext.sparkSession.sessionState.asInstanceOf[LlapSessionState]
+    val dbcp2Config = sqlContext.getConf("spark.sql.hive.llap.dbcp2", null)
     val params = parameters +
       ("user.name" -> sessionState.getUserString()) +
       ("user.password" -> "password") +
+      ("dbcp2.conf" -> dbcp2Config) +
       ("connectionUrl" -> sessionState.getConnectionUrl())
     LlapRelation(
       sqlContext,
