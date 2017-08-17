@@ -185,10 +185,10 @@ class JDBCWrapper {
         // for older version of HDP which do not have dbcp2 configurations
         if (dbcp2Configs == null) {
           properties.setProperty("initialSize", "1")
-          properties.setProperty("maxConnLifetimeMillis", "10000")
+          properties.setProperty("maxConnLifetimeMillis", "100000")
           properties.setProperty("maxTotal", "40")
           properties.setProperty("maxIdle", "10")
-          properties.setProperty("maxWaitMillis", "2000")
+          properties.setProperty("maxWaitMillis", "30000")
         } else {
           dbcp2Configs.split(" ").map(s => s.trim.split(":")).foreach {
             conf =>
