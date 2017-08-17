@@ -128,8 +128,9 @@ class JDBCWrapper {
   }
 
   def resolveQuery(conn: Connection, query: String): StructType = {
-    val rs = conn.prepareStatement(s"SELECT * FROM ($query) q WHERE 1=0").executeQuery()
-    log.debug(s"SELECT * FROM ($query) q WHERE 1=0")
+    val schemaQuery = s"SELECT * FROM ($query) q LIMIT 0"
+    val rs = conn.prepareStatement(schemaQuery).executeQuery()
+    log.debug(schemaQuery)
     try {
       val rsmd = rs.getMetaData
       val ncols = rsmd.getColumnCount
