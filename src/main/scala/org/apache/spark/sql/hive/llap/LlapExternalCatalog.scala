@@ -17,13 +17,14 @@
 
 package org.apache.spark.sql.hive.llap
 
-import java.sql.Connection
+import java.sql.{Connection, SQLException}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.NonFatal
 
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
+import org.apache.hive.service.cli.HiveSQLException
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.SparkConf
@@ -80,7 +81,8 @@ private[spark] class LlapExternalCatalog(
     val connectionUrl = getConnectionUrlMethod.invoke(sessionState, sparkSession).toString()
     val getUserMethod = sessionState.getClass.getMethod("getUser")
     val user = getUserMethod.invoke(sessionState).toString()
-    val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
+    val dbcp2Configs = sparkSession.sqlContext.getConf("spark.sql.hive.llap.dbcp2", null)
+    val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user, dbcp2Configs)
     connection
   }
 
@@ -112,7 +114,13 @@ private[spark] class LlapExternalCatalog(
     tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
         val ifNotExistsString = if (ignoreIfExists) "IF NOT EXISTS" else ""
-        stmt.executeUpdate(s"CREATE DATABASE $ifNotExistsString `${dbDefinition.name}`")
+        try {
+          stmt.executeUpdate(s"CREATE DATABASE $ifNotExistsString `${dbDefinition.name}`")
+        } catch {
+          case e: Throwable => throw new SQLException(
+            e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
+          case e: HiveSQLException => throw new HiveSQLException(e)
+        }
       }
     }
   }
@@ -126,7 +134,13 @@ private[spark] class LlapExternalCatalog(
       tryWithResource(conn.createStatement()) { stmt =>
         val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
         val cascadeString = if (cascade) "CASCADE" else ""
-        stmt.executeUpdate(s"DROP DATABASE $ifExistsString `$db` $cascadeString")
+        try {
+          stmt.executeUpdate(s"DROP DATABASE $ifExistsString `$db` $cascadeString")
+        } catch {
+          case e: Throwable => throw new SQLException(
+            e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
+          case e: HiveSQLException => throw new HiveSQLException(e)
+        }
       }
     }
   }
@@ -137,8 +151,14 @@ private[spark] class LlapExternalCatalog(
       var isExist = false
       tryWithResource(createConnection()) { conn =>
         tryWithResource(conn.createStatement()) { stmt =>
-          tryWithResource(stmt.executeQuery(s"SHOW DATABASES LIKE '$db'")) { rs =>
-            isExist = rs.next()
+          try {
+            tryWithResource(stmt.executeQuery(s"SHOW DATABASES LIKE '$db'")) { rs =>
+              isExist = rs.next()
+            }
+          } catch {
+            case e: Throwable => throw new SQLException(
+              e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
+            case e: HiveSQLException => throw new HiveSQLException(e)
           }
         }
       }
@@ -163,10 +183,16 @@ private[spark] class LlapExternalCatalog(
     val databases = new ArrayBuffer[String]()
     tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
-        tryWithResource(stmt.executeQuery(s"SHOW DATABASES LIKE '$pattern'")) { rs =>
-          while (rs.next()) {
-            databases += rs.getString("database_name")
+        try {
+          tryWithResource(stmt.executeQuery(s"SHOW DATABASES LIKE '$pattern'")) { rs =>
+            while (rs.next()) {
+              databases += rs.getString("database_name")
+            }
           }
+        } catch {
+          case e: Throwable => throw new SQLException(
+            e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
+          case e: HiveSQLException => throw new HiveSQLException(e)
         }
       }
     }
@@ -215,9 +241,15 @@ private[spark] class LlapExternalCatalog(
       requireDbExists(db)
       tryWithResource(createConnection()) { conn =>
         tryWithResource(conn.createStatement()) { stmt =>
-          val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
-          val purgeString = if (purge) "PURGE" else ""
-          stmt.executeUpdate(s"DROP TABLE $ifExistsString $db.$table $purgeString")
+          try {
+            val ifExistsString = if (ignoreIfNotExists) "IF EXISTS" else ""
+            val purgeString = if (purge) "PURGE" else ""
+            stmt.executeUpdate(s"DROP TABLE $ifExistsString $db.$table $purgeString")
+          } catch {
+            case e: Throwable => throw new SQLException(
+              e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
+            case e: HiveSQLException => throw new HiveSQLException(e)
+          }
         }
       }
     }
@@ -264,8 +296,13 @@ private[spark] class LlapExternalCatalog(
 
   override def tableExists(db: String, table: String): Boolean = withClient {
     tryWithResource(createConnection()) { conn =>
-      tryWithResource(conn.getMetaData.getTables(null, db, table, null)) { rs =>
-        rs.next()
+      try {
+        tryWithResource(conn.getMetaData.getTables(null, db, table, null)) { rs =>
+          rs.next()
+        }
+      } catch {
+        case e: Throwable => throw new SQLException(e)
+        case e: HiveSQLException => throw new HiveSQLException(e)
       }
     }
   }
@@ -275,11 +312,17 @@ private[spark] class LlapExternalCatalog(
   override def listTables(db: String, pattern: String): Seq[String] = withClient {
     var tableList: List[String] = Nil
     tryWithResource(createConnection()) { conn =>
-      tryWithResource(conn.getMetaData.getTables(null, db, pattern, null)) { rs =>
-        while (rs.next()) {
-          tableList = rs.getString(3) :: tableList
+      try {
+        tryWithResource(conn.getMetaData.getTables(null, db, pattern, null)) { rs =>
+          while (rs.next()) {
+            tableList = rs.getString(3) :: tableList
+          }
         }
-      }
+      } catch {
+        case e: Throwable => throw new SQLException(
+          e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
+        case e: HiveSQLException => throw new HiveSQLException(e)
+        }
     }
     tableList.reverse
   }
@@ -389,7 +432,13 @@ private[spark] class LlapExternalCatalog(
     logDebug(sql)
     tryWithResource(createConnection()) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
-        stmt.executeUpdate(sql)
+        try {
+          stmt.executeUpdate(sql)
+        } catch {
+          case e: Throwable => throw new SQLException(
+            e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
+          case e: HiveSQLException => throw new HiveSQLException(e)
+        }
       }
     }
   }

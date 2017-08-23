@@ -18,13 +18,14 @@
 package com.hortonworks.spark.sql.hive.llap
 
 import java.net.URI
-import java.sql.Connection
+import java.sql.{Connection, SQLException}
 import java.util.UUID
 
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.llap.{LlapInputSplit, LlapRowInputFormat, Schema}
 import org.apache.hadoop.io.NullWritable
 import org.apache.hadoop.mapred.{InputSplit, JobConf}
+import org.apache.hive.service.cli.HiveSQLException
 
 import org.apache.spark.rdd.HadoopRDD
 import org.apache.spark.rdd.RDD
@@ -47,7 +48,8 @@ case class LlapRelation(
   @transient val tableSchema: StructType = {
     val url = parameters("url")
     val user = parameters("user.name")
-    val conn = DefaultJDBCWrapper.getConnector(None, url, user)
+    val dbcp2Configs = parameters("dbcp2.conf")
+    val conn = DefaultJDBCWrapper.getConnector(None, url, user, dbcp2Configs)
     val queryKey = getQueryType()
 
     try {
@@ -129,7 +131,8 @@ case class LlapRelation(
   private def getConnection(): Connection = {
     val url = parameters("url")
     val user = parameters("user.name")
-    DefaultJDBCWrapper.getConnector(None, url, user)
+    val dbcp2Configs = parameters("dbcp2.conf")
+    DefaultJDBCWrapper.getConnector(None, url, user, dbcp2Configs)
   }
 
   private def getDbTableNames(nameStr: String): Tuple2[String, String] = {
@@ -163,12 +166,18 @@ case class LlapRelation(
   private def handleCountStar(queryString: String): RDD[Row] = {
     tryWithResource(getConnection()) { conn =>
       tryWithResource(conn.createStatement()) { stmt =>
-        val rs = stmt.executeQuery(queryString)
-        if (rs.next()) {
-          val countStarValue = rs.getLong(1)
-          sqlContext.sparkContext.parallelize(1L to countStarValue).map(_ => Row.empty)
-        } else {
-          throw new IllegalStateException("Failed to read count star value")
+        try {
+          val rs = stmt.executeQuery(queryString)
+          if (rs.next()) {
+            val countStarValue = rs.getLong(1)
+            sqlContext.sparkContext.parallelize(1L to countStarValue).map(_ => Row.empty)
+          } else {
+            throw new IllegalStateException("Failed to read count star value")
+          }
+        } catch {
+            case e: Throwable => throw new SQLException(
+              e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
+            case e: HiveSQLException => throw new HiveSQLException(e)
         }
       }
     }
