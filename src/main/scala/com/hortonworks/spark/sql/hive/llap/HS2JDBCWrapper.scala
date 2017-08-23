@@ -20,10 +20,13 @@ package com.hortonworks.spark.sql.hive.llap
 import java.net.URI
 import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData,
   SQLException}
+import java.util.Properties
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
+import org.apache.commons.dbcp2.BasicDataSource
+import org.apache.commons.dbcp2.BasicDataSourceFactory
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory
 import org.apache.hadoop.hive.serde2.typeinfo._
@@ -52,6 +55,8 @@ object DefaultJDBCWrapper extends JDBCWrapper
 class JDBCWrapper {
 
   private val log = LoggerFactory.getLogger(getClass)
+
+  private val connectionPools = new scala.collection.mutable.HashMap[String, BasicDataSource]
 
   /**
    * Given a JDBC subprotocol, returns the appropriate driver class so that it can be registered
@@ -167,12 +172,39 @@ class JDBCWrapper {
   def getConnector(
       userProvidedDriverClass: Option[String],
       url: String,
-      userName: String): Connection = {
+      userName: String,
+      dbcp2Configs: String): Connection = {
     log.debug(s"${userProvidedDriverClass.getOrElse("")} $url $userName password")
     val subprotocol = new URI(url.stripPrefix("jdbc:")).getScheme
     val driverClass: Class[Driver] = getDriverClass(subprotocol, userProvidedDriverClass)
-    registerDriver(driverClass.getCanonicalName)
-    DriverManager.getConnection(url, userName, "password")
+
+    connectionPools.get(userName) match {
+      case Some(d) =>
+        d.getConnection
+      case None =>
+        val properties = new Properties()
+        // for older version of HDP which do not have dbcp2 configurations
+        if (dbcp2Configs == null) {
+          properties.setProperty("initialSize", "1")
+          properties.setProperty("maxConnLifetimeMillis", "100000")
+          properties.setProperty("maxTotal", "40")
+          properties.setProperty("maxIdle", "10")
+          properties.setProperty("maxWaitMillis", "30000")
+        } else {
+          dbcp2Configs.split(" ").map(s => s.trim.split(":")).foreach {
+            conf =>
+              properties.setProperty(conf(0), conf(1))
+              log.debug(conf(0) + ":" + conf(1))
+          }
+        }
+        properties.setProperty("driverClassName", driverClass.getCanonicalName)
+        properties.setProperty("url", url)
+        properties.setProperty("password", "password")
+        properties.setProperty("username", userName)
+        val dataSource = BasicDataSourceFactory.createDataSource(properties)
+        connectionPools.put(userName, dataSource)
+        dataSource.getConnection
+    }
   }
 
   def columnString(dataType: DataType, dataSize: Option[Long]): String = dataType match {
