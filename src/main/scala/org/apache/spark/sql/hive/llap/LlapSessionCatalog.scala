@@ -17,11 +17,8 @@
 
 package org.apache.spark.sql.hive.llap
 
-import java.sql.SQLException
-
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
-import org.apache.hive.service.cli.HiveSQLException
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
@@ -105,16 +102,9 @@ private[sql] class LlapSessionCatalog(
       val connectionUrl = getConnectionUrlMethod.invoke(sessionState, sparkSession).toString()
       val getUserMethod = sessionState.getClass.getMethod("getUser")
       val user = getUserMethod.invoke(sessionState).toString()
-      val dbcp2Configs = sparkSession.sqlContext.getConf("spark.sql.hive.llap.dbcp2", null)
-      val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user, dbcp2Configs)
+      val connection = DefaultJDBCWrapper.getConnector(None, connectionUrl, user)
       val stmt = connection.createStatement()
-      try {
-        stmt.executeUpdate(s"DESC `$db`.`$table`")
-      } catch {
-        case e: Throwable => throw new SQLException(
-          e.toString.replace("shadehive.org.apache.hive.service.cli.HiveSQLException: ", ""))
-        case e: HiveSQLException => throw new HiveSQLException(e)
-      }
+      stmt.executeUpdate(s"DESC `$db`.`$table`")
     }
 
     super.getTableMetadata(name)
