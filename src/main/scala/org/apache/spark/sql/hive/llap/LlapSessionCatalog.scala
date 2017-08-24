@@ -71,12 +71,15 @@ private[sql] class LlapSessionCatalog(
           getMethod("getConnectionUrl", classOf[SparkSession])
         val connectionUrl = getConnectionUrlMethod.invoke(sessionState, sparkSession).toString()
 
+        val tableMeta = sessionState.catalog.getTableMetadata(TableIdentifier(table, Some(db)))
+        val sizeInBytes = tableMeta.stats.map(_.sizeInBytes.toLong).getOrElse(0L)
         val logicalRelation = LogicalRelation(
           DataSource(
             sparkSession = sparkSession,
             className = "org.apache.spark.sql.hive.llap",
             options = Map(
               "table" -> (metadata.database + "." + table),
+              "sizeinbytes" -> sizeInBytes.toString(),
               "url" -> connectionUrl)
           ).resolveRelation())
 
