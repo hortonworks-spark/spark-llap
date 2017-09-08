@@ -18,6 +18,7 @@
 package org.apache.spark.sql.hive.llap
 
 import java.sql.SQLException
+import java.util.UUID
 
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
@@ -73,12 +74,15 @@ private[sql] class LlapSessionCatalog(
 
         val tableMeta = sessionState.catalog.getTableMetadata(TableIdentifier(table, Some(db)))
         val sizeInBytes = tableMeta.stats.map(_.sizeInBytes.toLong).getOrElse(0L)
+        // Add a handleID which can be used to close resources via LlapBaseInputFormat.close()
+        val handleId = UUID.randomUUID().toString()
         val logicalRelation = LogicalRelation(
           DataSource(
             sparkSession = sparkSession,
             className = "org.apache.spark.sql.hive.llap",
             options = Map(
               "table" -> (metadata.database + "." + table),
+              "handleid" -> handleId,
               "sizeinbytes" -> sizeInBytes.toString(),
               "url" -> connectionUrl)
           ).resolveRelation())

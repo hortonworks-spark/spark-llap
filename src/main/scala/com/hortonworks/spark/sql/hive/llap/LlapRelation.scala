@@ -22,7 +22,7 @@ import java.sql.{Connection, SQLException}
 import java.util.UUID
 
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.llap.{LlapInputSplit, LlapRowInputFormat, Schema}
+import org.apache.hadoop.hive.llap.{LlapBaseInputFormat, LlapInputSplit, LlapRowInputFormat, Schema}
 import org.apache.hadoop.io.NullWritable
 import org.apache.hadoop.mapred.{InputSplit, JobConf}
 import org.apache.hive.service.cli.HiveSQLException
@@ -33,6 +33,7 @@ import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.sources.{BaseRelation, Filter, InsertableRelation, PrunedFilteredScan}
 import org.apache.spark.sql.types.StructType
 
+import org.slf4j.LoggerFactory
 
 case class LlapRelation(
     @transient sc: SQLContext,
@@ -40,6 +41,8 @@ case class LlapRelation(
   extends BaseRelation
   with InsertableRelation
   with PrunedFilteredScan {
+
+  private val log = LoggerFactory.getLogger(getClass)
 
   override def sqlContext(): SQLContext = {
     sc
@@ -57,7 +60,11 @@ case class LlapRelation(
         val (dbName, tableName) = getDbTableNames(parameters("table"))
         DefaultJDBCWrapper.resolveTable(conn, dbName, tableName)
       } else {
-        DefaultJDBCWrapper.resolveQuery(conn, parameters("query"))
+        var currentDatabase: String = null
+        if (parameters.isDefinedAt("currentdatabase")) {
+          currentDatabase = parameters("currentdatabase")
+        }
+        DefaultJDBCWrapper.resolveQuery(conn, currentDatabase, parameters("query"))
       }
     } finally
     {
@@ -92,6 +99,9 @@ case class LlapRelation(
     val countStar = requiredColumns.isEmpty
     val queryString = getQueryString(requiredColumns, filters)
 
+    // If this was previously called, close any resources associated with the previous invocation
+    close()
+
     if (countStar) {
       handleCountStar(queryString)
     } else {
@@ -103,6 +113,12 @@ case class LlapRelation(
       jobConf.set("llap.if.query", queryString)
       jobConf.set("llap.if.user", parameters("user.name"))
       jobConf.set("llap.if.pwd", parameters("user.password"))
+      if (parameters.isDefinedAt("currentdatabase")) {
+        jobConf.set("llap.if.database", parameters("currentdatabase"))
+      }
+      if (parameters.isDefinedAt("handleid")) {
+        jobConf.set("llap.if.handleid", parameters("handleid"))
+      }
 
       // This should be set to the number of executors
       val numPartitions = sc.sparkContext.defaultMinPartitions
@@ -193,6 +209,22 @@ case class LlapRelation(
       parameters("sizeinbytes").toLong
     } else {
       super.sizeInBytes
+    }
+  }
+
+  def close(): Unit = {
+    if (parameters.isDefinedAt("handleid")) {
+      val handleId = parameters("handleid")
+      log.info("Closing handleid " + handleId)
+      try {
+        LlapBaseInputFormat.close(handleId)
+      } catch {
+        case ex: Exception => {
+          log.error("Error closing " + handleId, ex)
+        }
+      }
+    } else {
+      log.info("No handleid defined - cannot close handle")
     }
   }
 }
