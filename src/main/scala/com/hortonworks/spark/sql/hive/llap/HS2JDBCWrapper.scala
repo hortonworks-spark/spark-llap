@@ -132,7 +132,10 @@ class JDBCWrapper {
     }
   }
 
-  def resolveQuery(conn: Connection, query: String): StructType = {
+  def resolveQuery(conn: Connection, currentDatabase: String, query: String): StructType = {
+    if (currentDatabase != null) {
+      conn.prepareStatement(s"USE $currentDatabase").execute()
+    }
     val schemaQuery = s"SELECT * FROM ($query) q LIMIT 0"
     val rs = conn.prepareStatement(schemaQuery).executeQuery()
     log.debug(schemaQuery)
