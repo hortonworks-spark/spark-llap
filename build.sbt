@@ -7,8 +7,8 @@ val scalatestVersion = "2.2.6"
 
 sparkVersion := sys.props.getOrElse("spark.version", "2.2.0")
 
-val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.1.0-129")
-val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.1.0-129")
+val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.3.0-79")
+val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.3.0-79")
 val log4j2Version = sys.props.getOrElse("log4j2.version", "2.4.1")
 val tezVersion = sys.props.getOrElse("tez.version", "0.8.4")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
@@ -129,6 +129,7 @@ assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.hadoop.hive.common.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.conf.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.io.**" -> "shadehive.@0").inAll,
+  ShadeRule.rename("org.apache.hive.common.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hive.jdbc.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hive.service.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.metastore.**" -> "shadehive.@0").inAll,
