@@ -17,6 +17,7 @@
 package com.hortonworks.spark.sql.hive.llap
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.hive.llap.Schema
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
@@ -27,15 +28,16 @@ import org.apache.spark.sql.Row
 object RowConverter {
 
   def llapRowToSparkRow(llapRow: org.apache.hadoop.hive.llap.Row, schema: Schema): Row = {
+    val fields = new ArrayBuffer[Any](schema.getColumns.size)
+    val iterator = schema.getColumns.iterator()
+    var idx = 0
+    while(iterator.hasNext) {
+      val colDesc = iterator.next()
+      fields += convertValue(llapRow.getValue(idx), colDesc.getTypeInfo)
+      idx += 1
+    }
 
-    Row.fromSeq({
-      var idx = 0
-      schema.getColumns.asScala.map(colDesc => {
-        val sparkValue = convertValue(llapRow.getValue(idx), colDesc.getTypeInfo)
-        idx += 1
-        sparkValue
-      })
-    })
+    Row.fromSeq(fields)
   }
 
   private def convertValue(value: Any, colType: TypeInfo): Any = {
