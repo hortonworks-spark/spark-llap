@@ -1,1 +1,1 @@
-Error: shadehive.org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: HiveAccessControlException Permission denied: user [spark] does not have [UPDATE] privilege on [spark_ranger_test/t_select] (state=,code=0)
+Error: Error while compiling statement: FAILED: HiveAccessControlException Permission denied: user [spark] does not have [UPDATE] privilege on [spark_ranger_test/t_select] (state=42000,code=40000)
