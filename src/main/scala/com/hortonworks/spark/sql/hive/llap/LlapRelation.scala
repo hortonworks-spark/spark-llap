@@ -99,9 +99,6 @@ case class LlapRelation(
     val countStar = requiredColumns.isEmpty
     val queryString = getQueryString(requiredColumns, filters)
 
-    // If this was previously called, close any resources associated with the previous invocation
-    close()
-
     if (countStar) {
       handleCountStar(queryString)
     } else {
