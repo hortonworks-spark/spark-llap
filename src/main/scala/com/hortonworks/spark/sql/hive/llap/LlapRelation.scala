@@ -29,11 +29,14 @@ import org.apache.hive.service.cli.HiveSQLException
 
 import org.apache.spark.rdd.HadoopRDD
 import org.apache.spark.rdd.RDD
+import org.apache.spark.rdd.UnionRDD
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.sources.{BaseRelation, Filter, InsertableRelation, PrunedFilteredScan}
 import org.apache.spark.sql.types.StructType
 
 import org.slf4j.LoggerFactory
+
+import scala.collection.mutable.ArrayBuffer
 
 case class LlapRelation(
     @transient sc: SQLContext,
@@ -43,6 +46,9 @@ case class LlapRelation(
   with PrunedFilteredScan {
 
   private val log = LoggerFactory.getLogger(getClass)
+
+  val countStarChunkSize = sc.sparkContext.getConf.getInt(
+      "spark.sql.hive.countstar.chunksize", Int.MaxValue)
 
   override def sqlContext(): SQLContext = {
     sc
@@ -183,7 +189,25 @@ case class LlapRelation(
           val rs = stmt.executeQuery(queryString)
           if (rs.next()) {
             val countStarValue = rs.getLong(1)
-            sqlContext.sparkContext.parallelize(1L to countStarValue).map(_ => Row.empty)
+            if (countStarValue <= countStarChunkSize) {
+              sqlContext.sparkContext.parallelize(1L to countStarValue).map(_ => Row.empty)
+            } else {
+              // parallelize() fails when the range exceeds Int.MaxValue.
+              // When the row count exceeds this value, break up this up into smaller chunks that do
+              // work with parallelize(), using a UnionRDD to put the chunks together as a single RDD
+              val fullSizeChunks = (countStarValue / countStarChunkSize).toInt
+              val remainder = countStarValue % countStarChunkSize
+              val rddBuff = new ArrayBuffer[RDD[Row]](fullSizeChunks + 1)
+              for (idx <- 1 to fullSizeChunks) {
+                val partialRdd = sqlContext.sparkContext.parallelize(1L to countStarChunkSize).map(_ => Row.empty)
+                rddBuff += partialRdd
+              }
+              if (remainder > 0) {
+                val partialRdd = sqlContext.sparkContext.parallelize(1L to remainder).map(_ => Row.empty)
+                rddBuff += partialRdd
+              }
+              new UnionRDD(sc.sparkContext, rddBuff)
+            }
           } else {
             throw new IllegalStateException("Failed to read count star value")
           }
