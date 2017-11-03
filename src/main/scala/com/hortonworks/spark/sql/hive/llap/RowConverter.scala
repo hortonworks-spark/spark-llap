@@ -39,28 +39,32 @@ object RowConverter {
   }
 
   private def convertValue(value: Any, colType: TypeInfo): Any = {
-    colType.getCategory match {
-      // The primitives should not require conversion
-      case Category.PRIMITIVE => value
-      case Category.LIST => value.asInstanceOf[java.util.List[Any]].asScala.map(
-        listElement => convertValue(
-            listElement,
-            colType.asInstanceOf[ListTypeInfo].getListElementTypeInfo))
-      case Category.MAP =>
-        // Try LinkedHashMap to preserve order of elements - is that necessary?
-        var map = scala.collection.mutable.LinkedHashMap.empty[Any, Any]
-        value.asInstanceOf[java.util.Map[Any, Any]].asScala.foreach((tuple) =>
-          map(convertValue(tuple._1, colType.asInstanceOf[MapTypeInfo].getMapKeyTypeInfo)) =
-            convertValue(tuple._2, colType.asInstanceOf[MapTypeInfo].getMapValueTypeInfo))
-        map
-      case Category.STRUCT =>
-        // Struct value is just a list of values. Convert each value based on corresponding typeinfo
-        Row.fromSeq(
-          colType.asInstanceOf[StructTypeInfo].getAllStructFieldTypeInfos.asScala.zip(
-            value.asInstanceOf[java.util.List[Any]].asScala).map({
-              case (fieldType, fieldValue) => convertValue(fieldValue, fieldType)
-            }))
-      case _ => null
+    if (value == null) {
+      null
+    } else {
+      colType.getCategory match {
+        // The primitives should not require conversion
+        case Category.PRIMITIVE => value
+        case Category.LIST => value.asInstanceOf[java.util.List[Any]].asScala.map(
+          listElement => convertValue(
+              listElement,
+              colType.asInstanceOf[ListTypeInfo].getListElementTypeInfo))
+        case Category.MAP =>
+          // Try LinkedHashMap to preserve order of elements - is that necessary?
+          var map = scala.collection.mutable.LinkedHashMap.empty[Any, Any]
+          value.asInstanceOf[java.util.Map[Any, Any]].asScala.foreach((tuple) =>
+            map(convertValue(tuple._1, colType.asInstanceOf[MapTypeInfo].getMapKeyTypeInfo)) =
+              convertValue(tuple._2, colType.asInstanceOf[MapTypeInfo].getMapValueTypeInfo))
+          map
+        case Category.STRUCT =>
+          // Struct value is just a list of values. Convert each value based on corresponding typeinfo
+          Row.fromSeq(
+            colType.asInstanceOf[StructTypeInfo].getAllStructFieldTypeInfos.asScala.zip(
+              value.asInstanceOf[java.util.List[Any]].asScala).map({
+                case (fieldType, fieldValue) => convertValue(fieldValue, fieldType)
+              }))
+        case _ => null
+      }
     }
   }
 }
