@@ -57,7 +57,8 @@ object RowConverter {
               convertValue(tuple._2, colType.asInstanceOf[MapTypeInfo].getMapValueTypeInfo))
           map
         case Category.STRUCT =>
-          // Struct value is just a list of values. Convert each value based on corresponding typeinfo
+          // Struct value is just a list of values. Convert each value based on corresponding
+          // typeinfo
           Row.fromSeq(
             colType.asInstanceOf[StructTypeInfo].getAllStructFieldTypeInfos.asScala.zip(
               value.asInstanceOf[java.util.List[Any]].asScala).map({
