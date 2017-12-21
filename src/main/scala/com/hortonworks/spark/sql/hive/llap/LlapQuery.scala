@@ -20,10 +20,10 @@ package com.hortonworks.spark.sql.hive.llap
 import java.util.UUID
 
 import org.apache.hadoop.hive.llap.LlapBaseInputFormat
+import org.slf4j.LoggerFactory
 
 import org.apache.spark.sql.{Dataset, Row, SQLContext}
 
-import org.slf4j.LoggerFactory
 
 class LlapQuery(val sc: SQLContext) {
 
@@ -54,9 +54,8 @@ class LlapQuery(val sc: SQLContext) {
       try {
         LlapBaseInputFormat.close(handleId)
       } catch {
-        case ex: Exception => {
+        case ex: Exception =>
           log.error("Error closing " + handleId, ex)
-        }
       }
     })
     handleIds.clear
