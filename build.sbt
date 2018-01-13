@@ -5,10 +5,10 @@ organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
-sparkVersion := sys.props.getOrElse("spark.version", "2.2.0.2.6.3.0-235")
+sparkVersion := sys.props.getOrElse("spark.version", "2.2.0.2.6.4.0-91")
 
-val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.3.0-235")
-val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.3.0-235")
+val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.4.0-91")
+val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.4.0-91")
 val log4j2Version = sys.props.getOrElse("log4j2.version", "2.4.1")
 val tezVersion = sys.props.getOrElse("tez.version", "0.8.4")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
