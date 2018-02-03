@@ -24,6 +24,7 @@ import scala.util.control.NonFatal
 
 import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hive.common.StatsSetupConst
 import org.apache.hive.service.cli.HiveSQLException
 
 import org.apache.spark.internal.Logging
@@ -258,7 +259,7 @@ private[spark] class LlapExternalCatalog(
   override def getTable(db: String, table: String): CatalogTable = withClient {
     try {
       val catalogTable = super.getTable(db, table)
-      catalogTable.copy(tableType = CatalogTableType.EXTERNAL)
+      catalogTable.copy(tableType = CatalogTableType.EXTERNAL, stats = statsForTable(catalogTable))
     } catch {
       case NonFatal(_) =>
         // Try to create a dummy table. This table cannot be used for ALTER TABLE.
@@ -446,5 +447,17 @@ private[spark] class LlapExternalCatalog(
   private def tryWithResource[R <: AutoCloseable, T](createResource: => R)(f: R => T): T = {
     val resource = createResource
     try f.apply(resource) finally resource.close()
+  }
+
+  private def statsForTable(table: CatalogTable): Option[CatalogStatistics] = {
+    val totalSize = table.properties.get(StatsSetupConst.TOTAL_SIZE).map(_.toLong)
+    val rawDataSize = table.properties.get(StatsSetupConst.RAW_DATA_SIZE).map(_.toLong)
+    if (totalSize.isDefined && totalSize.get > 0) {
+      Some(CatalogStatistics(sizeInBytes = BigInt(totalSize.get)))
+    } else if (rawDataSize.isDefined && rawDataSize.get > 0) {
+      Some(CatalogStatistics(sizeInBytes = BigInt(rawDataSize.get)))
+    } else {
+      None
+    }
   }
 }
