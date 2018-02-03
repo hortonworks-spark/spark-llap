@@ -1,1 +1,1 @@
-Error: org.apache.spark.sql.AnalysisException: cannot resolve '`a`' given input columns: []; line 1 pos 7;
+Error: org.apache.spark.sql.AnalysisException: Table or view not found: t_no; line 1 pos 14 (state=,code=0)

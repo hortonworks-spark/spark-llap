@@ -1,1 +1,1 @@
-Error: org.apache.spark.sql.AnalysisException: unknown requires that the data to be inserted have the same number of columns as the target table: target table has 0 column(s) but the inserted data has 2 column(s), including 0 partition column(s) having constant value(s).; (state=,code=0)
+Error: org.apache.spark.sql.AnalysisException: Table or view not found: t_no; line 1 pos 0 (state=,code=0)
