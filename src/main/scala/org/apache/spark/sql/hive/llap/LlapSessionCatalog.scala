@@ -73,7 +73,7 @@ private[sql] class LlapSessionCatalog(
         val connectionUrl = getConnectionUrlMethod.invoke(sessionState, sparkSession).toString()
 
         val tableMeta = sessionState.catalog.getTableMetadata(TableIdentifier(table, Some(db)))
-        val sizeInBytes = tableMeta.stats.map(_.sizeInBytes.toLong).getOrElse(0L)
+        val sizeInBytes = tableMeta.stats.map(_.sizeInBytes.toLong).getOrElse(sessionState.conf.defaultSizeInBytes)
         // Add a handleID which can be used to close resources via LlapBaseInputFormat.close()
         val handleId = UUID.randomUUID().toString()
         val logicalRelation = LogicalRelation(
