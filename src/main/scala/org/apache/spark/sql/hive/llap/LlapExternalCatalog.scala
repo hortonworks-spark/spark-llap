@@ -27,14 +27,13 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hive.common.StatsSetupConst
 import org.apache.hive.service.cli.HiveSQLException
 
-import org.apache.spark.internal.Logging
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.AnalysisException
+import org.apache.spark.internal.Logging
+import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.hive.HiveExternalCatalog
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 
 
@@ -382,9 +381,9 @@ private[spark] class LlapExternalCatalog(
     executeUpdate(s"ALTER TABLE $db.$oldName RENAME TO $db.$newName")
   }
 
-  override def alterTable(tableDefinition: CatalogTable): Unit = {
+  override def doAlterTable(tableDefinition: CatalogTable): Unit = {
     executeUpdate(s"ALTER TABLE ${tableDefinition.identifier.quotedString} TOUCH")
-    super.alterTable(tableDefinition)
+    super.doAlterTable(tableDefinition)
   }
 
   override def createPartitions(

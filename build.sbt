@@ -1,11 +1,11 @@
 
 name := "spark-llap"
-version := "1.1.4-2.2-SNAPSHOT"
+version := sys.props.getOrElse("version", "1.1.5-2.3-SNAPSHOT")
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
-sparkVersion := sys.props.getOrElse("spark.version", "2.2.0.2.6.4.0-91")
+sparkVersion := sys.props.getOrElse("spark.version", "2.3.0")
 
 val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.4.0-91")
 val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.4.0-91")
@@ -79,6 +79,9 @@ libraryDependencies ++= Seq(
     .exclude("javax.servlet.jsp", "jsp-api")
     .exclude("javax.transaction", "jta")
     .exclude("javax.transaction", "transaction-api")
+    .exclude("org.eclipse.jetty", "jetty-annotations")
+    .exclude("org.eclipse.jetty", "jetty-runner")
+    .exclude("org.eclipse.jetty", "jetty-xml")
     .exclude("org.mortbay.jetty", "jetty")
     .exclude("org.mortbay.jetty", "jetty-util")
     .exclude("org.mortbay.jetty", "jetty-sslengine")
