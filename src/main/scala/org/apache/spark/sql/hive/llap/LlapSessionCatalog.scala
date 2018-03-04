@@ -64,7 +64,7 @@ private[sql] class LlapSessionCatalog(
         globalTempViewManager.get(table).map { viewDef =>
           SubqueryAlias(table, viewDef)
         }.getOrElse(throw new NoSuchTableException(db, table))
-      } else if (name.database.isDefined || !tempTables.contains(table)) {
+      } else if (name.database.isDefined || !tempViews.contains(table)) {
         val metadata = externalCatalog.getTable(db, table)
         val sparkSession = SparkSession.getActiveSession.get.sqlContext.sparkSession
         val sessionState = SparkSession.getActiveSession.get.sessionState
@@ -73,7 +73,8 @@ private[sql] class LlapSessionCatalog(
         val connectionUrl = getConnectionUrlMethod.invoke(sessionState, sparkSession).toString()
 
         val tableMeta = sessionState.catalog.getTableMetadata(TableIdentifier(table, Some(db)))
-        val sizeInBytes = tableMeta.stats.map(_.sizeInBytes.toLong).getOrElse(sessionState.conf.defaultSizeInBytes)
+        val sizeInBytes = tableMeta.stats.map(_.sizeInBytes.toLong)
+          .getOrElse(sessionState.conf.defaultSizeInBytes)
         // Add a handleID which can be used to close resources via LlapBaseInputFormat.close()
         val handleId = UUID.randomUUID().toString()
         val logicalRelation = LogicalRelation(
@@ -89,7 +90,7 @@ private[sql] class LlapSessionCatalog(
 
         SubqueryAlias(table, logicalRelation)
       } else {
-        SubqueryAlias(table, tempTables(table))
+        SubqueryAlias(table, tempViews(table))
       }
     }
   }
