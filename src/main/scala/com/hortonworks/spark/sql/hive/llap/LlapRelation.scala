@@ -54,7 +54,9 @@ case class LlapRelation(
     sc
   }
 
-  @transient val tableSchema: StructType = {
+  // This variable became lazy on testing purpose so that the test case overrides this variable and
+  // avoid a JDBC connection.
+  @transient lazy val tableSchema: StructType = {
     val url = parameters("url")
     val user = parameters("user.name")
     val dbcp2Configs = parameters("dbcp2.conf")
