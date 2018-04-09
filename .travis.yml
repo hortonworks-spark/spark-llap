@@ -32,4 +32,5 @@ install:
   - build/sbt assembly
 
 script:
+  - build/sbt test
   - build/scalastyle
