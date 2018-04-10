@@ -22,11 +22,9 @@ import java.sql.{Connection, SQLException}
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.NonFatal
 
-import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hive.common.StatsSetupConst
 import org.apache.hive.service.cli.HiveSQLException
-
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{AnalysisException, SparkSession}
@@ -36,6 +34,7 @@ import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.hive.HiveExternalCatalog
 import org.apache.spark.sql.types.StructType
 
+import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 
 /**
  * A persistent implementation of the system catalog using Hive.

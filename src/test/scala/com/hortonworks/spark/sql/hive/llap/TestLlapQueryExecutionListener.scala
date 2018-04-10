@@ -16,20 +16,17 @@
  */
 package com.hortonworks.spark.sql.hive.llap
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession, SQLContext}
 import org.apache.spark.sql.hive.llap.DefaultSource
 import org.apache.spark.sql.sources.{BaseRelation, Filter}
 import org.apache.spark.sql.types.StructType
-
-// scalastyle:off
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
-// scalastyle:on
 
 class TestLlapQueryExecutionListener
-    // scalastyle:off funsuite
     extends FunSuite with BeforeAndAfterAll with BeforeAndAfterEach {
-    // scalastyle:on funsuite
 
   private var spark: SparkSession = _
 
@@ -62,9 +59,9 @@ class TestLlapQueryExecutionListener
 
   test("Closes all LlapRelations after query executions - basic") {
     val df = spark.read.format(classOf[FakeDefaultSource].getCanonicalName).load()
-    assert(CloseCalls.closeCalls == 0)
+    assert(CloseCalls.closeCalls.get() == 0)
     df.collect()
-    assert(CloseCalls.closeCalls == 1, "Closing LlapRelation was not attempted.")
+    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
   }
 
   test("Closes all LlapRelations after query executions - union") {
@@ -72,10 +69,10 @@ class TestLlapQueryExecutionListener
     val df2 = spark.read.format(classOf[FakeDefaultSource].getCanonicalName).load()
     val df3 = spark.read.format(classOf[FakeDefaultSource].getCanonicalName).load()
     val unionDF = df1.union(df2).union(df3)
-    assert(CloseCalls.closeCalls == 0)
+    assert(CloseCalls.closeCalls.get() == 0)
     unionDF.collect()
     assert(
-      CloseCalls.closeCalls == 3,
+      CloseCalls.closeCalls.get() == 3,
       s"Closing LlapRelation should be attempted 2 but got ${CloseCalls.closeCalls}.")
   }
 
@@ -83,10 +80,10 @@ class TestLlapQueryExecutionListener
     val df1 = spark.range(0, 10).toDF
     val df2 = spark.read.format(classOf[FakeDefaultSource].getCanonicalName).load()
     val unionDF = df1.union(df1).union(df2)
-    assert(CloseCalls.closeCalls == 0)
+    assert(CloseCalls.closeCalls.get() == 0)
     unionDF.show(0)
     assert(
-      CloseCalls.closeCalls == 1,
+      CloseCalls.closeCalls.get() == 1,
       s"Closing LlapRelation should be attempted 1 but got ${CloseCalls.closeCalls}.")
   }
 
@@ -96,10 +93,10 @@ class TestLlapQueryExecutionListener
       |USING ${classOf[FakeDefaultSource].getCanonicalName}
     """.stripMargin.replaceAll("\n", " "))
     val df = spark.sql("SELECT * FROM tableA")
-    assert(CloseCalls.closeCalls == 0)
+    assert(CloseCalls.closeCalls.get() == 0)
     df.count()
     assert(
-      CloseCalls.closeCalls == 1,
+      CloseCalls.closeCalls.get() == 1,
       s"Closing LlapRelation should be attempted 1 but got ${CloseCalls.closeCalls}.")
   }
 }
@@ -108,9 +105,9 @@ class TestLlapQueryExecutionListener
  * It holds a variable to count the actual 'close' call. It should manually be cleared.
  */
 object CloseCalls {
-  var closeCalls: Int = 0
+  val closeCalls: AtomicInteger = new AtomicInteger(0)
   def clear(): Unit = {
-    closeCalls = 0
+    closeCalls.set(0)
   }
 }
 
@@ -133,5 +130,5 @@ class FakeLlapRelation(sc: SQLContext, parameters: Map[String, String])
     sc.range(10).rdd
   }
 
-  override def close(): Unit = CloseCalls.closeCalls += 1
+  override def close(): Unit = CloseCalls.closeCalls.addAndGet(1)
 }

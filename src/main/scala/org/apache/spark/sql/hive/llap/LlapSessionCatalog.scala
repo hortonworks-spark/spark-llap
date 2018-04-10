@@ -20,10 +20,8 @@ package org.apache.spark.sql.hive.llap
 import java.sql.SQLException
 import java.util.UUID
 
-import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 import org.apache.hadoop.conf.Configuration
 import org.apache.hive.service.cli.HiveSQLException
-
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.TableIdentifier
@@ -35,6 +33,7 @@ import org.apache.spark.sql.execution.datasources.{DataSource, LogicalRelation}
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.internal.SQLConf
 
+import com.hortonworks.spark.sql.hive.llap.DefaultJDBCWrapper
 
 private[sql] class LlapSessionCatalog(
     externalCatalog: LlapExternalCatalog,
