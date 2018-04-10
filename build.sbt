@@ -110,16 +110,16 @@ libraryDependencies ++= Seq(
     .exclude("commons-logging", "commons-logging")
 )
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
-dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
+dependencyOverrides += "commons-codec" % "commons-codec" % "1.10"
 dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
-dependencyOverrides += "io.netty" % "netty-all" % "4.0.42.Final"
-dependencyOverrides += "org.apache.httpcomponents" % "httpclient" % "4.5.2"
-dependencyOverrides += "org.apache.httpcomponents" % "httpcore" % "4.4.4"
+dependencyOverrides += "io.netty" % "netty-all" % "4.1.17.Final"
+dependencyOverrides += "org.apache.httpcomponents" % "httpclient" % "4.5.4"
+dependencyOverrides += "org.apache.httpcomponents" % "httpcore" % "4.4.8"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-core-asl" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-jaxrs" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-xc" % "1.9.13"
-dependencyOverrides += "org.apache.commons" % "commons-lang3" % "3.4"
+dependencyOverrides += "org.apache.commons" % "commons-lang3" % "3.5"
 libraryDependencies += "org.apache.commons" % "commons-dbcp2" % "2.1"
 
 

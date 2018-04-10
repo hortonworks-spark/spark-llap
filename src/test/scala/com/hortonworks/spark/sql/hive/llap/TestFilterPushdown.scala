@@ -21,14 +21,9 @@ import java.sql.Timestamp
 
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
-
-// scalastyle:off
 import org.scalatest.FunSuite
-// scalastyle:on
 
-// scalastyle:off
 class TestFilterPushdown extends FunSuite {
-// scalastyle:on
   private val employeeSchema = StructType(Seq(
     StructField("employee_id", IntegerType, nullable = true),
     StructField("full_name", StringType, nullable = true),

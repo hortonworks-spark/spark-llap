@@ -28,14 +28,13 @@ import org.apache.hadoop.hive.llap.{LlapBaseInputFormat, LlapInputSplit, LlapRow
 import org.apache.hadoop.io.NullWritable
 import org.apache.hadoop.mapred.{InputSplit, JobConf}
 import org.apache.hive.service.cli.HiveSQLException
-import org.slf4j.LoggerFactory
-
 import org.apache.spark.rdd.HadoopRDD
 import org.apache.spark.rdd.RDD
 import org.apache.spark.rdd.UnionRDD
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.sources.{BaseRelation, Filter, InsertableRelation, PrunedFilteredScan}
 import org.apache.spark.sql.types.StructType
+import org.slf4j.LoggerFactory
 
 
 case class LlapRelation(
@@ -54,7 +53,9 @@ case class LlapRelation(
     sc
   }
 
-  @transient val tableSchema: StructType = {
+  // This variable became lazy on the testing purpose so that the test case overrides
+  // this variable and avoid a JDBC connection.
+  @transient lazy val tableSchema: StructType = {
     val url = parameters("url")
     val user = parameters("user.name")
     val dbcp2Configs = parameters("dbcp2.conf")

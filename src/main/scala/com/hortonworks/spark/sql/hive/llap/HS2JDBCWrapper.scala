@@ -30,10 +30,8 @@ import org.apache.commons.dbcp2.BasicDataSourceFactory
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory
 import org.apache.hadoop.hive.serde2.typeinfo._
-import org.slf4j.LoggerFactory
-
 import org.apache.spark.sql.types._
-
+import org.slf4j.LoggerFactory
 
 object Utils {
   def classForName(className: String): Class[_] = {

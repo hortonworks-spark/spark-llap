@@ -22,7 +22,6 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.hadoop.hive.llap.Schema
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.typeinfo._
-
 import org.apache.spark.sql.Row
 
 object RowConverter {
