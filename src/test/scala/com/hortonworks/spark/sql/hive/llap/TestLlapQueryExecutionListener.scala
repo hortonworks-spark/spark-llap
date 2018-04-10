@@ -73,7 +73,7 @@ class TestLlapQueryExecutionListener
     unionDF.collect()
     assert(
       CloseCalls.closeCalls.get() == 3,
-      s"Closing LlapRelation should be attempted 2 but got ${CloseCalls.closeCalls}.")
+      s"Closing LlapRelation should be attempted 3 but got ${CloseCalls.closeCalls}.")
   }
 
   test("Closes all LlapRelations after query executions - different sources") {
@@ -82,9 +82,7 @@ class TestLlapQueryExecutionListener
     val unionDF = df1.union(df1).union(df2)
     assert(CloseCalls.closeCalls.get() == 0)
     unionDF.show(0)
-    assert(
-      CloseCalls.closeCalls.get() == 1,
-      s"Closing LlapRelation should be attempted 1 but got ${CloseCalls.closeCalls}.")
+    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
   }
 
   test("Closes all LlapRelations after query executions - SQL") {
@@ -95,9 +93,7 @@ class TestLlapQueryExecutionListener
     val df = spark.sql("SELECT * FROM tableA")
     assert(CloseCalls.closeCalls.get() == 0)
     df.count()
-    assert(
-      CloseCalls.closeCalls.get() == 1,
-      s"Closing LlapRelation should be attempted 1 but got ${CloseCalls.closeCalls}.")
+    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
   }
 }
 
@@ -112,7 +108,7 @@ object CloseCalls {
 }
 
 /**
- * This FakeDefaultSource is to mock LLAP query execution.
+ * This is to mock LLAP query execution.
  */
 class FakeDefaultSource extends DefaultSource {
   override def createRelation(

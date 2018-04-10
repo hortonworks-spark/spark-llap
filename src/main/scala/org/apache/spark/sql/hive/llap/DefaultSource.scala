@@ -23,7 +23,6 @@ import org.apache.spark.sql.sources.RelationProvider
 
 import com.hortonworks.spark.sql.hive.llap.LlapRelation
 
-
 class DefaultSource extends RelationProvider {
 
   override def createRelation(sqlContext: SQLContext, parameters: Map[String, String])

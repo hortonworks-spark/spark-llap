@@ -53,8 +53,8 @@ case class LlapRelation(
     sc
   }
 
-  // This variable became lazy on testing purpose so that the test case overrides this variable and
-  // avoid a JDBC connection.
+  // This variable became lazy on the testing purpose so that the test case overrides
+  // this variable and avoid a JDBC connection.
   @transient lazy val tableSchema: StructType = {
     val url = parameters("url")
     val user = parameters("user.name")
