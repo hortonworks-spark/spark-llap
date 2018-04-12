@@ -30,6 +30,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force(),
+  "org.apache.spark" %% "spark-yarn" % testSparkVersion.value % "provided" force(),
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
 
