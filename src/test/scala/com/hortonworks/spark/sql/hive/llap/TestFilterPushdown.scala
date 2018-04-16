@@ -115,6 +115,12 @@ class TestFilterPushdown extends FunSuite {
       "employee_id IN (88,89,90)")
   }
 
+  test("in - empty values are not allowed") {
+    checkFilter(employeeSchema,
+      In("employee_id", Array.empty),
+      "CASE WHEN employee_id IS NULL THEN NULL ELSE FALSE END")
+  }
+
   test("string starts with") {
     checkFilter(employeeSchema,
       StringStartsWith("management_role", "val"),
