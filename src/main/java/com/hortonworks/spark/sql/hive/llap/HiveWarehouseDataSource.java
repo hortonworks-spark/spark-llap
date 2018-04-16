@@ -19,30 +19,40 @@ public class HiveWarehouseDataSource implements DataSourceV2, ReadSupport, Sessi
     private static final String HIVE_WAREHOUSE_PREFIX = "hive.warehouse";
     private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseDataSource.class);
 
-    @Override
-    public DataSourceReader createReader(DataSourceOptions options) {
-        try {
-            SparkSession session = SparkSession.getActiveSession().get();
-            if(session == null) {
-                throw new IllegalStateException("Must have active SparkSession to use HiveWarehouse");
+        @Override
+        public DataSourceReader createReader(DataSourceOptions options) {
+            try {
+                Map<String, String> params = new HashMap<>();
+                String connectionUrl = options.get("url").get();
+                params.put("url", connectionUrl);
+		if(options.get("query").isPresent()) {
+                	params.put("query", options.get("query").get());
+		}
+		if(options.get("table").isPresent()) {
+                	params.put("table", options.get("table").get());
+		}
+		if(options.get("stmt").isPresent()) {
+                	params.put("stmt", options.get("stmt").get());
+		}
+		if(options.get("currentdatabase").isPresent()) {
+                	params.put("currentdatabase", options.get("currentdatabase").get());
+		}
+		if(options.get("user.name").isPresent()) {
+                	params.put("user.name", options.get("user.name").get());
+		}
+		if(options.get("user.password").isPresent()) {
+                	params.put("user.password", options.get("user.password").get());
+		}
+                if(options.get("dbcp2.conf").isPresent()) {
+                	params.put("dbcp2.conf", options.get("dbcp2.conf").get());
+		}
+                return new HiveWarehouseDataSourceReader(params);
+            } catch (IOException e) {
+                LOG.error("Error creating {}", getClass().getName());
+                LOG.error(ExceptionUtils.getStackTrace(e));
             }
-            Map<String, String> params = new HashMap<>();
-            String connectionUrl = options.get("url").get();
-            params.put("query", options.get("query").get());
-            params.put("table", options.get("table").get());
-            //TODO username/password
-            params.put("user.name", "");
-            params.put("user.password", "");
-            //TODO handle dbcp.conf
-            params.put("dbcp2.conf", null);
-            params.put("url", connectionUrl);
-            return new HiveWarehouseDataSourceReader(params);
-        } catch (IOException e) {
-            LOG.error("Error creating {}", getClass().getName());
-            LOG.error(ExceptionUtils.getStackTrace(e));
+            return null;
         }
-        return null;
-    }
 
     @Override
     public String keyPrefix() {

@@ -17,6 +17,7 @@
 
 package com.hortonworks.spark.sql.hive.llap
 
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 import java.net.URI
 import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData,
   SQLException}
@@ -32,6 +33,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.Pr
 import org.apache.hadoop.hive.serde2.typeinfo._
 import org.apache.spark.sql.types._
 import org.slf4j.LoggerFactory
+import org.apache.spark.sql.{Row, RowFactory}
 
 object Utils {
   def classForName(className: String): Class[_] = {
@@ -125,6 +127,47 @@ class JDBCWrapper {
         fields += StructField(columnName, columnType, nullable)
       }
       new StructType(fields.toArray)
+    } finally {
+      rs.close()
+    }
+  }
+
+ def executeStmt(conn: Connection, currentDatabase: String, query: String): DriverResultSet = {
+    if (currentDatabase != null) {
+      conn.prepareStatement(s"USE $currentDatabase").execute()
+    }
+    val rs = conn.prepareStatement(query).executeQuery()
+    log.debug(query)
+    try {
+      val rsmd = rs.getMetaData
+      val ncols = rsmd.getColumnCount
+      val fields = new Array[StructField](ncols)
+      var i = 0
+      while (i < ncols) {
+        // HIVE-11750 - ResultSetMetadata.getColumnName() has format tablename.columnname
+        // Hack to remove the table name
+        val columnName = rsmd.getColumnLabel(i + 1).split("\\.").last
+        val dataType = rsmd.getColumnType(i + 1)
+        val typeName = rsmd.getColumnTypeName(i + 1)
+        val fieldSize = rsmd.getPrecision(i + 1)
+        val fieldScale = rsmd.getScale(i + 1)
+        val isSigned = true
+        val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
+        val columnType = getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
+        fields(i) = StructField(columnName, columnType, nullable)
+        i = i + 1
+      }
+      val schema = new StructType(fields)
+      val data = new java.util.ArrayList[Row]()
+      while(rs.next()) {
+        val rowData = new Array[Any](ncols)
+        for (j <- 0 to ncols - 1) {
+          rowData(j) = rs.getObject(j + 1)
+        }
+        val row = new GenericRow(rowData)
+        data.add(row)
+      }
+      return new DriverResultSet(data, schema)
     } finally {
       rs.close()
     }

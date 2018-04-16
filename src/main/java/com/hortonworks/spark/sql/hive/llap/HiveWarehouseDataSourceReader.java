@@ -62,18 +62,8 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
         return queryString;
     }
 
-
-    private String getQueryType() throws Exception {
-        boolean hasTable = options.containsKey("table");
-        boolean hasQuery = options.containsKey("query");
-        if (hasTable && hasQuery) {
-            throw new Exception("LlapRelation has both table and query parameters, can only have one or the other");
-        }
-        if (!hasTable && !hasQuery) {
-            throw new Exception("LlapRelation requires either a table or query parameter");
-        }
-        String queryType = hasTable ? "table" : "query";
-        return queryType;
+    private StatementType getQueryType() throws Exception {
+        return StatementType.fromOptions(options);
     }
 
     private static class TableRef {
@@ -98,10 +88,10 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
         String user = options.get("user.name");
         String dbcp2Configs = options.get("dbcp2.conf");
         Connection conn = DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs);
-        String queryKey = getQueryType();
+	StatementType queryKey = getQueryType();
 
         try {
-            if (queryKey.equals("table")) {
+            if (queryKey == StatementType.FULL_TABLE_SCAN) {
                 TableRef tableRef = getDbTableNames(options.get("table"));
                 return DefaultJDBCWrapper.resolveTable(conn, tableRef.databaseName, tableRef.tableName);
             } else {
@@ -164,9 +154,11 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
         if (options.containsKey("currentdatabase")) {
             jobConf.set("llap.if.database", options.get("currentdatabase"));
         }
-        if (options.containsKey("handleid")) {
-            jobConf.set("llap.if.handleid", options.get("handleid"));
-        }
+        if (!options.containsKey("handleid")) {
+	    String handleId = UUID.randomUUID().toString();
+            options.put("handleid", handleId);	
+        } 
+        jobConf.set("llap.if.handleid", options.get("handleid"));
         return jobConf;
     }
 
@@ -181,7 +173,7 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
                 //TODO Handle count(*)
                 throw new UnsupportedOperationException("count(*)");
             } else {
-                LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat();
+                LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false);
                 try {
                     //TODO apparently numSplits doesn't do anything
                     splits = llapInputFormat.getSplits(jobConf, 1);
@@ -198,6 +190,15 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void close() {
+        LOG.info("Closing resources for handleid: {}", options.get("handleid"));
+        try {
+	  LlapBaseInputFormat.close(options.get("handleid"));
+	} catch(IOException ioe) {
+		throw new RuntimeException(ioe);
+	}
     }
 
 }

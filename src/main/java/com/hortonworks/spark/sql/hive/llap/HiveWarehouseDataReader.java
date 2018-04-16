@@ -12,14 +12,15 @@ import org.apache.spark.sql.vectorized.ColumnVector;
 import java.util.Iterator;
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.hive.llap.LlapArrowInput;
 
 public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
 
-    private ArrowStreamReader reader;
+    private LlapArrowInput reader;
 
     public HiveWarehouseDataReader(LlapInputSplit split, JobConf conf) throws Exception {
-        LlapBaseInputFormat input = new LlapBaseInputFormat();
-        this.reader = input.getArrowReader(split, conf, null);
+        LlapBaseInputFormat input = new LlapBaseInputFormat(true);
+        this.reader = (LlapArrowInput) input.getRecordReader(split, conf, null);
     }
 
     @Override
@@ -31,7 +32,7 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
     @Override
     public ColumnarBatch get() {
         try {
-            List<FieldVector> fieldVectors = reader.getVectorSchemaRoot().getFieldVectors();
+            List<FieldVector> fieldVectors = reader.getCurrentFieldVectors();
             ColumnVector[] columnVectors = new ColumnVector[fieldVectors.size()];
             Iterator<FieldVector> iterator = fieldVectors.iterator();
             int rowCount = -1;
