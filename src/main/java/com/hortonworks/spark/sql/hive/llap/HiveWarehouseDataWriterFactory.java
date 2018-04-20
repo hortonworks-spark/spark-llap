@@ -29,7 +29,7 @@ public class HiveWarehouseDataWriterFactory implements DataWriterFactory<Interna
     }
 
     @Override
-    public DataWriter<InternalRow> createDataWriter(int partitionId, int attemptNumber) {
+    public DataWriter<InternalRow> createDataWriter(int partitionId, int attemptNumber, long epochId) {
         Path jobPath = new Path(new Path(path, "_temporary"), jobId);
         Path filePath = new Path(jobPath, String.format("%s_%s_%s", jobId, partitionId, attemptNumber));
         FileSystem fs = null;
