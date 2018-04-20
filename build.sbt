@@ -1,16 +1,16 @@
 
 name := "spark-llap"
-version := sys.props.getOrElse("version", "1.1.5-2.3-SNAPSHOT")
+version := "1.1.4-2.2-SNAPSHOT"
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
 sparkVersion := sys.props.getOrElse("spark.version", "2.3.0")
 
-val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.4.0-91")
-val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.4.0-91")
+val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.8.2")
+val hiveVersion = sys.props.getOrElse("hive.version", "3.0.0-SNAPSHOT")
 val log4j2Version = sys.props.getOrElse("log4j2.version", "2.4.1")
-val tezVersion = sys.props.getOrElse("tez.version", "0.8.4")
+val tezVersion = sys.props.getOrElse("tez.version", "0.9.1")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
 val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
@@ -25,19 +25,19 @@ spIgnoreProvided := true
 checksums in update := Nil
 
 libraryDependencies ++= Seq(
-
+  "org.apache.spark" %% "spark-yarn" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-core" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force(),
-  "org.apache.spark" %% "spark-yarn" % testSparkVersion.value % "provided" force(),
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
 
   "org.scala-lang" % "scala-library" % scalaVersion.value % "provided",
   "org.scalatest" %% "scalatest" % scalatestVersion % "test",
+  "org.apache.arrow" % "arrow-vector" % "0.8.0" % "compile",
 
-  ("org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion % "provided")
+    ("org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion % "provided")
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
     .exclude("org.apache.avro", "avro")
@@ -80,9 +80,6 @@ libraryDependencies ++= Seq(
     .exclude("javax.servlet.jsp", "jsp-api")
     .exclude("javax.transaction", "jta")
     .exclude("javax.transaction", "transaction-api")
-    .exclude("org.eclipse.jetty", "jetty-annotations")
-    .exclude("org.eclipse.jetty", "jetty-runner")
-    .exclude("org.eclipse.jetty", "jetty-xml")
     .exclude("org.mortbay.jetty", "jetty")
     .exclude("org.mortbay.jetty", "jetty-util")
     .exclude("org.mortbay.jetty", "jetty-sslengine")
@@ -111,16 +108,16 @@ libraryDependencies ++= Seq(
     .exclude("commons-logging", "commons-logging")
 )
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
-dependencyOverrides += "commons-codec" % "commons-codec" % "1.10"
+dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
 dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
-dependencyOverrides += "io.netty" % "netty-all" % "4.1.17.Final"
-dependencyOverrides += "org.apache.httpcomponents" % "httpclient" % "4.5.4"
-dependencyOverrides += "org.apache.httpcomponents" % "httpcore" % "4.4.8"
+dependencyOverrides += "io.netty" % "netty-all" % "4.0.42.Final"
+dependencyOverrides += "org.apache.httpcomponents" % "httpclient" % "4.5.2"
+dependencyOverrides += "org.apache.httpcomponents" % "httpcore" % "4.4.4"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-core-asl" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-jaxrs" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-xc" % "1.9.13"
-dependencyOverrides += "org.apache.commons" % "commons-lang3" % "3.5"
+dependencyOverrides += "org.apache.commons" % "commons-lang3" % "3.4"
 libraryDependencies += "org.apache.commons" % "commons-dbcp2" % "2.1"
 
 
@@ -144,17 +141,14 @@ assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.hadoop.hive.thrift.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.curator.**" -> "shadecurator.@0").inAll,
 
-  ShadeRule.rename("org.apache.derby.**" -> "shadederby.@0").inAll,
-  ShadeRule.rename("io.netty.**" -> "shadenetty.@0").inAll
+  ShadeRule.rename("org.apache.derby.**" -> "shadederby.@0").inAll
 )
 test in assembly := {}
 assemblyMergeStrategy in assembly := {
   case PathList("org","apache","logging","log4j","core","config","plugins","Log4j2Plugins.dat") => MergeStrategy.first
   case PathList("META-INF", "services", "org.apache.hadoop.fs.FileSystem") => MergeStrategy.discard
   case x if x.endsWith("package-info.class") => MergeStrategy.first
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
+  case x => MergeStrategy.first
 }
 
 val assemblyLogLevelString = sys.props.getOrElse("assembly.log.level", "error")
@@ -176,7 +170,8 @@ artifact in (Compile, assembly) := {
 }
 addArtifact(artifact in (Compile, assembly), assembly)
 
-resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
+resolvers += "Local Maven Repository" at "file:///grid/2/ewohlstadter/.m2/repository"
+//resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 resolvers += "Additional Maven Repository" at repoUrl
 resolvers += "Hortonworks Maven Repository" at "http://repo.hortonworks.com/content/groups/public/"
 
