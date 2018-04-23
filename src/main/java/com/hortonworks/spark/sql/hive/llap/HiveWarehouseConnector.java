@@ -1,5 +1,6 @@
 package com.hortonworks.spark.sql.hive.llap;
 
+import com.hortonworks.spark.sql.hive.llap.api.HiveWarehouseSession;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -25,10 +26,9 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HiveWarehouseDataSource implements DataSourceV2, ReadSupport, SessionConfigSupport, WriteSupport {
+public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, SessionConfigSupport, WriteSupport {
 
-    private static final String HIVE_WAREHOUSE_PREFIX = "hive.warehouse";
-    private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseDataSource.class);
+    private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseConnector.class);
 
         @Override
         public DataSourceReader createReader(DataSourceOptions options) {
@@ -71,7 +71,7 @@ public class HiveWarehouseDataSource implements DataSourceV2, ReadSupport, Sessi
 
     @Override
     public String keyPrefix() {
-        return HIVE_WAREHOUSE_PREFIX;
+        return HiveWarehouseSession.HIVE_WAREHOUSE_CONF;
     }
 
     @Override

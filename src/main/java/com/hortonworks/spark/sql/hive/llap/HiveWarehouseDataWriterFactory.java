@@ -4,7 +4,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.catalyst.InternalRow;
-import org.apache.spark.sql.sources.v2.DataSourceOptions;
 import org.apache.spark.sql.sources.v2.writer.DataWriter;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
 import org.apache.spark.sql.types.StructType;
@@ -29,7 +28,7 @@ public class HiveWarehouseDataWriterFactory implements DataWriterFactory<Interna
     }
 
     @Override
-    public DataWriter<InternalRow> createDataWriter(int partitionId, int attemptNumber, long epochId) {
+    public DataWriter<InternalRow> createDataWriter(int partitionId, int attemptNumber) {
         Path jobPath = new Path(new Path(path, "_temporary"), jobId);
         Path filePath = new Path(jobPath, String.format("%s_%s_%s", jobId, partitionId, attemptNumber));
         FileSystem fs = null;

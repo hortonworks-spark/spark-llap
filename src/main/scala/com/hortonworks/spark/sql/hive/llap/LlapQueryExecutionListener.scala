@@ -21,7 +21,6 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.util.QueryExecutionListener
 import org.apache.spark.sql.execution.datasources.v2._
-import com.hortonworks.spark.sql.hive.llap.HiveWarehouseDataSourceReader
 
 class LlapQueryExecutionListener extends QueryExecutionListener with Logging {
 

@@ -19,13 +19,11 @@ package com.hortonworks.spark.sql.hive.llap
 
 import org.apache.spark.sql.catalyst.expressions.GenericRow
 import java.net.URI
-import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData,
-  SQLException}
+import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
 import java.util.Properties
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-
 import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.commons.dbcp2.BasicDataSourceFactory
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
@@ -98,6 +96,15 @@ class JDBCWrapper {
     registerMethod.invoke(null, driverClass)
   }
 
+  def getConnector(sessionState: HiveWarehouseSessionState): Connection = {
+    return getConnector(
+      Option.empty,
+      sessionState.user(),
+      sessionState.password(),
+      sessionState.dbcp2Conf()
+    )
+  }
+
   /**
    * Takes a (schema, table) specification and returns the table's Catalyst
    * schema.
@@ -132,31 +139,35 @@ class JDBCWrapper {
     }
   }
 
- def executeStmt(conn: Connection, currentDatabase: String, query: String): DriverResultSet = {
-    if (currentDatabase != null) {
-      conn.prepareStatement(s"USE $currentDatabase").execute()
+  def populateSchemaFields(ncols: Int,
+                           rsmd: ResultSetMetaData,
+                           fields: Array[StructField]): Unit = {
+    var i = 0
+    while (i < ncols) {
+      // HIVE-11750 - ResultSetMetadata.getColumnName() has format tablename.columnname
+      // Hack to remove the table name
+      val columnName = rsmd.getColumnLabel(i + 1).split("\\.").last
+      val dataType = rsmd.getColumnType(i + 1)
+      val typeName = rsmd.getColumnTypeName(i + 1)
+      val fieldSize = rsmd.getPrecision(i + 1)
+      val fieldScale = rsmd.getScale(i + 1)
+      val isSigned = true
+      val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
+      val columnType = getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
+      fields(i) = StructField(columnName, columnType, nullable)
+      i = i + 1
     }
+  }
+
+ def executeStmt(conn: Connection, currentDatabase: String, query: String): DriverResultSet = {
+    useDatabase(conn, currentDatabase)
     val rs = conn.prepareStatement(query).executeQuery()
     log.debug(query)
     try {
       val rsmd = rs.getMetaData
       val ncols = rsmd.getColumnCount
       val fields = new Array[StructField](ncols)
-      var i = 0
-      while (i < ncols) {
-        // HIVE-11750 - ResultSetMetadata.getColumnName() has format tablename.columnname
-        // Hack to remove the table name
-        val columnName = rsmd.getColumnLabel(i + 1).split("\\.").last
-        val dataType = rsmd.getColumnType(i + 1)
-        val typeName = rsmd.getColumnTypeName(i + 1)
-        val fieldSize = rsmd.getPrecision(i + 1)
-        val fieldScale = rsmd.getScale(i + 1)
-        val isSigned = true
-        val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
-        val columnType = getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
-        fields(i) = StructField(columnName, columnType, nullable)
-        i = i + 1
-      }
+      populateSchemaFields(ncols, rsmd, fields)
       val schema = new StructType(fields)
       val data = new java.util.ArrayList[Row]()
       while(rs.next()) {
@@ -173,10 +184,14 @@ class JDBCWrapper {
     }
   }
 
-  def resolveQuery(conn: Connection, currentDatabase: String, query: String): StructType = {
+  def useDatabase(conn: Connection, currentDatabase: String) {
     if (currentDatabase != null) {
       conn.prepareStatement(s"USE $currentDatabase").execute()
     }
+  }
+
+  def resolveQuery(conn: Connection, currentDatabase: String, query: String): StructType = {
+    useDatabase(conn, currentDatabase)
     val schemaQuery = s"SELECT * FROM ($query) q LIMIT 0"
     val rs = conn.prepareStatement(schemaQuery).executeQuery()
     log.debug(schemaQuery)
@@ -184,21 +199,7 @@ class JDBCWrapper {
       val rsmd = rs.getMetaData
       val ncols = rsmd.getColumnCount
       val fields = new Array[StructField](ncols)
-      var i = 0
-      while (i < ncols) {
-        // HIVE-11750 - ResultSetMetadata.getColumnName() has format tablename.columnname
-        // Hack to remove the table name
-        val columnName = rsmd.getColumnLabel(i + 1).split("\\.").last
-        val dataType = rsmd.getColumnType(i + 1)
-        val typeName = rsmd.getColumnTypeName(i + 1)
-        val fieldSize = rsmd.getPrecision(i + 1)
-        val fieldScale = rsmd.getScale(i + 1)
-        val isSigned = true
-        val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
-        val columnType = getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
-        fields(i) = StructField(columnName, columnType, nullable)
-        i = i + 1
-      }
+      populateSchemaFields(ncols, rsmd, fields)
       new StructType(fields)
     } finally {
       rs.close()
