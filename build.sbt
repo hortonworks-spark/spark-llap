@@ -7,7 +7,7 @@ val scalatestVersion = "2.2.6"
 
 sparkVersion := sys.props.getOrElse("spark.version", "2.3.0")
 
-val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.8.2")
+val hadoopVersion = sys.props.getOrElse("hadoop.version", "3.0.0.3.0.0.0-829")
 val hiveVersion = sys.props.getOrElse("hive.version", "3.0.0-SNAPSHOT")
 val log4j2Version = sys.props.getOrElse("log4j2.version", "2.4.1")
 val tezVersion = sys.props.getOrElse("tez.version", "0.9.1")
@@ -225,7 +225,7 @@ artifact in (Compile, assembly) := {
 }
 addArtifact(artifact in (Compile, assembly), assembly)
 
-resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
+resolvers += "Local Maven Repository" at "file:///grid/2/ewohlstadter/.m2/repository"
 resolvers += "Additional Maven Repository" at repoUrl
 resolvers += "Hortonworks Maven Repository" at "http://repo.hortonworks.com/content/groups/public/"
 

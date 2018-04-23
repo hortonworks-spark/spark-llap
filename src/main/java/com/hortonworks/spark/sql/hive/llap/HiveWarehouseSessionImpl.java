@@ -19,16 +19,16 @@ import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.useDatabase;
 public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     public static String HIVE_WAREHOUSE_CONNECTOR_INTERNAL = HiveWarehouseSession.HIVE_WAREHOUSE_CONNECTOR;
 
-    protected HiveWarehouseSessionState sessionState;
+    public HiveWarehouseSessionState sessionState;
 
-    protected Supplier<Connection> getConnector =
-            () -> DefaultJDBCWrapper.getConnector(sessionState);
+    protected Supplier<Connection> getConnector;
 
-    protected TriFunction<Connection, String, String, DriverResultSet> executeStmt =
-            (conn, database, sql) -> DefaultJDBCWrapper.executeStmt(conn, database, sql);
+    protected TriFunction<Connection, String, String, DriverResultSet> executeStmt;
 
     HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
         this.sessionState = sessionState;
+        getConnector = () -> DefaultJDBCWrapper.getConnector(sessionState);
+        executeStmt = (conn, database, sql) -> DefaultJDBCWrapper.executeStmt(conn, database, sql);
         sessionState.session().listenerManager().register(new LlapQueryExecutionListener());
     }
 
@@ -38,7 +38,11 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
     public Dataset<Row> executeQuery(String sql) {
         DataFrameReader dfr = session().read().format(HIVE_WAREHOUSE_CONNECTOR_INTERNAL).option("query", sql);
-		dfr = dfr.option("currentdatabase", sessionState.database());
+	dfr = dfr.option("currentdatabase", sessionState.database());
+	dfr = dfr.option("user.name", sessionState.user());
+	dfr = dfr.option("user.password", sessionState.password());
+	dfr = dfr.option("dbcp2.conf", sessionState.dbcp2Conf());
+	dfr = dfr.option("url", sessionState.hs2url());
     	return dfr.load();
     }
 
@@ -74,7 +78,6 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
     /* Catalog helpers */
     public void setDatabase(String name) {
-        exec(useDatabase(name));
         this.sessionState.defaultDB = name;
     }
 

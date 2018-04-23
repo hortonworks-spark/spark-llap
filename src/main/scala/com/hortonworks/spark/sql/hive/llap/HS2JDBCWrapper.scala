@@ -98,7 +98,7 @@ class JDBCWrapper {
 
   def getConnector(sessionState: HiveWarehouseSessionState): Connection = {
     return getConnector(
-      Option.empty,
+      None,
       sessionState.user(),
       sessionState.password(),
       sessionState.dbcp2Conf()

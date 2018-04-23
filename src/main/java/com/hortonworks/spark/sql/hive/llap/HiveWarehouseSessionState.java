@@ -9,13 +9,13 @@ import static com.hortonworks.spark.sql.hive.llap.api.HiveWarehouseSession.wareh
 
 public class HiveWarehouseSessionState {
 
-    SparkSession session;
-    String user;
-    String password;
-    String hs2url;
-    Long maxExecResults;
-    String dbcp2Conf;
-    String defaultDB;
+    public SparkSession session;
+    public String user;
+    public String password;
+    public String hs2url;
+    public Long maxExecResults;
+    public String dbcp2Conf;
+    public String defaultDB;
 
     public SparkSession session() {
         return session;
@@ -39,7 +39,7 @@ public class HiveWarehouseSessionState {
     }
 
     public String dbcp2Conf() {
-        return Optional.of(dbcp2Conf).orElse(getConfStringOrNull(warehouseKey(HiveWarehouseSession.DBCP2_CONF_KEY)));
+        return Optional.ofNullable(dbcp2Conf).orElse(getConfStringOrNull(warehouseKey(HiveWarehouseSession.DBCP2_CONF_KEY)));
     }
 
     public String database() {
