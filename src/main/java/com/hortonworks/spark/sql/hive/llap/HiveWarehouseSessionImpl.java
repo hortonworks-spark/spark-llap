@@ -21,14 +21,14 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
     protected HiveWarehouseSessionState sessionState;
 
-    protected Supplier<Connection> getConnector =
-            () -> DefaultJDBCWrapper.getConnector(sessionState);
+    protected Supplier<Connection> getConnector;
 
-    protected TriFunction<Connection, String, String, DriverResultSet> executeStmt =
-            (conn, database, sql) -> DefaultJDBCWrapper.executeStmt(conn, database, sql);
+    protected TriFunction<Connection, String, String, DriverResultSet> executeStmt;
 
     HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
         this.sessionState = sessionState;
+        getConnector = () -> DefaultJDBCWrapper.getConnector(sessionState);
+        executeStmt = (conn, database, sql) -> DefaultJDBCWrapper.executeStmt(conn, database, sql);
         sessionState.session().listenerManager().register(new LlapQueryExecutionListener());
     }
 

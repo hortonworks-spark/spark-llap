@@ -2,13 +2,14 @@ package com.hortonworks.spark.sql.hive.llap;
 
 import com.hortonworks.spark.sql.hive.llap.api.HiveWarehouseSession;
 import org.apache.spark.sql.SparkSession;
-import org.junit.Ignore;
+import org.junit.Assert;
+import org.junit.Test;
 
 import static com.hortonworks.spark.sql.hive.llap.HiveWarehouseBuilderTest.*;
 
 public class HiveWarehouseSessionHiveQlTest {
 
-    @Ignore
+    @Test
     void runFlowWithoutException() {
         SparkSession session = SparkSession
                 .builder()
@@ -26,6 +27,7 @@ public class HiveWarehouseSessionHiveQlTest {
                         .sessionStateForTest();
         HiveWarehouseSession hive =
                new MockHiveWarehouseSessionImpl(sessionState);
+        Assert.assertEquals(hive.executeQuery("SELECT * FROM t1").count(), 10);
         hive.createDatabase(TEST_DEFAULT_DB + "2", true);
         hive.setDatabase(TEST_DEFAULT_DB + "2");
         hive.describeTable(TEST_DEFAULT_DB + "2");

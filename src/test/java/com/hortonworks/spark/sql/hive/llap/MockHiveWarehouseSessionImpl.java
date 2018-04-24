@@ -40,15 +40,4 @@ public class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
                 "com.hortonworks.spark.sql.hive.llap.MockHiveWarehouseConnector";
     }
 
-    @Override
-    public Dataset<Row> execute(String sql) {
-        try(Connection conn = getConnector.get()) {
-            executeStmt.apply(conn, sessionState.database(), sql);
-            //TODO Create dataframe with TestSparkSession (currently hitting jackson jar conflict)
-            return null;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
 }
