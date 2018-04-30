@@ -1,11 +1,14 @@
 package com.hortonworks.spark.sql.hive.llap;
 
 import com.hortonworks.spark.sql.hive.llap.api.HiveWarehouseSession;
-import com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static java.lang.String.format;
+import static java.lang.String.join;
+import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.*;
 
 public class CreateTableBuilder {
     private HiveWarehouseSession hive;
@@ -14,6 +17,7 @@ public class CreateTableBuilder {
     private boolean ifNotExists;
     private List<Pair<String, String>> cols = new ArrayList<>();
     private List<Pair<String, String>> parts = new ArrayList<>();
+    private List<Pair<String, String>> props = new ArrayList<>();
     private String[] clusters;
     private Long buckets;
 
@@ -38,6 +42,11 @@ public class CreateTableBuilder {
         return this;
     }
 
+    public CreateTableBuilder prop(String key, String value) {
+        props.add(Pair.of(key, value));
+        return this;
+    }
+
     public CreateTableBuilder clusterBy(long numBuckets, String ... columns) {
         this.buckets = numBuckets;
         this.clusters = columns;
@@ -50,25 +59,32 @@ public class CreateTableBuilder {
 
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append(HiveQlUtil.createTablePrelude(database, tableName, ifNotExists));
+        builder.append(createTablePrelude(database, tableName, ifNotExists));
         if(cols.size() > 0) {
             List<String> colsStrings = new ArrayList<>();
             for(Pair<String, String> col : cols) {
                 colsStrings.add(col.getKey() + " " + col.getValue());
             }
-            builder.append("(" + String.join(",", colsStrings) + ") ");
+            builder.append(columnSpec(join(",", colsStrings)));
         }
         if(parts.size() > 0) {
             List<String> partsStrings = new ArrayList<>();
             for(Pair<String, String> part : parts) {
                 partsStrings.add(part.getKey() + " " + part.getValue());
             }
-            builder.append("PARTITIONED BY (" + String.join(",", partsStrings) + ") ");
+            builder.append(partitionSpec(join(",", partsStrings)));
         }
         if(clusters != null) {
-            builder.append("CLUSTERED BY (" +
-                    String.join(",", clusters) +
-                    ") INTO " + buckets + " BUCKETS ");
+            builder.append(bucketSpec(join(",", clusters), buckets));
+        }
+        //Currently only managed ORC tables are supported
+        builder.append(" STORED AS ORC ");
+        if(props.size() > 0) {
+            List<String> keyValueStrings = new ArrayList<>();
+            for(Pair<String, String> keyValue : props) {
+                keyValueStrings.add(format("\"%s\"=\"%s\"", keyValue.getKey(), keyValue.getValue()));
+            }
+            builder.append(tblProperties(join(",", keyValueStrings)));
         }
         return builder.toString();
     }

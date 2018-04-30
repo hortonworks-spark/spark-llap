@@ -31,7 +31,6 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
   ("org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force())
     .exclude("org.apache.hive", "hive-exec"),
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.4" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
   "junit" % "junit" % "4.11" % "test",
   "com.novocode" % "junit-interface" % "0.11" % "test",
@@ -41,7 +40,7 @@ libraryDependencies ++= Seq(
     ("org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion % "provided")
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
-    .exclude("com.fasterxml.jackson", "jackson-databind")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
     .exclude("org.apache.avro", "avro")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
@@ -50,7 +49,7 @@ libraryDependencies ++= Seq(
   ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "provided")
     .exclude("commons-beanutils", "commons-beanutils")
     .exclude("commons-beanutils", "commons-beanutils-core")
-    .exclude("com.fasterxml.jackson", "jackson-databind")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
     .exclude("org.apache.avro", "avro"),
@@ -58,7 +57,7 @@ libraryDependencies ++= Seq(
   ("org.apache.tez" % "tez-runtime-internals" % tezVersion % "compile")
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
-    .exclude("com.fasterxml.jackson", "jackson-databind")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging")
@@ -93,7 +92,7 @@ libraryDependencies ++= Seq(
     .exclude("org.mortbay.jetty", "jsp-2.1")
     .exclude("org.mortbay.jetty", "jsp-api-2.1")
     .exclude("org.mortbay.jetty", "servlet-api-2.5")
-  .exclude("com.fasterxml.jackson", "jackson-databind")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
     .exclude("org.datanucleus", "datanucleus-api-jdo")
     .exclude("org.datanucleus", "datanucleus-core")
     .exclude("org.datanucleus", "datanucleus-rdbms")
@@ -116,7 +115,7 @@ libraryDependencies ++= Seq(
     .exclude("commons-logging", "commons-logging"),
 ("org.apache.hive" % "hive-exec" % hiveVersion % "test")
     .exclude("ant", "ant")
-    .exclude("com.fasterxml.jackson", "jackson-databind")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
     .exclude("org.apache.ant", "ant")
     .exclude("org.apache.avro", "avro")
     .exclude("org.apache.curator", "apache-curator")

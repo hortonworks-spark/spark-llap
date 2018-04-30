@@ -13,7 +13,7 @@ import java.util.List;
 
 public class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
 
-    private DriverResultSet testFixture() {
+    static DriverResultSet testFixture() {
         ArrayList<Row> row = new ArrayList<>();
         row.add(new GenericRow(new Object[] {1, "ID 1"}));
         row.add(new GenericRow(new Object[] {2, "ID 2"}));
@@ -38,17 +38,6 @@ public class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
                 };
         HiveWarehouseSessionImpl.HIVE_WAREHOUSE_CONNECTOR_INTERNAL =
                 "com.hortonworks.spark.sql.hive.llap.MockHiveWarehouseConnector";
-    }
-
-    @Override
-    public Dataset<Row> execute(String sql) {
-        try(Connection conn = getConnector.get()) {
-            executeStmt.apply(conn, sessionState.database(), sql);
-            //TODO Create dataframe with TestSparkSession (currently hitting jackson jar conflict)
-            return null;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
     }
 
 }
