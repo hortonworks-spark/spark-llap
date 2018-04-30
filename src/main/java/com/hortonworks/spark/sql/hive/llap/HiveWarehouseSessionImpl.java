@@ -78,6 +78,11 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
         this.sessionState.defaultDB = name;
     }
 
+    @Override
+    public Dataset<Row> showDatabases() {
+        return exec(HiveQlUtil.showDatabases());
+    }
+
     public Dataset<Row> showTables() {
         return exec(HiveQlUtil.showTables(this.sessionState.database()));
     }

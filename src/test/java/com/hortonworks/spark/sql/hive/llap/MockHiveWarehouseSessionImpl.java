@@ -13,7 +13,7 @@ import java.util.List;
 
 public class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
 
-    private DriverResultSet testFixture() {
+    static DriverResultSet testFixture() {
         ArrayList<Row> row = new ArrayList<>();
         row.add(new GenericRow(new Object[] {1, "ID 1"}));
         row.add(new GenericRow(new Object[] {2, "ID 2"}));

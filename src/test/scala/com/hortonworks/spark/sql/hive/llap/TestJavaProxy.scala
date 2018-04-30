@@ -9,7 +9,12 @@ class TestJavaProxy extends FunSuite {
   }
 
   test("HiveWarehouseSession") {
-    val hiveWarehouseSessionTest = new HiveWarehouseSessionHiveQlTest();
-    hiveWarehouseSessionTest.runFlowWithoutException();
+    val hiveWarehouseSessionTest = new HiveWarehouseSessionHiveQlTest()
+    hiveWarehouseSessionTest.setup()
+    hiveWarehouseSessionTest.testCreateDatabase()
+    hiveWarehouseSessionTest.testCreateTable()
+    hiveWarehouseSessionTest.testExecuteQuery()
+    hiveWarehouseSessionTest.testSetDatabase()
+    hiveWarehouseSessionTest.testShowTable()
   }
 }

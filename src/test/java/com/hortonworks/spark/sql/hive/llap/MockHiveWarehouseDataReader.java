@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class MockHiveWarehouseDataReader implements DataReader<Row> {
 
-    private static final int RESULT_SIZE = 10;
+    static final int RESULT_SIZE = 10;
     private int i = 0;
 
     @Override

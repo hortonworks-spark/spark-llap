@@ -8,6 +8,10 @@ public class HiveQlUtil {
         return format("USE %s", database);
     }
 
+    public static String showDatabases() {
+        return "SHOW DATABASES";
+    }
+
     public static String showTables(String database) {
         return format("SHOW TABLES IN %s", database);
     }
@@ -35,6 +39,22 @@ public class HiveQlUtil {
         return format("CREATE DATABASE %s %s",
                 orBlank(ifNotExists, "IF NOT EXISTS"),
                 database);
+    }
+
+    public static String columnSpec(String columnSpec) {
+        return format(" (%s) ", columnSpec);
+    }
+
+    public static String partitionSpec(String partSpec) {
+        return format(" PARTITIONED BY(%s) ", partSpec);
+    }
+
+    public static String bucketSpec(String bucketColumns, long numOfBuckets) {
+        return format(" CLUSTERED BY (%s) INTO %s BUCKETS ", bucketColumns, numOfBuckets);
+    }
+
+    public static String tblProperties(String keyValuePairs) {
+        return format(" TBLPROPERTIES (%s) ", keyValuePairs);
     }
 
     public static String createTablePrelude(String database, String table, boolean ifNotExists) {
