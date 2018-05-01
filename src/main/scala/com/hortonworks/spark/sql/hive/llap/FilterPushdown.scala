@@ -39,6 +39,11 @@ private[llap] object FilterPushdown extends Object {
     }
 
     def buildInClause(attr: String, values: Array[Any]): Option[String] = {
+      if (values.isEmpty) {
+        // See SPARK-18436. Values in `IN` can be empty but Hive can't handle this.
+        return Some(s"CASE WHEN ${attr} IS NULL THEN NULL ELSE FALSE END")
+      }
+
       getTypeForAttribute(schema, attr).map { dataType =>
         val valuesList = values.map(value => getSqlEscapedValue(dataType, value)).mkString(",")
         s"""$attr IN ($valuesList)"""
