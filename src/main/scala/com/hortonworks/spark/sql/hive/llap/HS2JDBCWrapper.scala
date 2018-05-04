@@ -17,14 +17,13 @@
 
 package com.hortonworks.spark.sql.hive.llap
 
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 import java.net.URI
-import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData,
-  SQLException}
+import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
 import java.util.Properties
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-
 import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.commons.dbcp2.BasicDataSourceFactory
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
@@ -32,6 +31,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.Pr
 import org.apache.hadoop.hive.serde2.typeinfo._
 import org.apache.spark.sql.types._
 import org.slf4j.LoggerFactory
+import org.apache.spark.sql.{Row, RowFactory}
 
 object Utils {
   def classForName(className: String): Class[_] = {
@@ -130,10 +130,68 @@ class JDBCWrapper {
     }
   }
 
-  def resolveQuery(conn: Connection, currentDatabase: String, query: String): StructType = {
+  def populateSchemaFields(ncols: Int,
+                           rsmd: ResultSetMetaData,
+                           fields: Array[StructField]): Unit = {
+    var i = 0
+    while (i < ncols) {
+      // HIVE-11750 - ResultSetMetadata.getColumnName() has format tablename.columnname
+      // Hack to remove the table name
+      val columnName = rsmd.getColumnLabel(i + 1).split("\\.").last
+      val dataType = rsmd.getColumnType(i + 1)
+      val typeName = rsmd.getColumnTypeName(i + 1)
+      val fieldSize = rsmd.getPrecision(i + 1)
+      val fieldScale = rsmd.getScale(i + 1)
+      val isSigned = true
+      val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
+      val columnType = getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
+      fields(i) = StructField(columnName, columnType, nullable)
+      i = i + 1
+    }
+  }
+
+  //Used for executing statements directly from the Driver to HS2
+  //ResultSet size is limited to prevent Driver OOM
+  //Should not be used for processing of big data
+  //Useful for DDL stmts
+ def executeStmt(conn: Connection,
+                 currentDatabase: String,
+                 query: String,
+                 maxExecResults: Long): DriverResultSet = {
+    useDatabase(conn, currentDatabase)
+    val stmt = conn.prepareStatement(query)
+    stmt.setLargeMaxRows(maxExecResults)
+    val rs = stmt.executeQuery()
+    log.debug(query)
+    try {
+      val rsmd = rs.getMetaData
+      val ncols = rsmd.getColumnCount
+      val fields = new Array[StructField](ncols)
+      populateSchemaFields(ncols, rsmd, fields)
+      val schema = new StructType(fields)
+      val data = new java.util.ArrayList[Row]()
+      while(rs.next()) {
+        val rowData = new Array[Any](ncols)
+        for (j <- 0 to ncols - 1) {
+          rowData(j) = rs.getObject(j + 1)
+        }
+        val row = new GenericRow(rowData)
+        data.add(row)
+      }
+      return new DriverResultSet(data, schema)
+    } finally {
+      rs.close()
+    }
+  }
+
+  def useDatabase(conn: Connection, currentDatabase: String) {
     if (currentDatabase != null) {
       conn.prepareStatement(s"USE $currentDatabase").execute()
     }
+  }
+
+  def resolveQuery(conn: Connection, currentDatabase: String, query: String): StructType = {
+    useDatabase(conn, currentDatabase)
     val schemaQuery = s"SELECT * FROM ($query) q LIMIT 0"
     val rs = conn.prepareStatement(schemaQuery).executeQuery()
     log.debug(schemaQuery)
@@ -141,21 +199,7 @@ class JDBCWrapper {
       val rsmd = rs.getMetaData
       val ncols = rsmd.getColumnCount
       val fields = new Array[StructField](ncols)
-      var i = 0
-      while (i < ncols) {
-        // HIVE-11750 - ResultSetMetadata.getColumnName() has format tablename.columnname
-        // Hack to remove the table name
-        val columnName = rsmd.getColumnLabel(i + 1).split("\\.").last
-        val dataType = rsmd.getColumnType(i + 1)
-        val typeName = rsmd.getColumnTypeName(i + 1)
-        val fieldSize = rsmd.getPrecision(i + 1)
-        val fieldScale = rsmd.getScale(i + 1)
-        val isSigned = true
-        val nullable = rsmd.isNullable(i + 1) != ResultSetMetaData.columnNoNulls
-        val columnType = getCatalystType(dataType, typeName, fieldSize, fieldScale, isSigned)
-        fields(i) = StructField(columnName, columnType, nullable)
-        i = i + 1
-      }
+      populateSchemaFields(ncols, rsmd, fields)
       new StructType(fields)
     } finally {
       rs.close()
@@ -206,6 +250,15 @@ class JDBCWrapper {
         connectionPools.put(userName, dataSource)
         dataSource.getConnection
     }
+  }
+
+  def getConnector(sessionState: HiveWarehouseSessionState): Connection = {
+    return getConnector(
+      Option.empty,
+      HWConf.USER.getString(sessionState),
+      HWConf.PASSWORD.getString(sessionState),
+      HWConf.DBCP2_CONF.getString(sessionState)
+    )
   }
 
   def columnString(dataType: DataType, dataSize: Option[Long]): String = dataType match {
