@@ -26,6 +26,8 @@ checksums in update := Nil
 
 libraryDependencies ++= Seq(
 
+  "junit" % "junit" % "4.11" % "test",
+  "com.novocode" % "junit-interface" % "0.11" % "test",
   "org.apache.spark" %% "spark-core" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),

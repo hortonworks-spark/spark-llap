@@ -252,6 +252,15 @@ class JDBCWrapper {
     }
   }
 
+  def getConnector(sessionState: HiveWarehouseSessionState): Connection = {
+    return getConnector(
+      Option.empty,
+      HWConf.USER.getString(sessionState),
+      HWConf.PASSWORD.getString(sessionState),
+      HWConf.DBCP2_CONF.getString(sessionState)
+    )
+  }
+
   def columnString(dataType: DataType, dataSize: Option[Long]): String = dataType match {
     case IntegerType => "INTEGER"
     case LongType => "BIGINT"
