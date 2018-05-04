@@ -1,3 +1,4 @@
+import sbtassembly.AssemblyPlugin.autoImport.ShadeRule
 
 name := "spark-llap"
 version := "1.1.4-2.2-SNAPSHOT"
@@ -31,11 +32,13 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
   ("org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force())
     .exclude("org.apache.hive", "hive-exec"),
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
   "junit" % "junit" % "4.11" % "test",
   "com.novocode" % "junit-interface" % "0.11" % "test",
   "org.scala-lang" % "scala-library" % scalaVersion.value % "provided",
   "org.scalatest" %% "scalatest" % scalatestVersion % "test",
+  "org.apache.arrow" % "arrow-vector" % "0.8.0" % "compile",
 
     ("org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion % "provided")
     .exclude("javax.servlet", "servlet-api")
@@ -129,9 +132,48 @@ libraryDependencies ++= Seq(
     .exclude("javax.servlet.jsp", "jsp-api")
     .exclude("javax.transaction", "jta")
     .exclude("javax.transaction", "transaction-api")
-    .exclude("org.eclipse.jetty", "jetty-annotations")
-    .exclude("org.eclipse.jetty", "jetty-runner")
-    .exclude("org.eclipse.jetty", "jetty-xml")
+    .exclude("org.mortbay.jetty", "jetty")
+    .exclude("org.mortbay.jetty", "jetty-util")
+    .exclude("org.mortbay.jetty", "jetty-sslengine")
+    .exclude("org.mortbay.jetty", "jsp-2.1")
+    .exclude("org.mortbay.jetty", "jsp-api-2.1")
+    .exclude("org.mortbay.jetty", "servlet-api-2.5")
+    .exclude("org.datanucleus", "datanucleus-api-jdo")
+    .exclude("org.datanucleus", "datanucleus-core")
+    .exclude("org.datanucleus", "datanucleus-rdbms")
+    .exclude("org.datanucleus", "javax.jdo")
+    .exclude("org.apache.hadoop", "hadoop-client")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-app")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-common")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-shuffle")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-jobclient")
+    .exclude("org.apache.hadoop", "hadoop-distcp")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-resourcemanager")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-common")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-applicationhistoryservice")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-web-proxy")
+    .exclude("org.apache.hadoop", "hadoop-common")
+    .exclude("org.apache.hadoop", "hadoop-hdfs")
+    .exclude("org.apache.hbase", "*")
+    .exclude("commons-beanutils", "commons-beanutils-core")
+    .exclude("commons-collections", "commons-collections")
+    .exclude("commons-logging", "commons-logging"),
+
+  ("org.apache.hive" % "hive-streaming" % hiveVersion)
+    .exclude("ant", "ant")
+    .exclude("org.apache.ant", "ant")
+    .exclude("org.apache.avro", "avro")
+    .exclude("org.apache.curator", "apache-curator")
+    .exclude("org.apache.logging.log4j", "log4j-1.2-api")
+    .exclude("org.apache.logging.log4j", "log4j-slf4j-impl")
+    .exclude("org.apache.logging.log4j", "log4j-web")
+    .exclude("org.apache.slider", "slider-core")
+    .exclude("stax", "stax-api")
+    .exclude("javax.servlet", "jsp-api")
+    .exclude("javax.servlet", "servlet-api")
+    .exclude("javax.servlet.jsp", "jsp-api")
+    .exclude("javax.transaction", "jta")
+    .exclude("javax.transaction", "transaction-api")
     .exclude("org.mortbay.jetty", "jetty")
     .exclude("org.mortbay.jetty", "jetty-util")
     .exclude("org.mortbay.jetty", "jetty-sslengine")
@@ -158,6 +200,10 @@ libraryDependencies ++= Seq(
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging")
+    .exclude("org.slf4j", "slf4j-api")
+    .exclude("org.apache.calcite.avatica", "avatica")
+    .exclude("org.apache.commons", "commons-lang3")
+    .exclude("org.apache.calcite", "calcite-core")
 )
 
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
@@ -178,7 +224,7 @@ libraryDependencies += "org.apache.commons" % "commons-dbcp2" % "2.1"
 assemblyShadeRules in assembly := Seq(
   ShadeRule.zap("scala.**").inAll,
 
-  // Relocate everything in Hive except for llap
+  // Relocate everything in Hive except for llap and hive-streaming
   ShadeRule.rename("org.apache.hadoop.hive.ant.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.common.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.conf.**" -> "shadehive.@0").inAll,
@@ -192,15 +238,22 @@ assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.hadoop.hive.serde2.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.shims.**" -> "shadehive.@0").inAll,
   ShadeRule.rename("org.apache.hadoop.hive.thrift.**" -> "shadehive.@0").inAll,
+  ShadeRule.rename("org.apache.orc.**" -> "shadeorc@0").inAll,
   ShadeRule.rename("org.apache.curator.**" -> "shadecurator.@0").inAll,
 
   ShadeRule.rename("org.apache.derby.**" -> "shadederby.@0").inAll
-  //ShadeRule.rename("io.netty.**" -> "shadenetty.@0").inAll
+
 )
 test in assembly := {}
 assemblyMergeStrategy in assembly := {
-  case PathList("org","apache","logging","log4j","core","config","plugins","Log4j2Plugins.dat") => MergeStrategy.first
-  case PathList("META-INF", "services", "org.apache.hadoop.fs.FileSystem") => MergeStrategy.discard
+  case PathList("org", "apache", "logging", "log4j", "core", "config", "plugins",
+  "Log4j2Plugins.dat") => MergeStrategy.first
+  case PathList("META-INF", "org", "apache", "logging", "log4j", "core", "config", "plugins",
+  "Log4j2Plugins.dat") => MergeStrategy.first
+  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
+  case PathList("git.properties") => MergeStrategy.first
+  case PathList("META-INF", "services",
+  "org.apache.hadoop.fs.FileSystem") => MergeStrategy.discard
   case x if x.endsWith("package-info.class") => MergeStrategy.first
   case x => MergeStrategy.first
 }
