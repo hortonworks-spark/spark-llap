@@ -69,7 +69,8 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hadoop", "hadoop-yarn-api")
     .exclude("org.apache.hadoop", "hadoop-annotations")
     .exclude("org.apache.hadoop", "hadoop-auth")
-    .exclude("org.apache.hadoop", "hadoop-hdfs"),
+    .exclude("org.apache.hadoop", "hadoop-hdfs")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
 
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
@@ -116,7 +117,8 @@ libraryDependencies ++= Seq(
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging")
     .exclude("io.netty", "netty-buffer")
-    .exclude("io.netty", "netty-common"),
+    .exclude("io.netty", "netty-common")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
 //Use ParserUtils to validate generated HiveQl strings in tests
   ("org.apache.hive" % "hive-exec" % hiveVersion % "test")
     .exclude("ant", "ant")
