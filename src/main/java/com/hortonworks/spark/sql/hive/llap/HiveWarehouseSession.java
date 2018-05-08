@@ -14,6 +14,8 @@ public interface HiveWarehouseSession {
     Dataset<Row> execute(String sql);
     Dataset<Row> exec(String sql);
 
+    boolean executeUpdate(String sql);
+
     Dataset<Row> table(String sql);
 
     SparkSession session();

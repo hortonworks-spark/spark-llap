@@ -53,7 +53,7 @@ public class CreateTableBuilder {
     }
 
     public void create() {
-        hive.exec(this.toString());
+        hive.executeUpdate(this.toString());
     }
 
     public String toString() {
