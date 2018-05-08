@@ -1,5 +1,11 @@
 package com.hortonworks.spark.sql.hive.llap;
 
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.SequenceFile.Writer;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -20,6 +26,7 @@ import java.util.List;
 
 public class HiveWarehouseDataWriter implements DataWriter<InternalRow> {
     private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseDataWriter.class);
+    private BytesWritable EMPTY_KEY = new BytesWritable();
 
     private String jobId;
     private StructType schema;
@@ -28,16 +35,16 @@ public class HiveWarehouseDataWriter implements DataWriter<InternalRow> {
     private int attemptNumber;
     private FileSystem fs;
     private Path filePath;
-    private FSDataOutputStream out;
+    private Writer out;
 
-    public HiveWarehouseDataWriter(String jobId, StructType schema, SaveMode saveMode, int partitionId, int attemptNumber, FileSystem fs, Path filePath) {
+    public HiveWarehouseDataWriter(Configuration conf, String jobId, StructType schema, SaveMode saveMode, int partitionId, int attemptNumber, FileSystem fs, Path filePath) {
         this.jobId = jobId;
         this.schema = schema;
         this.saveMode = saveMode;
         this.partitionId = partitionId;
         this.attemptNumber = attemptNumber;
         try {
-            this.out = fs.create(filePath);
+            this.out = SequenceFile.createWriter(conf, SequenceFile.Writer.file(filePath), SequenceFile.Writer.keyClass(BytesWritable.class), SequenceFile.Writer.valueClass(Text.class));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -48,9 +55,11 @@ public class HiveWarehouseDataWriter implements DataWriter<InternalRow> {
         Seq scalaSeq = record.toSeq(schema);
         List<String> colStrs = new ArrayList<>();
         for(Object colVal : scala.collection.JavaConversions.seqAsJavaList(scalaSeq)) {
-           colStrs.add(colVal.toString());
+           String colStr = (colVal != null) ? colVal.toString() : "null";
+           colStrs.add(colStr);
         }
-        out.writeBytes(String.join(",", colStrs) + "\n");
+        String row = String.join(",", colStrs);
+        out.append(EMPTY_KEY, new Text((row.getBytes())));
     }
 
     @Override

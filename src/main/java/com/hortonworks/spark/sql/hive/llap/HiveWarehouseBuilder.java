@@ -44,6 +44,10 @@ public class HiveWarehouseBuilder {
 
     //This is the only way for application to obtain a HiveWarehouseSessionImpl
     public HiveWarehouseSessionImpl build() {
+        SparkSession s = this.sessionState.session();
+	HiveWarehouseConnector.set("spark.datasources.hive.warehouse.user.name", sessionState.user(), s);
+	HiveWarehouseConnector.set("spark.datasources.hive.warehouse.user.password", sessionState.password(), s);
+	HiveWarehouseConnector.set("spark.datasources.hive.warehouse.url", sessionState.hs2url(), s);
         return new HiveWarehouseSessionImpl(this.sessionState);
     }
 

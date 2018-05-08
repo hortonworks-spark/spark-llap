@@ -28,18 +28,19 @@ class DefaultSource extends RelationProvider {
   override def createRelation(sqlContext: SQLContext, parameters: Map[String, String])
       : BaseRelation = {
     val sessionState = sqlContext.sparkSession.sessionState
-    val getConnectionUrlMethod = sessionState.getClass.
-      getMethod("getConnectionUrl", classOf[SparkSession])
-    val connectionUrl = getConnectionUrlMethod.
-      invoke(sessionState, sqlContext.sparkSession).toString()
-    val getUserMethod = sessionState.getClass.getMethod("getUser")
-    val user = getUserMethod.invoke(sessionState).toString()
+    //val getConnectionUrlMethod = sessionState.getClass.
+    //  getMethod("getConnectionUrl", classOf[SparkSession])
+    //val connectionUrl = getConnectionUrlMethod.
+    //  invoke(sessionState, sqlContext.sparkSession).toString()
+    //val getUserMethod = sessionState.getClass.getMethod("getUser")
+    //val user = getUserMethod.invoke(sessionState).toString()
     val dbcp2Config = sqlContext.getConf("spark.sql.hive.llap.dbcp2", null)
+    val myUrl = sqlContext.getConf("spark.sql.hive.hiveserver2.jdbc.url", "jdbc:hive2://localhost:10084/tpcds_bin_partitioned_orc_1000?hive.exec.orc.split.strategy=BI;hive.llap.io.enabled=false")
     val params = parameters +
-      ("user.name" -> user) +
+      ("user.name" -> "ewohlstadter") +
       ("user.password" -> "password") +
       ("dbcp2.conf" -> dbcp2Config) +
-      ("url" -> connectionUrl)
+      ("url" -> myUrl)
 
     LlapRelation(
       sqlContext,

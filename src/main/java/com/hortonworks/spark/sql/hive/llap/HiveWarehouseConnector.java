@@ -33,34 +33,7 @@ public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, Sessio
         @Override
         public DataSourceReader createReader(DataSourceOptions options) {
             try {
-                Map<String, String> params = new HashMap<>();
-                String connectionUrl = options.get("url").get();
-                params.put("url", connectionUrl);
-		if(options.get("query").isPresent()) {
-                	params.put("query", options.get("query").get());
-		}
-		if(options.get("table").isPresent()) {
-                	params.put("table", options.get("table").get());
-		}
-		if(options.get("stmt").isPresent()) {
-                	params.put("stmt", options.get("stmt").get());
-		}
-		if(options.get("currentdatabase").isPresent()) {
-                	params.put("currentdatabase", options.get("currentdatabase").get());
-		}
-		if(options.get("user.name").isPresent()) {
-                	params.put("user.name", options.get("user.name").get());
-		} else {
-                	params.put("user.name", "hive");
-		}
-		if(options.get("user.password").isPresent()) {
-                	params.put("user.password", options.get("user.password").get());
-		} else {
-                	params.put("user.password", "hive");
-		}
-                if(options.get("dbcp2.conf").isPresent()) {
-                	params.put("dbcp2.conf", options.get("dbcp2.conf").get());
-		}
+                Map<String, String> params = getOptions(options);
                 return new HiveWarehouseDataSourceReader(params);
             } catch (IOException e) {
                 LOG.error("Error creating {}", getClass().getName());
@@ -76,8 +49,48 @@ public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, Sessio
 
     @Override
     public Optional<DataSourceWriter> createWriter(String jobId, StructType schema, SaveMode mode, DataSourceOptions options) {
-        Path path = new Path(options.get("path").get());
+        Path path = new Path(options.get("load.staging.dir").get());
 	Configuration conf = SparkSession.getActiveSession().get().sparkContext().hadoopConfiguration();
-        return Optional.of(new HiveWarehouseDataSourceWriter(jobId, schema, mode, path, conf));
+        Map<String, String> params = getOptions(options);
+        return Optional.of(new HiveWarehouseDataSourceWriter(params, jobId, schema, mode, path, conf));
     }
+
+    public static void set(String key, String value, SparkSession s) {
+      String set = String.format("set %s=%s", key, value);
+      s.sql(set);
+    }
+
+    private Map<String, String> getOptions(DataSourceOptions options) {
+                System.out.println(options.asMap().toString());
+                Map<String, String> params = new HashMap<>();
+                String connectionUrl = options.get("url").get();
+                params.put("url", connectionUrl);
+                if(options.get("query").isPresent()) {
+                        params.put("query", options.get("query").get());
+                }
+                if(options.get("table").isPresent()) {
+                        params.put("table", options.get("table").get());
+                }
+                if(options.get("stmt").isPresent()) {
+                        params.put("stmt", options.get("stmt").get());
+                }
+                if(options.get("currentdatabase").isPresent()) {
+                        params.put("currentdatabase", options.get("currentdatabase").get());
+		}
+                if(options.get("user.name").isPresent()) {
+                        params.put("user.name", options.get("user.name").get());
+                } else {
+                        params.put("user.name", "hive");
+                }
+                if(options.get("user.password").isPresent()) {
+                        params.put("user.password", options.get("user.password").get());
+                } else {
+                        params.put("user.password", "hive");
+                }
+                if(options.get("dbcp2.conf").isPresent()) {
+                        params.put("dbcp2.conf", options.get("dbcp2.conf").get());
+                }
+                return params;
+    }
+    
 }

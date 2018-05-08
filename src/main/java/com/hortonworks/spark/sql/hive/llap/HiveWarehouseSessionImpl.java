@@ -1,5 +1,7 @@
 package com.hortonworks.spark.sql.hive.llap;
 
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.catalyst.rules.Rule;
 import com.hortonworks.spark.sql.hive.llap.api.HiveWarehouseSession;
 import com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil;
 import com.hortonworks.spark.sql.hive.llap.util.TriFunction;
@@ -8,6 +10,7 @@ import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.execution.SparkStrategy;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -27,10 +30,16 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
     HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
         this.sessionState = sessionState;
-        getConnector = () -> DefaultJDBCWrapper.getConnector(sessionState);
+        getConnector = () -> DefaultJDBCWrapper.getConnector(this.sessionState);
         executeStmt = (conn, database, sql) -> DefaultJDBCWrapper.executeStmt(conn, database, sql);
         sessionState.session().listenerManager().register(new LlapQueryExecutionListener());
+	 scala.Function1 func = new scala.runtime.AbstractFunction1<SparkSession, Rule<LogicalPlan>>() {
+    public Rule<LogicalPlan> apply(SparkSession session) {
+        return new DataSourceV2CountStrategy(session);
     }
+};
+         sessionState.session.extensions().injectOptimizerRule(func);
+	}
 
     public Dataset<Row> q(String sql) {
       return executeQuery(sql);
@@ -79,6 +88,7 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     /* Catalog helpers */
     public void setDatabase(String name) {
         this.sessionState.defaultDB = name;
+	HiveWarehouseConnector.set("spark.datasources.hive.warehouse.currentdatabase", name, sessionState.session());
     }
 
     @Override

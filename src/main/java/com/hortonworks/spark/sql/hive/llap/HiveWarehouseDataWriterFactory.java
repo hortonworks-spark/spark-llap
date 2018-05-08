@@ -29,15 +29,14 @@ public class HiveWarehouseDataWriterFactory implements DataWriterFactory<Interna
 
     @Override
     public DataWriter<InternalRow> createDataWriter(int partitionId, int attemptNumber) {
-        Path jobPath = new Path(new Path(path, "_temporary"), jobId);
-        Path filePath = new Path(jobPath, String.format("%s_%s_%s", jobId, partitionId, attemptNumber));
+        Path filePath = new Path(this.path, String.format("%s_%s_%s", jobId, partitionId, attemptNumber));
         FileSystem fs = null;
         try {
             fs = filePath.getFileSystem(conf.value());
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return new HiveWarehouseDataWriter(jobId, schema, saveMode, partitionId, attemptNumber, fs, filePath);
+        return new HiveWarehouseDataWriter(conf.value(), jobId, schema, saveMode, partitionId, attemptNumber, fs, filePath);
     }
 }
 

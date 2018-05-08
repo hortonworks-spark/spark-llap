@@ -98,9 +98,9 @@ class JDBCWrapper {
 
   def getConnector(sessionState: HiveWarehouseSessionState): Connection = {
     return getConnector(
-      None,
+      Option.empty,
+      sessionState.hs2url(),
       sessionState.user(),
-      sessionState.password(),
       sessionState.dbcp2Conf()
     )
   }
@@ -182,6 +182,17 @@ class JDBCWrapper {
     } finally {
       rs.close()
     }
+  }
+
+  //Used for executing statements directly from the Driver to HS2
+  //with no results
+  def execute(conn: Connection,
+                  currentDatabase: String,
+                  query: String): Unit = {
+    useDatabase(conn, currentDatabase)
+    val stmt = conn.prepareStatement(query)
+    stmt.execute()
+    log.debug(query)
   }
 
   def useDatabase(conn: Connection, currentDatabase: String) {

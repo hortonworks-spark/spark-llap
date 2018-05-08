@@ -33,6 +33,7 @@ import static scala.collection.JavaConversions.asScalaBuffer;
 
 public class HiveWarehouseDataSourceReader implements DataSourceReader, SupportsPushDownRequiredColumns, SupportsScanColumnarBatch, SupportsPushDownFilters {
     StructType schema = null;
+    boolean notPruned = false;
     Filter[] pushedFilters = new Filter[0];
     Map<String, String> options;
     private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseDataSourceReader.class);
@@ -109,6 +110,7 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
         try {
             if (schema == null) {
                 schema = getTableSchema();
+		notPruned = true;
             }
             return schema;
         } catch(Exception e) {
@@ -171,8 +173,7 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
             InputSplit[] splits = null;
             JobConf jobConf = createJobConf(options, queryString);
             if (countStar) {
-                //TODO Handle count(*)
-                throw new UnsupportedOperationException("count(*)");
+		System.out.println("Is count *" + options.get("isCountStar"));
             } else {
                 LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false);
                 try {
