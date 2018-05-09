@@ -1,8 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hortonworks.spark.sql.hive.llap;
 
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import org.apache.spark.sql.catalyst.rules.Rule;
-import com.hortonworks.spark.sql.hive.llap.api.HiveWarehouseSession;
 import com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil;
 import com.hortonworks.spark.sql.hive.llap.util.TriFunction;
 import org.apache.spark.SparkConf;
@@ -11,120 +25,144 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.SparkStrategy;
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.catalyst.rules.Rule;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Supplier;
+import static com.hortonworks.spark.sql.hive.llap.HWConf.*;
 
 import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.useDatabase;
 
 public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
-    public static String HIVE_WAREHOUSE_CONNECTOR_INTERNAL = HiveWarehouseSession.HIVE_WAREHOUSE_CONNECTOR;
+  static String HIVE_WAREHOUSE_CONNECTOR_INTERNAL = HiveWarehouseSession.HIVE_WAREHOUSE_CONNECTOR;
 
-    public HiveWarehouseSessionState sessionState;
+  protected HiveWarehouseSessionState sessionState;
 
-    protected Supplier<Connection> getConnector;
+  protected Supplier<Connection> getConnector;
 
-    protected TriFunction<Connection, String, String, DriverResultSet> executeStmt;
+  protected TriFunction<Connection, String, String, DriverResultSet> executeStmt;
 
-    HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
-        this.sessionState = sessionState;
-        getConnector = () -> DefaultJDBCWrapper.getConnector(this.sessionState);
-        executeStmt = (conn, database, sql) -> DefaultJDBCWrapper.executeStmt(conn, database, sql);
-        sessionState.session().listenerManager().register(new LlapQueryExecutionListener());
+  protected TriFunction<Connection, String, String, Boolean> executeUpdate;
+
+  HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
+    this.sessionState = sessionState;
+    getConnector = () -> DefaultJDBCWrapper.getConnector(sessionState);
+    executeStmt = (conn, database, sql) ->
+      DefaultJDBCWrapper.executeStmt(conn, database, sql, MAX_EXEC_RESULTS.getLong(sessionState));
+    executeUpdate = (conn, database, sql) ->
+      DefaultJDBCWrapper.executeUpdate(conn, database, sql);
 	 scala.Function1 func = new scala.runtime.AbstractFunction1<SparkSession, Rule<LogicalPlan>>() {
     public Rule<LogicalPlan> apply(SparkSession session) {
         return new DataSourceV2CountStrategy(session);
     }
 };
-         sessionState.session.extensions().injectOptimizerRule(func);
-	}
+    sessionState.session.extensions().injectOptimizerRule(func);
+    sessionState.session.listenerManager().register(new LlapQueryExecutionListener());
+  }
 
-    public Dataset<Row> q(String sql) {
-      return executeQuery(sql);
-    }
+  public Dataset<Row> q(String sql) {
+    return executeQuery(sql);
+  }
 
-    public Dataset<Row> executeQuery(String sql) {
-        DataFrameReader dfr = session().read().format(HIVE_WAREHOUSE_CONNECTOR_INTERNAL).option("query", sql);
-	dfr = dfr.option("currentdatabase", sessionState.database());
-	dfr = dfr.option("user.name", sessionState.user());
-	dfr = dfr.option("user.password", sessionState.password());
-	dfr = dfr.option("dbcp2.conf", sessionState.dbcp2Conf());
-	dfr = dfr.option("url", sessionState.hs2url());
-    	return dfr.load();
-    }
+  public Dataset<Row> executeQuery(String sql) {
+    DataFrameReader dfr = session().read().format(HIVE_WAREHOUSE_CONNECTOR_INTERNAL).option("query", sql);
+    addConfigOptions(dfr);
+    return dfr.load();
+  }
 
-    public Dataset<Row> exec(String sql) {
-      return execute(sql);
-    }
+  public Dataset<Row> exec(String sql) {
+    return execute(sql);
+  }
 
-    public Dataset<Row> execute(String sql) {
-        try(Connection conn = getConnector.get()) {
-            DriverResultSet drs = executeStmt.apply(conn, sessionState.database(), sql);
-            return session().createDataFrame((List<Row>) drs.data, drs.schema);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+  public Dataset<Row> execute(String sql) {
+    try (Connection conn = getConnector.get()) {
+      DriverResultSet drs = executeStmt.apply(conn, DEFAULT_DB.getString(sessionState), sql);
+      return drs.asDataFrame(session());
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
     }
+  }
 
-    public Dataset<Row> executeInternal(String sql, Connection conn) {
-        DriverResultSet drs = executeStmt.apply(conn, sessionState.database(), sql);
-        return session().createDataFrame((List<Row>) drs.data, drs.schema);
+  public boolean executeUpdate(String sql) {
+    try (Connection conn = getConnector.get()) {
+      return executeUpdate.apply(conn, DEFAULT_DB.getString(sessionState), sql);
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
     }
+  }
 
-    public Dataset<Row> table(String sql) {
-        return session().read().format(HIVE_WAREHOUSE_CONNECTOR_INTERNAL).option("table", sql).load();
-    }
+  private boolean executeUpdateInternal(String sql, Connection conn) {
+    return executeUpdate.apply(conn, DEFAULT_DB.getString(sessionState), sql);
+  }
 
-    public SparkSession session() {
-        return sessionState.session();
-    }
+  public Dataset<Row> executeInternal(String sql, Connection conn) {
+    DriverResultSet drs = executeStmt.apply(conn, DEFAULT_DB.getString(sessionState), sql);
+    return drs.asDataFrame(session());
+  }
 
-    SparkConf conf() {
-        return sessionState.session().sparkContext().getConf();
-    }
+  public Dataset<Row> table(String sql) {
+    DataFrameReader dfr = session().read().format(HIVE_WAREHOUSE_CONNECTOR_INTERNAL).option("table", sql);
+    addConfigOptions(dfr);
+    return dfr.load();
+  }
 
-    /* Catalog helpers */
-    public void setDatabase(String name) {
-        this.sessionState.defaultDB = name;
-	HiveWarehouseConnector.set("spark.datasources.hive.warehouse.currentdatabase", name, sessionState.session());
-    }
+  public SparkSession session() {
+    return sessionState.session;
+  }
 
-    @Override
-    public Dataset<Row> showDatabases() {
-        return exec(HiveQlUtil.showDatabases());
-    }
+  SparkConf conf() {
+    return sessionState.session.sparkContext().getConf();
+  }
 
-    public Dataset<Row> showTables() {
-        return exec(HiveQlUtil.showTables(this.sessionState.database()));
-    }
+  /* Catalog helpers */
+  public void setDatabase(String name) {
+    executeUpdate(useDatabase(name));
+    this.sessionState.props.put(DEFAULT_DB.qualifiedKey, name);
+  }
 
-    public Dataset<Row> describeTable(String table) {
-        return exec(HiveQlUtil.describeTable(this.sessionState.database(), table));
-    }
+  public Dataset<Row> showDatabases() {
+    return exec(HiveQlUtil.showDatabases());
+  }
 
-    public void dropDatabase(String database, boolean ifExists, boolean cascade) {
-        exec(HiveQlUtil.dropDatabase(database, ifExists, cascade));
-    }
+  public Dataset<Row> showTables(){
+    return exec(HiveQlUtil.showTables(DEFAULT_DB.getString(sessionState)));
+  }
 
-    public void dropTable(String table, boolean ifExists, boolean purge) {
-        try(Connection conn = getConnector.get()) {
-            executeInternal(HiveQlUtil.useDatabase(this.sessionState.database()), conn);
-            executeInternal(HiveQlUtil.dropTable(table, ifExists, purge), conn);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
+  public Dataset<Row> describeTable(String table) {
+    return exec(HiveQlUtil.describeTable(DEFAULT_DB.getString(sessionState), table));
+  }
 
-    public void createDatabase(String database, boolean ifNotExists) {
-        exec(HiveQlUtil.createDatabase(database, ifNotExists));
-    }
+  public void dropDatabase(String database, boolean ifExists, boolean cascade) {
+    executeUpdate(HiveQlUtil.dropDatabase(database, ifExists, cascade));
+  }
 
-    @Override
-    public CreateTableBuilder createTable(String tableName) {
-        return new CreateTableBuilder(this, sessionState.database(), tableName);
+  public void dropTable(String table, boolean ifExists, boolean purge) {
+    try (Connection conn = getConnector.get()) {
+      executeInternal(HiveQlUtil.useDatabase(DEFAULT_DB.getString(sessionState)), conn);
+      executeUpdateInternal(HiveQlUtil.dropTable(table, ifExists, purge), conn);
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
     }
+  }
+
+  public void createDatabase(String database, boolean ifNotExists) {
+    executeUpdate(HiveQlUtil.createDatabase(database, ifNotExists));
+  }
+
+  public CreateTableBuilder createTable(String tableName) {
+    return new CreateTableBuilder(this, DEFAULT_DB.getString(sessionState), tableName);
+  }
+
+  private void addConfigOptions(DataFrameReader dfr) {
+    dfr.option(USER.simpleKey, USER.getString(sessionState));
+    dfr.option(PASSWORD.simpleKey, PASSWORD.getString(sessionState));
+    dfr.option(HS2_URL.simpleKey, HS2_URL.getString(sessionState));
+    dfr.option(DBCP2_CONF.simpleKey, DBCP2_CONF.getString(sessionState));
+    dfr.option(DEFAULT_DB.simpleKey, DEFAULT_DB.getString(sessionState));
+  }
 
 }
 

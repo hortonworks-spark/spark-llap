@@ -17,26 +17,39 @@
 
 package com.hortonworks.spark.sql.hive.llap;
 
-import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.Dataset;
 
+public interface HiveWarehouseSession {
 
-import java.util.List;
+    String HIVE_WAREHOUSE_CONNECTOR = "com.hortonworks.spark.sql.hive.llap.HiveWarehouseConnector";
 
-//Holder class for data return directly to the Driver from HS2
-public class DriverResultSet {
+    Dataset<Row> executeQuery(String sql);
+    Dataset<Row> q(String sql);
 
-    public DriverResultSet(List<Row> data, StructType schema) {
-       this.data = data;
-       this.schema = schema;
-    }
+    Dataset<Row> execute(String sql);
+    Dataset<Row> exec(String sql);
 
-    public List<Row> data;
-    public StructType schema;
+    boolean executeUpdate(String sql);
 
-    public Dataset<Row> asDataFrame(SparkSession session) {
-      return session.createDataFrame(data, schema);
-    }
+    Dataset<Row> table(String sql);
+
+    SparkSession session();
+
+    void setDatabase(String name);
+
+    Dataset<Row> showDatabases();
+
+    Dataset<Row> showTables();
+
+    Dataset<Row> describeTable(String table);
+
+    void createDatabase(String database, boolean ifNotExists);
+
+    CreateTableBuilder createTable(String tableName);
+
+    void dropDatabase(String database, boolean ifExists, boolean cascade);
+
+    void dropTable(String table, boolean ifExists, boolean purge);
 }

@@ -1,64 +1,36 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hortonworks.spark.sql.hive.llap;
 
-import com.hortonworks.spark.sql.hive.llap.api.HiveWarehouseSession;
 import org.apache.spark.sql.SparkSession;
 
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 
-import static com.hortonworks.spark.sql.hive.llap.api.HiveWarehouseSession.warehouseKey;
+class HiveWarehouseSessionState {
+    SparkSession session;
+    Map<String, Object> props = new HashMap<>();
 
-public class HiveWarehouseSessionState {
-
-    public SparkSession session;
-    public String user;
-    public String password;
-    public String hs2url;
-    public Long maxExecResults;
-    public String dbcp2Conf;
-    public String defaultDB;
-
-    public SparkSession session() {
-        return session;
+    String getString(HWConf confValue) {
+       return confValue.getString(this);
     }
 
-    public String user() {
-        return Optional.of(user).orElse(getConfStringOrNull(warehouseKey(HiveWarehouseSession.USER_KEY)));
-    }
-
-    public String password() {
-        return Optional.of(password).orElse(getConfStringOrNull(warehouseKey(HiveWarehouseSession.PASSWORD_KEY)));
-    }
-
-    public String hs2url() {
-        return Optional.of(hs2url).orElse(getConfStringOrNull(warehouseKey(HiveWarehouseSession.HS2_URL_KEY)));
-    }
-
-    public Long maxExecResults() {
-        return Optional.of(maxExecResults)
-                .orElse(getConfLongOrNull(warehouseKey(HiveWarehouseSession.EXEC_RESULTS_MAX_KEY), HiveWarehouseSession.DEFAULT_EXEC_RESULT_MAX));
-    }
-
-    public String dbcp2Conf() {
-        return Optional.ofNullable(dbcp2Conf).orElse(getConfStringOrNull(warehouseKey(HiveWarehouseSession.DBCP2_CONF_KEY)));
-    }
-
-    public String database() {
-        return Optional.of(defaultDB).orElse(getConfStringOrNull(warehouseKey(HiveWarehouseSession.DEFAULT_DB_KEY)));
-    }
-
-    public String getConfStringOrNull(String key) {
-        if(session.sparkContext().getConf().contains(key)) {
-            return session.sparkContext().getConf().get(key);
-        } else {
-            return null;
-        }
-    }
-
-    public Long getConfLongOrNull(String key, Long orElse) {
-        if(session.sparkContext().getConf().contains(key)) {
-            return session.sparkContext().getConf().getLong(key, orElse);
-        } else {
-            return null;
-        }
+    Long getLong(HWConf confValue) {
+        return confValue.getLong(this);
     }
 }

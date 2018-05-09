@@ -63,7 +63,7 @@ public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, Sessio
     private Map<String, String> getOptions(DataSourceOptions options) {
                 System.out.println(options.asMap().toString());
                 Map<String, String> params = new HashMap<>();
-                String connectionUrl = options.get("url").get();
+                String connectionUrl = options.get("hs2.url").get();
                 params.put("url", connectionUrl);
                 if(options.get("query").isPresent()) {
                         params.put("query", options.get("query").get());

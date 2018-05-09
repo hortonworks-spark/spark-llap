@@ -1,5 +1,11 @@
 package com.hortonworks.spark.sql.hive.llap;
 
+import org.apache.hadoop.mapred.TaskAttemptID;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskAttemptContext;
+import org.apache.hadoop.mapred.TaskAttemptContextImpl;
+import org.apache.spark.sql.execution.datasources.orc.OrcOutputWriter;
+import org.apache.spark.sql.execution.datasources.orc.OrcSerializer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +41,7 @@ public class HiveWarehouseDataWriter implements DataWriter<InternalRow> {
     private int attemptNumber;
     private FileSystem fs;
     private Path filePath;
-    private Writer out;
+    private OrcOutputWriter out;
 
     public HiveWarehouseDataWriter(Configuration conf, String jobId, StructType schema, SaveMode saveMode, int partitionId, int attemptNumber, FileSystem fs, Path filePath) {
         this.jobId = jobId;
@@ -43,23 +49,15 @@ public class HiveWarehouseDataWriter implements DataWriter<InternalRow> {
         this.saveMode = saveMode;
         this.partitionId = partitionId;
         this.attemptNumber = attemptNumber;
-        try {
-            this.out = SequenceFile.createWriter(conf, SequenceFile.Writer.file(filePath), SequenceFile.Writer.keyClass(BytesWritable.class), SequenceFile.Writer.valueClass(Text.class));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        JobConf jobConf = new JobConf(conf);
+        jobConf.set("orc.mapred.output.schema", this.schema.simpleString());
+        TaskAttemptContext tac = new TaskAttemptContextImpl(jobConf, new TaskAttemptID());
+        this.out = new OrcOutputWriter(filePath.toString(), schema, tac);
     }
 
     @Override
     public void write(InternalRow record) throws IOException {
-        Seq scalaSeq = record.toSeq(schema);
-        List<String> colStrs = new ArrayList<>();
-        for(Object colVal : scala.collection.JavaConversions.seqAsJavaList(scalaSeq)) {
-           String colStr = (colVal != null) ? colVal.toString() : "null";
-           colStrs.add(colStr);
-        }
-        String row = String.join(",", colStrs);
-        out.append(EMPTY_KEY, new Text((row.getBytes())));
+      out.write(record);
     }
 
     @Override

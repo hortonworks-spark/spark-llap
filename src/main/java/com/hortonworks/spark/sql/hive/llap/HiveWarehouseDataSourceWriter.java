@@ -47,7 +47,7 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
       String database = options.get("currentdatabase");
       String table = options.get("table");
       try(Connection conn = DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs)) {
-        DefaultJDBCWrapper.execute(conn, database, loadInto(this.path.toString(), database, table));	
+        DefaultJDBCWrapper.executeUpdate(conn, database, loadInto(this.path.toString(), database, table));	
       } catch(java.sql.SQLException e) {
         throw new RuntimeException(e);
       }

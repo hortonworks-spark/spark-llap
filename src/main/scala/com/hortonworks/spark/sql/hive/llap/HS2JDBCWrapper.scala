@@ -96,15 +96,6 @@ class JDBCWrapper {
     registerMethod.invoke(null, driverClass)
   }
 
-  def getConnector(sessionState: HiveWarehouseSessionState): Connection = {
-    return getConnector(
-      Option.empty,
-      sessionState.hs2url(),
-      sessionState.user(),
-      sessionState.dbcp2Conf()
-    )
-  }
-
   /**
    * Takes a (schema, table) specification and returns the table's Catalyst
    * schema.
@@ -159,9 +150,18 @@ class JDBCWrapper {
     }
   }
 
- def executeStmt(conn: Connection, currentDatabase: String, query: String): DriverResultSet = {
+  //Used for executing queries directly from the Driver to HS2
+  //ResultSet size is limited to prevent Driver OOM
+  //Should not be used for processing of big data
+  //Useful for DDL instrospection statements like 'show tables'
+ def executeStmt(conn: Connection,
+                 currentDatabase: String,
+                 query: String,
+                 maxExecResults: Long): DriverResultSet = {
     useDatabase(conn, currentDatabase)
-    val rs = conn.prepareStatement(query).executeQuery()
+    val stmt = conn.prepareStatement(query)
+    stmt.setMaxRows(maxExecResults.asInstanceOf[Int])
+    val rs = stmt.executeQuery()
     log.debug(query)
     try {
       val rsmd = rs.getMetaData
@@ -186,13 +186,15 @@ class JDBCWrapper {
 
   //Used for executing statements directly from the Driver to HS2
   //with no results
-  def execute(conn: Connection,
+  //Useful for DDL statements like 'create table'
+  def executeUpdate(conn: Connection,
                   currentDatabase: String,
-                  query: String): Unit = {
+                  query: String): Boolean = {
     useDatabase(conn, currentDatabase)
     val stmt = conn.prepareStatement(query)
-    stmt.execute()
+    val succeed = stmt.execute()
     log.debug(query)
+    succeed
   }
 
   def useDatabase(conn: Connection, currentDatabase: String) {
@@ -261,6 +263,15 @@ class JDBCWrapper {
         connectionPools.put(userName, dataSource)
         dataSource.getConnection
     }
+  }
+
+  def getConnector(sessionState: HiveWarehouseSessionState): Connection = {
+    return getConnector(
+      Option.empty,
+      HWConf.HS2_URL.getString(sessionState),
+      HWConf.USER.getString(sessionState),
+      HWConf.DBCP2_CONF.getString(sessionState)
+    )
   }
 
   def columnString(dataType: DataType, dataSize: Option[Long]): String = dataType match {
