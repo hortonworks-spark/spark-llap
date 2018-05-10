@@ -118,7 +118,10 @@ libraryDependencies ++= Seq(
     .exclude("commons-logging", "commons-logging")
     .exclude("io.netty", "netty-buffer")
     .exclude("io.netty", "netty-common")
-    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
+    .exclude("org.apache.arrow", "arrow-vector")
+    .exclude("org.apache.arrow", "arrow-format")
+    .exclude("org.apache.arrow", "arrow-memory"),
 //Use ParserUtils to validate generated HiveQl strings in tests
   ("org.apache.hive" % "hive-exec" % hiveVersion % "test")
     .exclude("ant", "ant")
@@ -167,6 +170,9 @@ libraryDependencies ++= Seq(
     .exclude("commons-logging", "commons-logging") 
     .exclude("io.netty", "netty-buffer")
     .exclude("io.netty", "netty-common")
+    .exclude("org.apache.arrow", "arrow-vector")
+    .exclude("org.apache.arrow", "arrow-format")
+    .exclude("org.apache.arrow", "arrow-memory")
 )
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.10"

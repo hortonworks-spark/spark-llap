@@ -150,10 +150,10 @@ class JDBCWrapper {
     }
   }
 
-  //Used for executing statements directly from the Driver to HS2
+  //Used for executing queries directly from the Driver to HS2
   //ResultSet size is limited to prevent Driver OOM
   //Should not be used for processing of big data
-  //Useful for DDL stmts
+  //Useful for DDL instrospection statements like 'show tables'
  def executeStmt(conn: Connection,
                  currentDatabase: String,
                  query: String,
@@ -182,6 +182,19 @@ class JDBCWrapper {
     } finally {
       rs.close()
     }
+  }
+
+  //Used for executing statements directly from the Driver to HS2
+  //with no results
+  //Useful for DDL statements like 'create table'
+  def executeUpdate(conn: Connection,
+                  currentDatabase: String,
+                  query: String): Boolean = {
+    useDatabase(conn, currentDatabase)
+    val stmt = conn.prepareStatement(query)
+    val succeed = stmt.execute()
+    log.debug(query)
+    succeed
   }
 
   def useDatabase(conn: Connection, currentDatabase: String) {

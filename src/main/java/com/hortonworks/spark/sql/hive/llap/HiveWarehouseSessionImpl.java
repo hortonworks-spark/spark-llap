@@ -41,11 +41,15 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   protected TriFunction<Connection, String, String, DriverResultSet> executeStmt;
 
+  protected TriFunction<Connection, String, String, Boolean> executeUpdate;
+
   HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
     this.sessionState = sessionState;
     getConnector = () -> DefaultJDBCWrapper.getConnector(sessionState);
     executeStmt = (conn, database, sql) ->
       DefaultJDBCWrapper.executeStmt(conn, database, sql, MAX_EXEC_RESULTS.getLong(sessionState));
+    executeUpdate = (conn, database, sql) ->
+      DefaultJDBCWrapper.executeUpdate(conn, database, sql);
     sessionState.session.listenerManager().register(new LlapQueryExecutionListener());
   }
 
@@ -70,6 +74,18 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public boolean executeUpdate(String sql) {
+    try (Connection conn = getConnector.get()) {
+      return executeUpdate.apply(conn, DEFAULT_DB.getString(sessionState), sql);
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private boolean executeUpdateInternal(String sql, Connection conn) {
+    return executeUpdate.apply(conn, DEFAULT_DB.getString(sessionState), sql);
   }
 
   public Dataset<Row> executeInternal(String sql, Connection conn) {
@@ -110,20 +126,20 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
   }
 
   public void dropDatabase(String database, boolean ifExists, boolean cascade) {
-    exec(HiveQlUtil.dropDatabase(database, ifExists, cascade));
+    executeUpdate(HiveQlUtil.dropDatabase(database, ifExists, cascade));
   }
 
   public void dropTable(String table, boolean ifExists, boolean purge) {
     try (Connection conn = getConnector.get()) {
       executeInternal(HiveQlUtil.useDatabase(DEFAULT_DB.getString(sessionState)), conn);
-      executeInternal(HiveQlUtil.dropTable(table, ifExists, purge), conn);
+      executeUpdateInternal(HiveQlUtil.dropTable(table, ifExists, purge), conn);
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
   }
 
   public void createDatabase(String database, boolean ifNotExists) {
-    exec(HiveQlUtil.createDatabase(database, ifNotExists));
+    executeUpdate(HiveQlUtil.createDatabase(database, ifNotExists));
   }
 
   public CreateTableBuilder createTable(String tableName) {
