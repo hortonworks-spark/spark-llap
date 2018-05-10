@@ -193,13 +193,16 @@ class JDBCWrapper {
     useDatabase(conn, currentDatabase)
     val stmt = conn.prepareStatement(query)
     val succeed = stmt.execute()
+    stmt.close()
     log.debug(query)
     succeed
   }
 
   def useDatabase(conn: Connection, currentDatabase: String) {
     if (currentDatabase != null) {
-      conn.prepareStatement(s"USE $currentDatabase").execute()
+      val stmt = conn.prepareStatement(s"USE $currentDatabase")
+      stmt.execute()
+      stmt.close()
     }
   }
 
