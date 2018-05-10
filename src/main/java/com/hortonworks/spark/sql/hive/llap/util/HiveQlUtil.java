@@ -44,13 +44,13 @@ public class HiveQlUtil {
                 orBlank(cascade, "CASCADE"));
     }
 
-    //Requires jdbc Connection attached to current database (see HiveWarehouseSessionImpl.dropTable)
-    public static String dropTable(String table, boolean ifExists, boolean purge) {
-        return format("DROP TABLE %s %s %s",
-                table,
-                orBlank(ifExists, "IF EXISTS"),
-                orBlank(purge, "PURGE"));
-    }
+     //Requires jdbc Connection attached to current database (see HiveWarehouseSessionImpl.dropTable)
+     public static String dropTable(String table, boolean ifExists, boolean purge) {
+       return format("DROP TABLE %s %s %s",
+         orBlank(ifExists, "IF EXISTS"),
+         table,
+         orBlank(purge, "PURGE"));
+     }
 
     public static String createDatabase(String database, boolean ifNotExists) {
         return format("CREATE DATABASE %s %s",

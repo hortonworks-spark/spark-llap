@@ -18,6 +18,7 @@
 package com.hortonworks.spark.sql.hive.llap;
 
 import org.apache.spark.sql.SparkSession;
+import scala.Tuple2;
 
 public class HiveWarehouseBuilder {
 
@@ -30,6 +31,16 @@ public class HiveWarehouseBuilder {
     public static HiveWarehouseBuilder session(SparkSession session) {
         HiveWarehouseBuilder builder = new HiveWarehouseBuilder();
         builder.sessionState.session = session;
+        session.conf().getAll().foreach(new scala.runtime.AbstractFunction1<scala.Tuple2<String, String>, Object>() {
+          public Object apply(Tuple2<String, String> keyValue) {
+            String key = keyValue._1;
+            String value = keyValue._2;
+            if(key.startsWith(HWConf.HIVE_WAREHOUSE_CONF_PREFIX)) {
+              session.sessionState().conf().setConfString(key, value);
+            }
+            return null;
+          }
+        });
         return builder;
     }
 

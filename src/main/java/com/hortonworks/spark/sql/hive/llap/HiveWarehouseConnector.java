@@ -44,7 +44,7 @@ public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, Sessio
 
     @Override
     public String keyPrefix() {
-        return HiveWarehouseSession.HIVE_WAREHOUSE_CONF;
+        return "hive.warehouse";
     }
 
     @Override

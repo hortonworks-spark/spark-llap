@@ -141,8 +141,9 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   public void dropTable(String table, boolean ifExists, boolean purge) {
     try (Connection conn = getConnector.get()) {
-      executeInternal(HiveQlUtil.useDatabase(DEFAULT_DB.getString(sessionState)), conn);
-      executeUpdateInternal(HiveQlUtil.dropTable(table, ifExists, purge), conn);
+      executeUpdateInternal(HiveQlUtil.useDatabase(DEFAULT_DB.getString(sessionState)), conn);
+      String dropTable = HiveQlUtil.dropTable(table, ifExists, purge);
+      executeUpdateInternal(dropTable, conn);
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
@@ -162,6 +163,7 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     dfr.option(HS2_URL.simpleKey, HS2_URL.getString(sessionState));
     dfr.option(DBCP2_CONF.simpleKey, DBCP2_CONF.getString(sessionState));
     dfr.option(DEFAULT_DB.simpleKey, DEFAULT_DB.getString(sessionState));
+    dfr.option("currentdatabase", DEFAULT_DB.getString(sessionState));
   }
 
 }

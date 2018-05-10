@@ -34,7 +34,7 @@ enum HWConf {
     this.defaultValue = defaultValue;
   }
 
-  static String HIVE_WAREHOUSE_CONF_PREFIX = "spark.datasources.hive.warehouse";
+  static String HIVE_WAREHOUSE_CONF_PREFIX = "spark.datasource.hive.warehouse";
 
   static String warehouseKey(String suffix) {
     return HIVE_WAREHOUSE_CONF_PREFIX + "." + suffix;
@@ -43,7 +43,7 @@ enum HWConf {
   String getString(HiveWarehouseSessionState state) {
     return Optional.
       ofNullable((String) state.props.get(qualifiedKey)).
-      orElse(state.session.sparkContext().getConf().get(
+      orElse(state.session.sessionState().conf().getConfString(
         qualifiedKey, (String) defaultValue)
       );
   }
@@ -51,8 +51,8 @@ enum HWConf {
   Long getLong(HiveWarehouseSessionState state) {
     return Optional.
       ofNullable((Long) state.props.get(qualifiedKey)).
-      orElse(state.session.sparkContext().getConf().getLong(
-        qualifiedKey, (Long) defaultValue)
+      orElse(Long.parseLong(state.session.sessionState().conf().getConfString(
+        qualifiedKey, defaultValue.toString()))
       );
   }
 
