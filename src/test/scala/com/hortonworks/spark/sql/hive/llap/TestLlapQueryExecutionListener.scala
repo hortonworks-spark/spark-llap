@@ -60,6 +60,7 @@ class TestLlapQueryExecutionListener
   test("Closes all LlapRelations after query executions - basic") {
     val df = spark.read.format(classOf[FakeDefaultSource].getCanonicalName).load()
     assert(CloseCalls.closeCalls.get() == 0)
+    df.explain(true)
     df.collect()
     assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
   }
@@ -70,6 +71,7 @@ class TestLlapQueryExecutionListener
     val df3 = spark.read.format(classOf[FakeDefaultSource].getCanonicalName).load()
     val unionDF = df1.union(df2).union(df3)
     assert(CloseCalls.closeCalls.get() == 0)
+    unionDF.explain(true)
     unionDF.collect()
     assert(
       CloseCalls.closeCalls.get() == 3,
@@ -81,6 +83,7 @@ class TestLlapQueryExecutionListener
     val df2 = spark.read.format(classOf[FakeDefaultSource].getCanonicalName).load()
     val unionDF = df1.union(df1).union(df2)
     assert(CloseCalls.closeCalls.get() == 0)
+    unionDF.explain(true)
     unionDF.show(0)
     assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
   }
@@ -93,6 +96,7 @@ class TestLlapQueryExecutionListener
     val df = spark.sql("SELECT * FROM tableA")
     assert(CloseCalls.closeCalls.get() == 0)
     df.count()
+    df.explain(true)
     assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
   }
 }
