@@ -37,7 +37,7 @@ class HiveWarehouseSessionHiveQlTest {
         session = SparkSession
                 .builder()
                 .master("local")
-                .appName("HiveWarehouseConnector test")
+                .appName("HiveWarehouseSessionHiveQlTest test")
                 .getOrCreate();
         HiveWarehouseSessionState sessionState =
                 HiveWarehouseBuilder

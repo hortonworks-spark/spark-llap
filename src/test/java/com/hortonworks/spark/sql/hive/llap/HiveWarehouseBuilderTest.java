@@ -37,7 +37,6 @@ class HiveWarehouseBuilderTest {
 
     @Before
     public void setUp() {
-        // Trigger static initializer of TestData
         session = SparkSession
                 .builder()
                 .master("local")
