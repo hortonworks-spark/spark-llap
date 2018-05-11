@@ -33,17 +33,17 @@ class TestJavaProxy extends FunSuite {
   test("HiveWarehouseSession") {
     val hiveWarehouseSessionTest = new HiveWarehouseSessionHiveQlTest()
 
-    def setupAndTearDown(test: () => Unit): Unit = try {
+    def withSetUpAndTearDown(test: () => Unit): Unit = try {
       hiveWarehouseSessionTest.setUp()
       test()
     } finally {
       hiveWarehouseSessionTest.tearDown()
     }
 
-    setupAndTearDown(hiveWarehouseSessionTest.testCreateDatabase)
-    setupAndTearDown(hiveWarehouseSessionTest.testCreateTable)
-    setupAndTearDown(hiveWarehouseSessionTest.testExecuteQuery)
-    setupAndTearDown(hiveWarehouseSessionTest.testSetDatabase)
-    setupAndTearDown(hiveWarehouseSessionTest.testShowTable)
+    withSetUpAndTearDown(hiveWarehouseSessionTest.testCreateDatabase)
+    withSetUpAndTearDown(hiveWarehouseSessionTest.testCreateTable)
+    withSetUpAndTearDown(hiveWarehouseSessionTest.testExecuteQuery)
+    withSetUpAndTearDown(hiveWarehouseSessionTest.testSetDatabase)
+    withSetUpAndTearDown(hiveWarehouseSessionTest.testShowTable)
   }
 }
