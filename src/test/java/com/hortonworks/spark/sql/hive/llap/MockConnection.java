@@ -36,8 +36,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
-//Methods are empty on purpose
-class MockConnection implements Connection {
+// Methods are empty on purpose
+// Exposed for Python side.
+public class MockConnection implements Connection {
     @Override
     public Statement createStatement() throws SQLException {
         return null;

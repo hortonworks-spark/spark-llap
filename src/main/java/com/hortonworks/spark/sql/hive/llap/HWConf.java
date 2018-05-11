@@ -41,11 +41,18 @@ enum HWConf {
   }
 
   String getString(HiveWarehouseSessionState state) {
-    return Optional.
-      ofNullable((String) state.props.get(qualifiedKey)).
-      orElse(state.session.sparkContext().getConf().get(
-        qualifiedKey, (String) defaultValue)
-      );
+      String value = (String) state.props.get(qualifiedKey);
+      if (value == null) {
+          // There seems no way to call spark.conf.get(key, default)?
+          if (state.session.conf().getOption(qualifiedKey).nonEmpty()) {
+              return state.session.conf().getOption(qualifiedKey).get();
+          } else {
+              // Search it from the context too just in case.
+              return state.session.sparkContext().getConf().get(qualifiedKey, (String) defaultValue);
+          }
+      } else {
+          return value;
+      }
   }
 
   Long getLong(HiveWarehouseSessionState state) {

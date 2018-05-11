@@ -42,6 +42,7 @@ class TestJavaProxy extends FunSuite {
 
     withSetUpAndTearDown(hiveWarehouseSessionTest.testCreateDatabase)
     withSetUpAndTearDown(hiveWarehouseSessionTest.testCreateTable)
+    withSetUpAndTearDown(hiveWarehouseSessionTest.testDescribeTable)
     withSetUpAndTearDown(hiveWarehouseSessionTest.testExecuteQuery)
     withSetUpAndTearDown(hiveWarehouseSessionTest.testSetDatabase)
     withSetUpAndTearDown(hiveWarehouseSessionTest.testShowTable)

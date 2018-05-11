@@ -72,7 +72,7 @@ class HiveWarehouseSessionHiveQlTest {
 
     @Test
     void testDescribeTable() {
-       assertEquals(hive.describeTable("testTable").count(),
+        assertEquals(hive.describeTable("testTable").count(),
                mockExecuteResultSize);
     }
 
