@@ -30,7 +30,7 @@ class HiveWarehouseSessionHiveQlTest {
     private HiveWarehouseSession hive;
     private int mockExecuteResultSize;
 
-    private transient SparkSession session = null;
+    transient SparkSession session = null;
 
     @Before
     void setup() {

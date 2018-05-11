@@ -33,7 +33,7 @@ class HiveWarehouseBuilderTest {
     static final Long TEST_EXEC_RESULTS_MAX = Long.valueOf(12345L);
     static final String TEST_DEFAULT_DB = "default12345";
 
-    private transient SparkSession session = null;
+    transient SparkSession session = null;
 
     @Before
     public void setUp() {

@@ -21,17 +21,29 @@ import org.scalatest.FunSuite
 
 class TestJavaProxy extends FunSuite {
   test("HiveWarehouseBuilder") {
-    val builderTest = new HiveWarehouseBuilderTest();
-    builderTest.testAllBuilderConfig();
+    val builderTest = new HiveWarehouseBuilderTest()
+    try {
+      builderTest.setUp()
+      builderTest.testAllBuilderConfig()
+    } finally {
+      builderTest.tearDown()
+    }
   }
 
   test("HiveWarehouseSession") {
     val hiveWarehouseSessionTest = new HiveWarehouseSessionHiveQlTest()
-    hiveWarehouseSessionTest.setup()
-    hiveWarehouseSessionTest.testCreateDatabase()
-    hiveWarehouseSessionTest.testCreateTable()
-    hiveWarehouseSessionTest.testExecuteQuery()
-    hiveWarehouseSessionTest.testSetDatabase()
-    hiveWarehouseSessionTest.testShowTable()
+
+    def setupAndTearDown(test: () => Unit): Unit = try {
+      hiveWarehouseSessionTest.setup()
+      test()
+    } finally {
+      hiveWarehouseSessionTest.tearDown()
+    }
+
+    setupAndTearDown(hiveWarehouseSessionTest.testCreateDatabase)
+    setupAndTearDown(hiveWarehouseSessionTest.testCreateTable)
+    setupAndTearDown(hiveWarehouseSessionTest.testExecuteQuery)
+    setupAndTearDown(hiveWarehouseSessionTest.testSetDatabase)
+    setupAndTearDown(hiveWarehouseSessionTest.testShowTable)
   }
 }
