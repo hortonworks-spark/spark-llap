@@ -121,6 +121,7 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
   public void setDatabase(String name) {
     executeUpdate(useDatabase(name));
     this.sessionState.props.put(DEFAULT_DB.qualifiedKey, name);
+    this.sessionState.session.sessionState.conf().setConfString(HWConf.HIVE_WAREHOUSE_CONF_PREFIX + ".currentdatabase", name);
   }
 
   public Dataset<Row> showDatabases() {
