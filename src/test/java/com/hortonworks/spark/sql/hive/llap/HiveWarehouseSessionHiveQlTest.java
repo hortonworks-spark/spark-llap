@@ -18,6 +18,7 @@
 package com.hortonworks.spark.sql.hive.llap;
 
 import org.apache.spark.sql.SparkSession;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,6 +29,8 @@ class HiveWarehouseSessionHiveQlTest {
 
     private HiveWarehouseSession hive;
     private int mockExecuteResultSize;
+
+    private transient SparkSession session = null;
 
     @Before
     void setup() {
@@ -48,6 +51,12 @@ class HiveWarehouseSessionHiveQlTest {
          hive = new MockHiveWarehouseSessionImpl(sessionState);
          mockExecuteResultSize =
                  MockHiveWarehouseSessionImpl.testFixture().data.size();
+    }
+
+    @After
+    public void tearDown() {
+        session.stop();
+        session = null;
     }
 
     @Test
