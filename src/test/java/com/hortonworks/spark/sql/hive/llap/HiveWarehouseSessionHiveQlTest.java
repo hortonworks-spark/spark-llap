@@ -33,7 +33,7 @@ class HiveWarehouseSessionHiveQlTest {
     transient SparkSession session = null;
 
     @Before
-    void setup() {
+    void setUp() {
         session = SparkSession
                 .builder()
                 .master("local")
