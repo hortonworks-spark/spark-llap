@@ -63,10 +63,6 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     return dfr.load();
   }
 
-  public Dataset<Row> exec(String sql) {
-    return execute(sql);
-  }
-
   public Dataset<Row> execute(String sql) {
     try (Connection conn = getConnector.get()) {
       DriverResultSet drs = executeStmt.apply(conn, DEFAULT_DB.getString(sessionState), sql);
@@ -109,20 +105,20 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   /* Catalog helpers */
   public void setDatabase(String name) {
-    exec(useDatabase(name));
+    execute(useDatabase(name));
     this.sessionState.props.put(DEFAULT_DB.qualifiedKey, name);
   }
 
   public Dataset<Row> showDatabases() {
-    return exec(HiveQlUtil.showDatabases());
+    return execute(HiveQlUtil.showDatabases());
   }
 
   public Dataset<Row> showTables(){
-    return exec(HiveQlUtil.showTables(DEFAULT_DB.getString(sessionState)));
+    return execute(HiveQlUtil.showTables(DEFAULT_DB.getString(sessionState)));
   }
 
   public Dataset<Row> describeTable(String table) {
-    return exec(HiveQlUtil.describeTable(DEFAULT_DB.getString(sessionState), table));
+    return execute(HiveQlUtil.describeTable(DEFAULT_DB.getString(sessionState), table));
   }
 
   public void dropDatabase(String database, boolean ifExists, boolean cascade) {

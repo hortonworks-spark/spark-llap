@@ -29,7 +29,6 @@ public interface HiveWarehouseSession {
     Dataset<Row> q(String sql);
 
     Dataset<Row> execute(String sql);
-    Dataset<Row> exec(String sql);
 
     boolean executeUpdate(String sql);
 
