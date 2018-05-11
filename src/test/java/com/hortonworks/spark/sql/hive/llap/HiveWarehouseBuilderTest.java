@@ -53,11 +53,6 @@ class HiveWarehouseBuilderTest {
 
     @Test
     void testAllBuilderConfig() {
-        SparkSession session = SparkSession
-                .builder()
-                .master("local")
-                .appName("HiveWarehouseConnector test")
-                .getOrCreate();
         HiveWarehouseSessionState sessionState =
                 HiveWarehouseBuilder
                         .session(session)
@@ -79,11 +74,6 @@ class HiveWarehouseBuilderTest {
 
     @Test
     void testAllConfConfig() {
-        SparkSession session = SparkSession
-                .builder()
-                .master("local")
-                .appName("HiveWarehouseConnector test")
-                .getOrCreate();
         session.conf().set(HWConf.USER.qualifiedKey, TEST_USER);
         session.conf().set(HWConf.PASSWORD.qualifiedKey, TEST_PASSWORD);
         session.conf().set(HWConf.HS2_URL.qualifiedKey, TEST_HS2_URL);
