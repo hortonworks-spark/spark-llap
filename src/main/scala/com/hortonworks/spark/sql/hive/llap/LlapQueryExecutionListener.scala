@@ -36,6 +36,10 @@ class LlapQueryExecutionListener extends QueryExecutionListener with Logging {
   }
 
   override def onSuccess(funcName: String, qe: QueryExecution, durationNs: Long): Unit = {
+    println
+    println(funcName)
+    println
+    println(qe.toString)
     closeLlapRelation(qe)
   }
 
