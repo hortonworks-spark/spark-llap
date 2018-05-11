@@ -61,7 +61,7 @@ class TestLlapQueryExecutionListener
     val df = spark.read.format(classOf[FakeDefaultSource].getCanonicalName).load()
     assert(CloseCalls.closeCalls.get() == 0)
     df.collect()
-    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
+    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation should only be attempted once.")
   }
 
   test("Closes all LlapRelations after query executions - union") {
@@ -82,7 +82,7 @@ class TestLlapQueryExecutionListener
     val unionDF = df1.union(df1).union(df2)
     assert(CloseCalls.closeCalls.get() == 0)
     unionDF.show(0)
-    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
+    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation should only be attempted once.")
   }
 
   test("Closes all LlapRelations after query executions - SQL") {
@@ -93,7 +93,7 @@ class TestLlapQueryExecutionListener
     val df = spark.sql("SELECT * FROM tableA")
     assert(CloseCalls.closeCalls.get() == 0)
     df.count()
-    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation was not attempted.")
+    assert(CloseCalls.closeCalls.get() == 1, "Closing LlapRelation should only be attempted once.")
   }
 }
 
