@@ -34,7 +34,7 @@ class HiveWarehouseSessionHiveQlTest {
 
     @Before
     void setup() {
-        SparkSession session = SparkSession
+        session = SparkSession
                 .builder()
                 .master("local")
                 .appName("HiveWarehouseConnector test")
