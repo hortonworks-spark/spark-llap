@@ -51,7 +51,7 @@ before_install:
 
 install:
   - build/sbt assembly -Drepourl=http://nexus-private.hortonworks.com/nexus/content/groups/public/ -Dhadoop.version=3.0.0.3.0.0.0-SNAPSHOT -Dhive.version=3.0.0.3.0.0.0-SNAPSHOT
-  # sbt test:assembly generates a jar containing test classes complied. This is required to run the Python tests.
+  # sbt test:package generates a jar containing test classes complied. This is required to run the Python tests.
   - build/sbt test:package -Drepourl=http://nexus-private.hortonworks.com/nexus/content/groups/public/ -Dhadoop.version=3.0.0.3.0.0.0-SNAPSHOT -Dhive.version=3.0.0.3.0.0.0-SNAPSHOT
 
 script:
