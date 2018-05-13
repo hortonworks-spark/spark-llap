@@ -25,7 +25,6 @@ matrix:
       python: 2.7
       env: >
         TEST_SPARK_VERSION=2.3.0
-        SPARK_HOME=$TRAVIS_BUILD_DIR/spark/spark-$TEST_SPARK_VERSION-bin-hadoop2.7
 
 cache:
   directories:
@@ -36,14 +35,19 @@ notifications:
   email: false
 
 before_install:
+  - export PYTHONPATH=`pwd`/python:$PYTHONPATH
+  - export SPARK_HOME=$TRAVIS_BUILD_DIR/spark/spark-$TEST_SPARK_VERSION-bin-hadoop2.7
+
   # Download Python packages.
   - pip install coverage pycodestyle
+
   # Download Spark
   - mkdir $TRAVIS_BUILD_DIR/spark
   - curl -O http://mirrors.gigenet.com/apache/spark/spark-$TEST_SPARK_VERSION/spark-$TEST_SPARK_VERSION-bin-hadoop2.7.tgz
   - tar zxfC spark-$TEST_SPARK_VERSION-bin-hadoop2.7.tgz $TRAVIS_BUILD_DIR/spark
+
+  # Set the PySpark libraries paths for, for example, py4j and pyspark. This should be set after Spark is downloaded.
   - export PYTHONPATH=$(ZIPS=("$SPARK_HOME"/python/lib/*.zip); IFS=:; echo "${ZIPS[*]}"):$PYTHONPATH
-  - export PYTHONPATH=`pwd`/python:$PYTHONPATH
 
 install:
   - build/sbt assembly -Drepourl=http://nexus-private.hortonworks.com/nexus/content/groups/public/ -Dhadoop.version=3.0.0.3.0.0.0-SNAPSHOT -Dhive.version=3.0.0.3.0.0.0-SNAPSHOT
