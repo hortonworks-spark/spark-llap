@@ -63,5 +63,5 @@ script:
   - python setup.py sdist
   - coverage run pyspark_llap/sql/tests.py
   - coverage report --include "pyspark_llap/*" --show-missing
-  - pycodestyle `find pyspark_llap -name *.py` --ignore=E402,E731,E241,W503,E226,E722,E741,E305 --max-line-length=100
+  - pycodestyle `find . -name '*.py'` --ignore=E402,E731,E241,W503,E226,E722,E741,E305 --max-line-length=100
 

@@ -46,4 +46,3 @@ setup(
     ],
     url='https://github.com/hortonworks-spark/spark-llap',
 )
-
