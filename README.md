@@ -121,5 +121,7 @@ HiveWarehouseSession Interface
 	    void dropDatabase(String database, boolean ifExists, boolean cascade);
 
 	    void dropTable(String table, boolean ifExists, boolean purge);
+
+	    MergeBuilder mergeInto(String targetTable, String alias);
 	}
 
