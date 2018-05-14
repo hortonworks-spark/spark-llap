@@ -8,4 +8,9 @@ Usage
 =====
 
 * Start a HiveWarehouseConnector session:
+
+`val hive = com.hortonworks.spark.sql.hive.llap.HiveWarehouseBuilder.session(spark).build()`
+
+* Start a HiveWarehouseConnector session:
+
 `val hive = com.hortonworks.spark.sql.hive.llap.HiveWarehouseBuilder.session(spark).build()`
