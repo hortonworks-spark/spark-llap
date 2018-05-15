@@ -181,6 +181,7 @@ class JDBCWrapper {
       return new DriverResultSet(data, schema)
     } finally {
       rs.close()
+      stmt.close()
     }
   }
 
@@ -251,6 +252,7 @@ class JDBCWrapper {
           properties.setProperty("maxTotal", "40")
           properties.setProperty("maxIdle", "10")
           properties.setProperty("maxWaitMillis", "30000")
+          properties.setProperty("logExpiredConnections", "false")
         } else {
           dbcp2Configs.split(" ").map(s => s.trim.split(":")).foreach {
             conf =>

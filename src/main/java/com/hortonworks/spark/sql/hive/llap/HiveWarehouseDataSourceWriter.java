@@ -30,7 +30,7 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
         this.jobId = jobId;
         this.schema = schema;
         this.saveMode = mode;
-        this.path = new Path(new Path(path, "%s_temporary"), jobId);
+        this.path = new Path(new Path(path, "_temporary"), jobId);
         this.conf = conf;
     }
 
@@ -56,10 +56,10 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
 
     @Override
     public void abort(WriterCommitMessage[] messages) {
-        LOG.info("Abort job {}", jobId);
+      LOG.info("Abort job {}", jobId);
     }
 
     private String loadInto(String path, String database, String table) {
-	return format("LOAD DATA INPATH '%s' INTO TABLE %s.%s", path, database, table);
+      return format("LOAD DATA INPATH '%s' INTO TABLE %s.%s", path, database, table);
     }
 }

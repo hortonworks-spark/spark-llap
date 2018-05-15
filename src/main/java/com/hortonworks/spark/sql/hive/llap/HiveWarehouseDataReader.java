@@ -12,27 +12,28 @@ import org.apache.spark.sql.vectorized.ColumnVector;
 import java.util.Iterator;
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hive.llap.LlapArrowInput;
+import org.apache.hadoop.hive.llap.LlapArrowBatchRecordReader;
+import org.apache.hadoop.hive.llap.LlapArrowBatchRecordReader.ArrowWrapperWritable;
 
 public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
 
-    private LlapArrowInput reader;
+    private LlapArrowBatchRecordReader reader;
+    private ArrowWrapperWritable wrapperWritable = new ArrowWrapperWritable();
 
     public HiveWarehouseDataReader(LlapInputSplit split, JobConf conf) throws Exception {
         LlapBaseInputFormat input = new LlapBaseInputFormat(true);
-        this.reader = (LlapArrowInput) input.getRecordReader(split, conf, null);
+        this.reader = (LlapArrowBatchRecordReader) input.getRecordReader(split, conf, null);
     }
 
     @Override
     public boolean next() throws IOException {
-        boolean hasNextBatch = reader.loadNextBatch();
+        boolean hasNextBatch = reader.next(null, wrapperWritable);
         return hasNextBatch;
     }
 
     @Override
     public ColumnarBatch get() {
-        try {
-            List<FieldVector> fieldVectors = reader.getCurrentFieldVectors();
+            List<FieldVector> fieldVectors = wrapperWritable.getVectorSchemaRoot().getFieldVectors();
             ColumnVector[] columnVectors = new ColumnVector[fieldVectors.size()];
             Iterator<FieldVector> iterator = fieldVectors.iterator();
             int rowCount = -1;
@@ -46,9 +47,6 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
             ColumnarBatch columnarBatch = new ColumnarBatch(columnVectors);
             columnarBatch.setNumRows(rowCount);
             return columnarBatch;
-        } catch(IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override
