@@ -12,6 +12,10 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Spark streaming data source v2 that writes to hive using new hive Streaming API (HIVE-19205).
+ * Example usage can be found in com.hortonworks.spark.sql.hive.llap.streaming.examples.HiveStreamingExample
+ */
 public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport {
   private static final long DEFAULT_COMMIT_INTERVAL_ROWS = 10000;
   private static Logger LOG = LoggerFactory.getLogger(HiveStreamingDataSource.class);

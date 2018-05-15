@@ -13,6 +13,28 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Spark data source v2 to write to hive using new Hive Streaming API (HIVE-19205).
+ *
+ * <pre>
+ * Example usage:
+ * // Read from source table (web_sales_small) and write to destination table (web_sales) using dynamic partitioning.
+ * val df = sql("select * from web_sales_small")
+ * df.write.format("com.hortonworks.spark.sql.hive.llap.HiveStreamingDataSource")
+ *   .option("database", "streaming")
+ *   .option("table", "web_sales")
+ *   .option("metastoreUri", "thrift://cn105-10.l42scl.hortonworks.com:9183")
+ *   .save()
+ *
+ * // To write to static partition
+ * df.write.format("com.hortonworks.spark.sql.hive.llap.HiveStreamingDataSource")
+ *   .option("database", "streaming")
+ *   .option("table", "web_sales")
+ *   .option("partition", "2018-08-09")
+ *   .option("metastoreUri", "thrift://cn105-10.l42scl.hortonworks.com:9183")
+ *   .save()
+ * </pre>
+ */
 public class HiveStreamingDataSource implements DataSourceV2, WriteSupport {
   private static final long DEFAULT_COMMIT_INTERVAL_ROWS = 10000;
   private static Logger LOG = LoggerFactory.getLogger(HiveStreamingDataSource.class);
