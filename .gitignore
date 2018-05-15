@@ -4,3 +4,7 @@ build/*.jar
 derby.log
 metastore_db/
 target/
+*.pyc
+.coverage
+python/dist/
+python/pyspark_llap.egg-info/

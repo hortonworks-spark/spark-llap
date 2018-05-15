@@ -39,4 +39,9 @@ public class DriverResultSet {
     public Dataset<Row> asDataFrame(SparkSession session) {
       return session.createDataFrame(data, schema);
     }
+
+    // Exposed for Python side.
+    public List<Row> getData() {
+        return this.data;
+    }
 }

@@ -17,16 +17,18 @@
 
 package com.hortonworks.spark.sql.hive.llap;
 
+import java.util.ArrayList;
+
 import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRow;
 import org.apache.spark.sql.types.StructType;
 
-import java.util.ArrayList;
+// Exposed for Python side access.
+public class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
 
-class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
-
-    static DriverResultSet testFixture() {
+    // Exposed for Python side access.
+    public static DriverResultSet testFixture() {
         ArrayList<Row> row = new ArrayList<>();
         row.add(new GenericRow(new Object[] {1, "ID 1"}));
         row.add(new GenericRow(new Object[] {2, "ID 2"}));
@@ -36,14 +38,14 @@ class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
         return new DriverResultSet(row, schema);
     }
 
-    MockHiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
+    public MockHiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
         super(sessionState);
         super.getConnector =
                 () -> new MockConnection();
         super.executeStmt =
                 (conn, database, sql) -> {
                     try {
-                        org.apache.hadoop.hive.ql.parse.ParseUtils.parse(sql);
+                        new org.apache.hadoop.hive.ql.parse.ParseDriver().parse(sql);
                         return testFixture();
                     } catch(ParseException pe) {
                         throw new RuntimeException(pe);
@@ -51,12 +53,12 @@ class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
                 };
       super.executeUpdate =
         (conn, database, sql) -> {
-          try {
-            org.apache.hadoop.hive.ql.parse.ParseUtils.parse(sql);
-            return true;
-          } catch(ParseException pe) {
-            throw new RuntimeException(pe);
-          }
+            try {
+                new org.apache.hadoop.hive.ql.parse.ParseDriver().parse(sql);
+                return true;
+            } catch(ParseException pe) {
+                throw new RuntimeException(pe);
+            }
         };
         HiveWarehouseSessionImpl.HIVE_WAREHOUSE_CONNECTOR_INTERNAL =
                 "com.hortonworks.spark.sql.hive.llap.MockHiveWarehouseConnector";

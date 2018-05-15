@@ -99,6 +99,11 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     return sessionState.session;
   }
 
+  // Exposed for Python side.
+  public HiveWarehouseSessionState sessionState() {
+    return sessionState;
+  }
+
   SparkConf conf() {
     return sessionState.session.sparkContext().getConf();
   }
