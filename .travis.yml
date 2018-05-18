@@ -35,7 +35,6 @@ notifications:
   email: false
 
 before_install:
-  - export PYTHONPATH=`pwd`/python:$PYTHONPATH
   - export SPARK_HOME=$TRAVIS_BUILD_DIR/spark/spark-$TEST_SPARK_VERSION-bin-hadoop2.7
 
   # Download Python packages.
@@ -51,17 +50,22 @@ before_install:
 
 install:
   - build/sbt assembly -Drepourl=http://nexus-private.hortonworks.com/nexus/content/groups/public/ -Dhadoop.version=3.0.0.3.0.0.0-SNAPSHOT -Dhive.version=3.0.0.3.0.0.0-SNAPSHOT
+
   # sbt test:package generates a jar containing test classes complied. This is required to run the Python tests.
   - build/sbt test:package -Drepourl=http://nexus-private.hortonworks.com/nexus/content/groups/public/ -Dhadoop.version=3.0.0.3.0.0.0-SNAPSHOT -Dhive.version=3.0.0.3.0.0.0-SNAPSHOT
+
+  # assembly also produces a Python API module under targets. Adds it to the Python path.
+  - export PYTHONPATH=$(ZIPS=(`pwd`/target/*.zip); IFS=:; echo "${ZIPS[*]}"):$PYTHONPATH
 
 script:
   # Scala / Java
   - build/sbt test -Drepourl=http://nexus-private.hortonworks.com/nexus/content/groups/public/ -Dhadoop.version=3.0.0.3.0.0.0-SNAPSHOT -Dhive.version=3.0.0.3.0.0.0-SNAPSHOT
   - build/scalastyle
+
   # Python
   - cd python
   - python setup.py sdist
   - coverage run pyspark_llap/sql/tests.py
-  - coverage report --include "pyspark_llap/*" --show-missing
+  - coverage report --include "*pyspark_llap-*pyspark_llap/*" --show-missing
   - pycodestyle `find . -name '*.py'` --ignore=E402,E731,E241,W503,E226,E722,E741,E305 --max-line-length=100
 

@@ -1,7 +1,11 @@
+import java.io.{File, FileInputStream, FileOutputStream}
+import java.util.zip.{ZipEntry, ZipOutputStream}
+
 
 name := "spark-llap"
 //<ownVersion>-<sparkVersion>-<hiveVersion>
-version := sys.props.getOrElse("version", "1.2-2.3-3.0-SNAPSHOT")
+val versionString = sys.props.getOrElse("version", "1.2-2.3-3.0-SNAPSHOT")
+version := versionString
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
@@ -220,6 +224,43 @@ assemblyMergeStrategy in assembly := {
     val oldStrategy = (assemblyMergeStrategy in assembly).value
     oldStrategy(x)
 }
+
+def pyFilesZipRecursive(source: File, destZipFile: File): Unit = {
+  val destOutput = new ZipOutputStream(new FileOutputStream(destZipFile))
+  addPyFilesToZipStream("", source, destOutput)
+  destOutput.flush()
+  destOutput.close()
+}
+
+def addPyFilesToZipStream(parent: String, source: File, output: ZipOutputStream): Unit = {
+  if (source.isDirectory) {
+    output.putNextEntry(new ZipEntry(parent + source.getName))
+    for (file <- source.listFiles()) {
+      addPyFilesToZipStream(parent + source.getName + File.separator, file, output)
+    }
+  } else if (source.getName.endsWith(".py")) {
+    val in = new FileInputStream(source)
+    output.putNextEntry(new ZipEntry(parent + source.getName))
+    val buf = new Array[Byte](8192)
+    var n = 0
+    while (n != -1) {
+      n = in.read(buf)
+      if (n != -1) {
+        output.write(buf, 0, n)
+      }
+    }
+    output.closeEntry()
+    in.close()
+  }
+}
+
+resourceGenerators in Compile += Def.macroValueI(resourceManaged in Compile map { outDir: File =>
+  val src = new File("./python/pyspark_llap")
+  val zipFile = new File(s"./target/pyspark_llap-$versionString.zip")
+  zipFile.delete()
+  pyFilesZipRecursive(src, zipFile)
+  Seq.empty[File]
+}).value
 
 val assemblyLogLevelString = sys.props.getOrElse("assembly.log.level", "error")
 
