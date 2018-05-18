@@ -75,8 +75,8 @@ public class HiveWarehouseBuilder {
         return new HiveWarehouseSessionImpl(this.sessionState);
     }
 
-    //Revealed internally for test only (not public)
-    HiveWarehouseSessionState sessionStateForTest() {
+    // Revealed internally for test only. Exposed for Python side.
+    public HiveWarehouseSessionState sessionStateForTest() {
         return this.sessionState;
     }
 }

@@ -22,7 +22,9 @@ import org.apache.spark.sql.SparkSession;
 import java.util.HashMap;
 import java.util.Map;
 
-class HiveWarehouseSessionState {
+// Exposed for Python side.
+public class HiveWarehouseSessionState {
+
     SparkSession session;
     Map<String, Object> props = new HashMap<>();
 
@@ -32,5 +34,10 @@ class HiveWarehouseSessionState {
 
     Long getLong(HWConf confValue) {
         return confValue.getLong(this);
+    }
+
+    // Exposed for Python side.
+    public Map<String, Object> getProps() {
+        return this.props;
     }
 }

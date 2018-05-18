@@ -25,7 +25,8 @@ import java.io.IOException;
 
 public class MockHiveWarehouseDataReader implements DataReader<Row> {
 
-    static final int RESULT_SIZE = 10;
+    // Exposed for Python side.
+    public static final int RESULT_SIZE = 10;
     private int i = 0;
 
     @Override

@@ -13,7 +13,7 @@ import java.util.Iterator;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hive.llap.LlapArrowBatchRecordReader;
-import org.apache.hadoop.hive.llap.LlapArrowBatchRecordReader.ArrowWrapperWritable;
+import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
 
 public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
 
@@ -21,7 +21,7 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
     private ArrowWrapperWritable wrapperWritable = new ArrowWrapperWritable();
 
     public HiveWarehouseDataReader(LlapInputSplit split, JobConf conf) throws Exception {
-        LlapBaseInputFormat input = new LlapBaseInputFormat(true);
+        LlapBaseInputFormat input = new LlapBaseInputFormat(true, Long.MAX_VALUE);
         this.reader = (LlapArrowBatchRecordReader) input.getRecordReader(split, conf, null);
     }
 

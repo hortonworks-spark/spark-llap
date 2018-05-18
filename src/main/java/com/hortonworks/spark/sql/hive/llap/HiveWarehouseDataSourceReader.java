@@ -175,7 +175,7 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
             if (countStar) {
 		System.out.println("Is count *" + options.get("isCountStar"));
             } else {
-                LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false);
+                LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
                 try {
                     //TODO apparently numSplits doesn't do anything
                     splits = llapInputFormat.getSplits(jobConf, 1);

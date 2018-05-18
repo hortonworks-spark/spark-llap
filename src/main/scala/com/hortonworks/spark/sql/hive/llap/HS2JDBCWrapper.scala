@@ -17,21 +17,23 @@
 
 package com.hortonworks.spark.sql.hive.llap
 
-import org.apache.spark.sql.catalyst.expressions.GenericRow
 import java.net.URI
 import java.sql.{Connection, DatabaseMetaData, Driver, DriverManager, ResultSet, ResultSetMetaData, SQLException}
 import java.util.Properties
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+
 import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.commons.dbcp2.BasicDataSourceFactory
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory
 import org.apache.hadoop.hive.serde2.typeinfo._
+import org.apache.spark.sql.{Row, RowFactory}
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.types._
 import org.slf4j.LoggerFactory
-import org.apache.spark.sql.{Row, RowFactory}
+
 
 object Utils {
   def classForName(className: String): Class[_] = {
@@ -150,10 +152,10 @@ class JDBCWrapper {
     }
   }
 
-  //Used for executing queries directly from the Driver to HS2
-  //ResultSet size is limited to prevent Driver OOM
-  //Should not be used for processing of big data
-  //Useful for DDL instrospection statements like 'show tables'
+  // Used for executing queries directly from the Driver to HS2
+  // ResultSet size is limited to prevent Driver OOM
+  // Should not be used for processing of big data
+  // Useful for DDL instrospection statements like 'show tables'
  def executeStmt(conn: Connection,
                  currentDatabase: String,
                  query: String,
@@ -185,9 +187,9 @@ class JDBCWrapper {
     }
   }
 
-  //Used for executing statements directly from the Driver to HS2
-  //with no results
-  //Useful for DDL statements like 'create table'
+  // Used for executing statements directly from the Driver to HS2
+  // with no results
+  // Useful for DDL statements like 'create table'
   def executeUpdate(conn: Connection,
                   currentDatabase: String,
                   query: String): Boolean = {

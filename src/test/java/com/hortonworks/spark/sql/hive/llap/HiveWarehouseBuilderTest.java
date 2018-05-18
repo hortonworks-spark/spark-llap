@@ -18,6 +18,8 @@
 package com.hortonworks.spark.sql.hive.llap;
 
 import org.apache.spark.sql.SparkSession;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -31,13 +33,25 @@ class HiveWarehouseBuilderTest {
     static final Long TEST_EXEC_RESULTS_MAX = Long.valueOf(12345L);
     static final String TEST_DEFAULT_DB = "default12345";
 
-    @Test
-    void testAllBuilderConfig() {
-        SparkSession session = SparkSession
+    transient SparkSession session = null;
+
+    @Before
+    public void setUp() {
+        session = SparkSession
                 .builder()
                 .master("local")
                 .appName("HiveWarehouseConnector test")
                 .getOrCreate();
+    }
+
+    @After
+    public void tearDown() {
+        session.stop();
+        session = null;
+    }
+
+    @Test
+    void testAllBuilderConfig() {
         HiveWarehouseSessionState sessionState =
                 HiveWarehouseBuilder
                         .session(session)
@@ -48,7 +62,6 @@ class HiveWarehouseBuilderTest {
                         .defaultDB(TEST_DEFAULT_DB)
                         .sessionStateForTest();
         MockHiveWarehouseSessionImpl hive = new MockHiveWarehouseSessionImpl(sessionState);
-<<<<<<< HEAD
         assertEquals(hive.sessionState.session(), session);
         assertEquals(hive.sessionState.user(), TEST_USER);
         assertEquals(hive.sessionState.password(), TEST_PASSWORD);
@@ -59,12 +72,7 @@ class HiveWarehouseBuilderTest {
     }
 
     @Test
-    private void testAllConfConfig() {
-        SparkSession session = SparkSession
-                .builder()
-                .master("local")
-                .appName("HiveWarehouseConnector test")
-                .getOrCreate();
+    void testAllConfConfig() {
         session.conf().set(HWConf.USER.qualifiedKey, TEST_USER);
         session.conf().set(HWConf.PASSWORD.qualifiedKey, TEST_PASSWORD);
         session.conf().set(HWConf.HS2_URL.qualifiedKey, TEST_HS2_URL);
