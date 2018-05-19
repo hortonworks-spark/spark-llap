@@ -26,18 +26,10 @@ import java.util.Map;
 public class HiveWarehouseSessionState {
 
     SparkSession session;
-    Map<String, Object> props = new HashMap<>();
-
-    String getString(HWConf confValue) {
-       return confValue.getString(this);
-    }
-
-    Long getLong(HWConf confValue) {
-        return confValue.getLong(this);
-    }
+    Map<String, String> props = new HashMap<>();
 
     // Exposed for Python side.
-    public Map<String, Object> getProps() {
+    public Map<String, String> getProps() {
         return this.props;
     }
 }

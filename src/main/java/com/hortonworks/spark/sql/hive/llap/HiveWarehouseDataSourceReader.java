@@ -33,7 +33,6 @@ import static scala.collection.JavaConversions.asScalaBuffer;
 
 public class HiveWarehouseDataSourceReader implements DataSourceReader, SupportsPushDownRequiredColumns, SupportsScanColumnarBatch, SupportsPushDownFilters {
     StructType schema = null;
-    boolean notPruned = false;
     Filter[] pushedFilters = new Filter[0];
     Map<String, String> options;
     private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseDataSourceReader.class);
@@ -86,18 +85,18 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
     }
 
     private StructType getTableSchema() throws Exception {
-        String url = options.get("url");
-        String user = options.get("user.name");
-        String dbcp2Configs = options.get("dbcp2.conf");
+        String url = HWConf.HS2_URL.getFromOptionsMap(options);
+        String user = HWConf.USER.getFromOptionsMap(options);
+        String dbcp2Configs = HWConf.DBCP2_CONF.getFromOptionsMap(options);
         Connection conn = DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs);
-	StatementType queryKey = getQueryType();
+	      StatementType queryKey = getQueryType();
 
         try {
             if (queryKey == StatementType.FULL_TABLE_SCAN) {
                 TableRef tableRef = getDbTableNames(options.get("table"));
                 return DefaultJDBCWrapper.resolveTable(conn, tableRef.databaseName, tableRef.tableName);
             } else {
-                String currentDatabase = options.getOrDefault("currentdatabase", null);
+                String currentDatabase = HWConf.DEFAULT_DB.getFromOptionsMap(options);
                 return DefaultJDBCWrapper.resolveQuery(conn, currentDatabase, options.get("query"));
             }
         } finally {
@@ -109,8 +108,7 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
     public StructType readSchema() {
         try {
             if (schema == null) {
-                schema = getTableSchema();
-		notPruned = true;
+              schema = getTableSchema();
             }
             return schema;
         } catch(Exception e) {
@@ -148,18 +146,18 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
     static JobConf createJobConf(Map<String, String> options, String queryString) {
         JobConf jobConf = new JobConf(SparkContext.getOrCreate().hadoopConfiguration());
         jobConf.set("hive.llap.zk.registry.user", "hive");
-        jobConf.set("llap.if.hs2.connection", options.get("url"));
+        jobConf.set("llap.if.hs2.connection", HWConf.HS2_URL.getFromOptionsMap(options));
         if(queryString != null) {
             jobConf.set("llap.if.query", queryString);
         }
-        jobConf.set("llap.if.user", options.get("user.name"));
-        jobConf.set("llap.if.pwd", options.get("user.password"));
-        if (options.containsKey("currentdatabase")) {
-            jobConf.set("llap.if.database", options.get("currentdatabase"));
+        jobConf.set("llap.if.user", HWConf.USER.getFromOptionsMap(options));
+        jobConf.set("llap.if.pwd", HWConf.PASSWORD.getFromOptionsMap(options));
+        if (options.containsKey("default.db")) {
+            jobConf.set("llap.if.database", HWConf.DEFAULT_DB.getFromOptionsMap(options));
         }
         if (!options.containsKey("handleid")) {
-	    String handleId = UUID.randomUUID().toString();
-            options.put("handleid", handleId);	
+	        String handleId = UUID.randomUUID().toString();
+          options.put("handleid", handleId);
         } 
         jobConf.set("llap.if.handleid", options.get("handleid"));
         return jobConf;
@@ -173,7 +171,8 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
             InputSplit[] splits = null;
             JobConf jobConf = createJobConf(options, queryString);
             if (countStar) {
-		System.out.println("Is count *" + options.get("isCountStar"));
+              //TODO: Add countStar workaround
+              throw new UnsupportedOperationException();
             } else {
                 LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
                 try {
@@ -197,10 +196,10 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
     public void close() {
         LOG.info("Closing resources for handleid: {}", options.get("handleid"));
         try {
-	  LlapBaseInputFormat.close(options.get("handleid"));
-	} catch(IOException ioe) {
-		throw new RuntimeException(ioe);
-	}
+	        LlapBaseInputFormat.close(options.get("handleid"));
+	      } catch(IOException ioe) {
+		      throw new RuntimeException(ioe);
+	      }
     }
 
 }

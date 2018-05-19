@@ -31,11 +31,17 @@ public class HiveWarehouseBuilder {
     public static HiveWarehouseBuilder session(SparkSession session) {
         HiveWarehouseBuilder builder = new HiveWarehouseBuilder();
         builder.sessionState.session = session;
+        //Copy all static configuration (e.g. spark-defaults.conf)
+        //with keys matching HWConf.CONF_PREFIX into
+        //the SparkSQL session conf for this session
+        //Otherwise these settings will not be available to
+        //v2 DataSourceReader or DataSourceWriter
+        //See: {@link org.apache.spark.sql.sources.v2.SessionConfigSupport}
         session.conf().getAll().foreach(new scala.runtime.AbstractFunction1<scala.Tuple2<String, String>, Object>() {
           public Object apply(Tuple2<String, String> keyValue) {
             String key = keyValue._1;
             String value = keyValue._2;
-            if(key.startsWith(HWConf.HIVE_WAREHOUSE_CONF_PREFIX)) {
+            if(key.startsWith(HWConf.CONF_PREFIX)) {
               session.sessionState().conf().setConfString(key, value);
             }
             return null;
@@ -45,29 +51,31 @@ public class HiveWarehouseBuilder {
     }
 
     public HiveWarehouseBuilder userPassword(String user, String password) {
-        this.sessionState.props.put(HWConf.USER.qualifiedKey, user);
-        this.sessionState.props.put(HWConf.PASSWORD.qualifiedKey, password);
-        return this;
+      HWConf.USER.setString(sessionState, user);
+      HWConf.PASSWORD.setString(sessionState, user);
+      return this;
     }
 
     public HiveWarehouseBuilder hs2url(String hs2url) {
-        this.sessionState.props.put(HWConf.HS2_URL.qualifiedKey, hs2url);
-        return this;
+      HWConf.HS2_URL.setString(sessionState, hs2url);
+      return this;
     }
 
-    public HiveWarehouseBuilder maxExecResults(long maxExecResults) {
-        this.sessionState.props.put(HWConf.MAX_EXEC_RESULTS.qualifiedKey, maxExecResults);
-        return this;
+    //Hive JDBC doesn't support java.sql.Statement.setLargeMaxResults(long)
+    //Need to use setMaxResults(int) instead
+    public HiveWarehouseBuilder maxExecResults(int maxExecResults) {
+      HWConf.MAX_EXEC_RESULTS.setInt(sessionState, maxExecResults);
+      return this;
     }
 
     public HiveWarehouseBuilder dbcp2Conf(String dbcp2Conf) {
-        this.sessionState.props.put(HWConf.DBCP2_CONF.qualifiedKey, dbcp2Conf);
-        return this;
+      HWConf.DBCP2_CONF.setString(sessionState, dbcp2Conf);
+      return this;
     }
 
     public HiveWarehouseBuilder defaultDB(String defaultDB) {
-        this.sessionState.props.put(HWConf.DEFAULT_DB.qualifiedKey, defaultDB);
-        return this;
+      HWConf.DEFAULT_DB.setString(sessionState, defaultDB);
+      return this;
     }
 
     //This is the only way for application to obtain a HiveWarehouseSessionImpl

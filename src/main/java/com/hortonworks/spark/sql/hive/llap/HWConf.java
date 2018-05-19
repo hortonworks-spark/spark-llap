@@ -17,16 +17,23 @@
 
 package com.hortonworks.spark.sql.hive.llap;
 
+import java.util.Map;
 import java.util.Optional;
 
+/**
+ * See: {@link org.apache.spark.sql.sources.v2.SessionConfigSupport}
+ */
 enum HWConf {
 
+  //ENUM(shortKey, qualifiedKey, default)
   USER("user.name", warehouseKey("user.name"), ""),
   PASSWORD("password", warehouseKey("password"), ""),
   HS2_URL("hs2.url", warehouseKey("hs2.url"), "jdbc:hive2://localhost:10500"),
   DBCP2_CONF("dbcp2.conf", warehouseKey("dbcp2.conf"), null),
   DEFAULT_DB("default.db", warehouseKey("default.db"), "default"),
-  MAX_EXEC_RESULTS("exec.results.max", warehouseKey("exec.results.max"), 1000L);
+  MAX_EXEC_RESULTS("exec.results.max", warehouseKey("exec.results.max"), 1000),
+  LOAD_STAGING_DIR("load.staging.dir", warehouseKey("load.staging.dir"), "/tmp"),
+  ARROW_ALLOCATOR_MAX("arrow.allocator.max", warehouseKey("arrow.allocator.max"), Long.MAX_VALUE);
 
   private HWConf(String simpleKey, String qualifiedKey, Object defaultValue) {
     this.simpleKey = simpleKey;
@@ -34,10 +41,27 @@ enum HWConf {
     this.defaultValue = defaultValue;
   }
 
-  static String HIVE_WAREHOUSE_CONF_PREFIX = "spark.datasource.hive.warehouse";
+  static String SPARK_DATASOURCES_PREFIX = "spark.datasources";
+  static String HIVE_WAREHOUSE_POSTFIX = "hive.warehouse";
+  static String CONF_PREFIX = SPARK_DATASOURCES_PREFIX + "." + HIVE_WAREHOUSE_POSTFIX;
 
-  static String warehouseKey(String suffix) {
-    return HIVE_WAREHOUSE_CONF_PREFIX + "." + suffix;
+  static String warehouseKey(String keySuffix) {
+    return CONF_PREFIX + "." + keySuffix;
+  }
+
+  void setString(HiveWarehouseSessionState state, String value) {
+    state.props.put(qualifiedKey, value);
+    state.session.sessionState().conf().setConfString(qualifiedKey, value);
+  }
+
+  void setInt(HiveWarehouseSessionState state, Integer value) {
+    state.props.put(qualifiedKey, Integer.toString(value));
+    state.session.sessionState().conf().setConfString(qualifiedKey, Integer.toString(value));
+  }
+
+  //This is called from executors so it can't depend explicitly on session state
+  String getFromOptionsMap(Map<String, String> options) {
+    return options.get(simpleKey);
   }
 
   String getString(HiveWarehouseSessionState state) {
@@ -48,12 +72,14 @@ enum HWConf {
       );
   }
 
-  Long getLong(HiveWarehouseSessionState state) {
-    return Optional.
-      ofNullable((Long) state.props.get(qualifiedKey)).
-      orElse(Long.parseLong(state.session.sessionState().conf().getConfString(
-        qualifiedKey, defaultValue.toString()))
-      );
+  Integer getInt(HiveWarehouseSessionState state) {
+    return Integer.parseInt(
+      Optional.
+        ofNullable(state.props.get(qualifiedKey)).
+        orElse(state.session.sessionState().conf().getConfString(
+        qualifiedKey, defaultValue.toString())
+      )
+    );
   }
 
   String simpleKey;

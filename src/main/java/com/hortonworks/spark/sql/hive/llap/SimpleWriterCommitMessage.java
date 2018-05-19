@@ -8,5 +8,9 @@ public class SimpleWriterCommitMessage implements WriterCommitMessage {
     public SimpleWriterCommitMessage(String message) {
         this.message = message;
     }
+
+    public String getMessage() {
+        return message;
+    }
 }
 
