@@ -30,7 +30,7 @@ class HiveWarehouseBuilderTest {
     static final String TEST_PASSWORD = "passwordX";
     static final String TEST_HS2_URL = "jdbc:hive2://nohost:10084";
     static final String TEST_DBCP2_CONF = "defaultQueryTimeout=100";
-    static final Long TEST_EXEC_RESULTS_MAX = Long.valueOf(12345L);
+    static final Integer TEST_EXEC_RESULTS_MAX = 12345;
     static final String TEST_DEFAULT_DB = "default12345";
 
     transient SparkSession session = null;
@@ -62,13 +62,13 @@ class HiveWarehouseBuilderTest {
                         .defaultDB(TEST_DEFAULT_DB)
                         .sessionStateForTest();
         MockHiveWarehouseSessionImpl hive = new MockHiveWarehouseSessionImpl(sessionState);
-        assertEquals(hive.sessionState.session(), session);
-        assertEquals(hive.sessionState.user(), TEST_USER);
-        assertEquals(hive.sessionState.password(), TEST_PASSWORD);
-        assertEquals(hive.sessionState.hs2url(), TEST_HS2_URL);
-        assertEquals(hive.sessionState.dbcp2Conf(), TEST_DBCP2_CONF);
-        assertEquals(hive.sessionState.maxExecResults(), TEST_EXEC_RESULTS_MAX);
-        assertEquals(hive.sessionState.database(), TEST_DEFAULT_DB);
+        assertEquals(hive.session(), session);
+        assertEquals(HWConf.USER.getString(sessionState), TEST_USER);
+        assertEquals(HWConf.PASSWORD.getString(sessionState), TEST_PASSWORD);
+        assertEquals(HWConf.HS2_URL.getString(sessionState), TEST_HS2_URL);
+        assertEquals(HWConf.DBCP2_CONF.getString(sessionState), TEST_DBCP2_CONF);
+        assertEquals(HWConf.MAX_EXEC_RESULTS.getInt(sessionState), TEST_EXEC_RESULTS_MAX);
+        assertEquals(HWConf.DEFAULT_DB.getString(sessionState), TEST_DEFAULT_DB);
     }
 
     @Test
@@ -89,7 +89,7 @@ class HiveWarehouseBuilderTest {
         assertEquals(HWConf.PASSWORD.getString(hive.sessionState), TEST_PASSWORD);
         assertEquals(HWConf.HS2_URL.getString(hive.sessionState), TEST_HS2_URL);
         assertEquals(HWConf.DBCP2_CONF.getString(hive.sessionState), TEST_DBCP2_CONF);
-        assertEquals(HWConf.MAX_EXEC_RESULTS.getLong(hive.sessionState), TEST_EXEC_RESULTS_MAX);
+        assertEquals(HWConf.MAX_EXEC_RESULTS.getInt(hive.sessionState), TEST_EXEC_RESULTS_MAX);
         assertEquals(HWConf.DEFAULT_DB.getString(hive.sessionState), TEST_DEFAULT_DB);
     }
 }

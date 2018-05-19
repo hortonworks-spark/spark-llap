@@ -52,7 +52,7 @@ public class HiveWarehouseBuilder {
 
     public HiveWarehouseBuilder userPassword(String user, String password) {
       HWConf.USER.setString(sessionState, user);
-      HWConf.PASSWORD.setString(sessionState, user);
+      HWConf.PASSWORD.setString(sessionState, password);
       return this;
     }
 
