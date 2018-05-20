@@ -32,7 +32,7 @@ public class MockHiveWarehouseConnector implements DataSourceV2, ReadSupport, Se
 
     @Override
     public String keyPrefix() {
-        return HWConf.CONF_PREFIX;
+        return HiveWarehouseSession.CONF_PREFIX;
     }
 
 

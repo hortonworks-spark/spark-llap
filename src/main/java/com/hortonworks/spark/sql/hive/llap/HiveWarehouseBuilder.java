@@ -41,7 +41,7 @@ public class HiveWarehouseBuilder {
           public Object apply(Tuple2<String, String> keyValue) {
             String key = keyValue._1;
             String value = keyValue._2;
-            if(key.startsWith(HWConf.CONF_PREFIX)) {
+            if(key.startsWith(HiveWarehouseSession.CONF_PREFIX)) {
               session.sessionState().conf().setConfString(key, value);
             }
             return null;

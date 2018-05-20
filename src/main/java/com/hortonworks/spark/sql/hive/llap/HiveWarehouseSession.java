@@ -24,6 +24,9 @@ import org.apache.spark.sql.SparkSession;
 public interface HiveWarehouseSession {
 
     String HIVE_WAREHOUSE_CONNECTOR = "com.hortonworks.spark.sql.hive.llap.HiveWarehouseConnector";
+    String SPARK_DATASOURCES_PREFIX = "spark.datasource";
+    String HIVE_WAREHOUSE_POSTFIX = "hive.warehouse";
+    String CONF_PREFIX = SPARK_DATASOURCES_PREFIX + "." + HIVE_WAREHOUSE_POSTFIX;
 
     Dataset<Row> executeQuery(String sql);
     Dataset<Row> q(String sql);
