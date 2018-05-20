@@ -47,8 +47,8 @@ public class HiveQlUtil {
     //Requires jdbc Connection attached to current database (see HiveWarehouseSessionImpl.dropTable)
     public static String dropTable(String table, boolean ifExists, boolean purge) {
         return format("DROP TABLE %s %s %s",
-                table,
                 orBlank(ifExists, "IF EXISTS"),
+                table,
                 orBlank(purge, "PURGE"));
     }
 
