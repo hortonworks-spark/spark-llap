@@ -42,7 +42,7 @@ public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, Sessio
   }
 
   @Override public String keyPrefix() {
-    return HWConf.CONF_PREFIX;
+    return HWConf.HIVE_WAREHOUSE_POSTFIX;
   }
 
   @Override public Optional<DataSourceWriter> createWriter(String jobId, StructType schema,

@@ -96,6 +96,7 @@ public class HiveWarehouseDataSourceReader implements DataSourceReader, Supports
                 TableRef tableRef = getDbTableNames(options.get("table"));
                 return DefaultJDBCWrapper.resolveTable(conn, tableRef.databaseName, tableRef.tableName);
             } else {
+		System.out.println(options.toString());
                 String currentDatabase = HWConf.DEFAULT_DB.getFromOptionsMap(options);
                 return DefaultJDBCWrapper.resolveQuery(conn, currentDatabase, options.get("query"));
             }

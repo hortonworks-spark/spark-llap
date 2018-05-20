@@ -41,7 +41,7 @@ enum HWConf {
     this.defaultValue = defaultValue;
   }
 
-  static String SPARK_DATASOURCES_PREFIX = "spark.datasources";
+  static String SPARK_DATASOURCES_PREFIX = "spark.datasource";
   static String HIVE_WAREHOUSE_POSTFIX = "hive.warehouse";
   static String CONF_PREFIX = SPARK_DATASOURCES_PREFIX + "." + HIVE_WAREHOUSE_POSTFIX;
 
@@ -61,7 +61,7 @@ enum HWConf {
 
   //This is called from executors so it can't depend explicitly on session state
   String getFromOptionsMap(Map<String, String> options) {
-    return options.get(simpleKey);
+    return Optional.ofNullable(options.get(simpleKey)).orElse((String) defaultValue);
   }
 
   String getString(HiveWarehouseSessionState state) {
