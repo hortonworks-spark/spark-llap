@@ -17,6 +17,7 @@
 
 package com.hortonworks.spark.sql.hive.llap;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**

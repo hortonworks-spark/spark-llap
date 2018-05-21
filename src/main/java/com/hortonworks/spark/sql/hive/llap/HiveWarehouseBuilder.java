@@ -18,6 +18,7 @@
 package com.hortonworks.spark.sql.hive.llap;
 
 import org.apache.spark.sql.SparkSession;
+import scala.Tuple2;
 
 public class HiveWarehouseBuilder {
 
