@@ -16,13 +16,15 @@ public class HiveWarehouseDataReaderFactory implements DataReaderFactory<Columna
     private byte[] splitBytes;
     private byte[] confBytes;
     private transient InputSplit split;
+    private long arrowAllocatorMax;
 
     //No-arg constructor for executors
     public HiveWarehouseDataReaderFactory() {}
 
     //Driver-side setup
-    public HiveWarehouseDataReaderFactory(InputSplit split, JobConf conf) {
+    public HiveWarehouseDataReaderFactory(InputSplit split, JobConf conf, long arrowAllocatorMax) {
         this.split = split;
+        this.arrowAllocatorMax = arrowAllocatorMax;
         try {
             //Serialize split and conf for executors
             //TODO optimize/compress
@@ -64,7 +66,7 @@ public class HiveWarehouseDataReaderFactory implements DataReaderFactory<Columna
             conf.readFields(dis2);
             dis.close();
             dis2.close();
-            return new HiveWarehouseDataReader(llapInputSplit, conf);
+            return new HiveWarehouseDataReader(llapInputSplit, conf, arrowAllocatorMax);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

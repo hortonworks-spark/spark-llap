@@ -20,6 +20,14 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 
+/*
+ * Driver:
+ *   UserCode -> HiveWarehouseConnector -> HiveWarehouseDataSourceReader -> HiveWarehouseDataReaderFactory
+ * Task serializer:
+ *   HiveWarehouseDataReaderFactory (Driver) -> bytes -> HiveWarehouseDataReaderFactory (Executor task)
+ * Executor:
+ *   HiveWarehouseDataReaderFactory -> HiveWarehouseDataReader
+ */
 public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, SessionConfigSupport {
 
   private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseConnector.class);
@@ -31,12 +39,12 @@ public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, Sessio
     } catch (IOException e) {
       LOG.error("Error creating {}", getClass().getName());
       LOG.error(ExceptionUtils.getStackTrace(e));
+      throw new RuntimeException(e);
     }
-    return null;
   }
 
   @Override public String keyPrefix() {
-    return com.hortonworks.spark.sql.hive.llap.HiveWarehouseSession.HIVE_WAREHOUSE_POSTFIX;
+    return HiveWarehouseSession.HIVE_WAREHOUSE_POSTFIX;
   }
 
   private static Map<String, String> getOptions(DataSourceOptions options) {
