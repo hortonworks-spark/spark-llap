@@ -28,7 +28,7 @@ import java.util.Optional;
  * Executor:
  *   HiveWarehouseDataReaderFactory -> HiveWarehouseDataReader
  */
-public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, SessionConfigSupport {
+public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, SessionConfigSupport, WriteSupport {
 
   private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseConnector.class);
 
@@ -41,6 +41,15 @@ public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, Sessio
       LOG.error(ExceptionUtils.getStackTrace(e));
       throw new RuntimeException(e);
     }
+  }
+
+  @Override public Optional<DataSourceWriter> createWriter(String jobId, StructType schema,
+      SaveMode mode, DataSourceOptions options) {
+    Map<String, String> params = getOptions(options);
+    String stagingDirPrefix = HWConf.LOAD_STAGING_DIR.getFromOptionsMap(params);
+    Path path = new Path(stagingDirPrefix);
+    Configuration conf = SparkSession.getActiveSession().get().sparkContext().hadoopConfiguration();
+    return Optional.of(new HiveWarehouseDataSourceWriter(params, jobId, schema, mode, path, conf));
   }
 
   @Override public String keyPrefix() {
