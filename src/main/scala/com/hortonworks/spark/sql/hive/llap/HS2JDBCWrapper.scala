@@ -162,7 +162,7 @@ class JDBCWrapper {
                  maxExecResults: Long): DriverResultSet = {
     useDatabase(conn, currentDatabase)
     val stmt = conn.prepareStatement(query)
-    stmt.setLargeMaxRows(maxExecResults)
+    stmt.setMaxRows(maxExecResults.asInstanceOf[Int])
     val rs = stmt.executeQuery()
     log.debug(query)
     try {
@@ -183,6 +183,7 @@ class JDBCWrapper {
       return new DriverResultSet(data, schema)
     } finally {
       rs.close()
+      stmt.close()
     }
   }
 
@@ -195,13 +196,16 @@ class JDBCWrapper {
     useDatabase(conn, currentDatabase)
     val stmt = conn.prepareStatement(query)
     val succeed = stmt.execute()
+    stmt.close()
     log.debug(query)
     succeed
   }
 
   def useDatabase(conn: Connection, currentDatabase: String) {
     if (currentDatabase != null) {
-      conn.prepareStatement(s"USE $currentDatabase").execute()
+      val stmt = conn.prepareStatement(s"USE $currentDatabase")
+      stmt.execute()
+      stmt.close()
     }
   }
 

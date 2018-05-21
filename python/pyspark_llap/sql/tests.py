@@ -80,12 +80,12 @@ class HiveWarehouseBuilderTest(unittest.TestCase):
         cls.spark.stop()
 
     conf_pairs = {
-        "null.exec.results.max": TEST_EXEC_RESULTS_MAX,
-        "null.user.name": TEST_USER,
-        "null.password": TEST_PASSWORD,
-        "null.hs2.url": TEST_HS2_URL,
-        "null.default.db": TEST_DEFAULT_DB,
-        "null.dbcp2.conf": TEST_DBCP2_CONF,
+        u'spark.datasource.hive.warehouse.password': u'passwordX',
+        u'spark.datasource.hive.warehouse.dbcp2.conf': u'defaultQueryTimeout=100',
+        u'spark.datasource.hive.warehouse.default.db': u'default12345',
+        u'spark.datasource.hive.warehouse.user.name': u'userX',
+        u'spark.datasource.hive.warehouse.hs2.url': u'jdbc:hive2://nohost:10084',
+        u'spark.datasource.hive.warehouse.exec.results.max': u'12345',
     }
 
     def test_all_builder_config(self):

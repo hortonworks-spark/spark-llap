@@ -47,7 +47,7 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     this.sessionState = sessionState;
     getConnector = () -> DefaultJDBCWrapper.getConnector(sessionState);
     executeStmt = (conn, database, sql) ->
-      DefaultJDBCWrapper.executeStmt(conn, database, sql, MAX_EXEC_RESULTS.getLong(sessionState));
+      DefaultJDBCWrapper.executeStmt(conn, database, sql, MAX_EXEC_RESULTS.getInt(sessionState));
     executeUpdate = (conn, database, sql) ->
       DefaultJDBCWrapper.executeUpdate(conn, database, sql);
     sessionState.session.listenerManager().register(new LlapQueryExecutionListener());
@@ -59,7 +59,6 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   public Dataset<Row> executeQuery(String sql) {
     DataFrameReader dfr = session().read().format(HIVE_WAREHOUSE_CONNECTOR_INTERNAL).option("query", sql);
-    addConfigOptions(dfr);
     return dfr.load();
   }
 
@@ -91,7 +90,6 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   public Dataset<Row> table(String sql) {
     DataFrameReader dfr = session().read().format(HIVE_WAREHOUSE_CONNECTOR_INTERNAL).option("table", sql);
-    addConfigOptions(dfr);
     return dfr.load();
   }
 
@@ -110,8 +108,7 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   /* Catalog helpers */
   public void setDatabase(String name) {
-    execute(useDatabase(name));
-    this.sessionState.props.put(DEFAULT_DB.qualifiedKey, name);
+    HWConf.DEFAULT_DB.setString(sessionState, name);
   }
 
   public Dataset<Row> showDatabases() {
@@ -132,8 +129,9 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   public void dropTable(String table, boolean ifExists, boolean purge) {
     try (Connection conn = getConnector.get()) {
-      executeInternal(HiveQlUtil.useDatabase(DEFAULT_DB.getString(sessionState)), conn);
-      executeUpdateInternal(HiveQlUtil.dropTable(table, ifExists, purge), conn);
+      executeUpdateInternal(HiveQlUtil.useDatabase(DEFAULT_DB.getString(sessionState)), conn);
+      String dropTable = HiveQlUtil.dropTable(table, ifExists, purge);
+      executeUpdateInternal(dropTable, conn);
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
@@ -147,13 +145,6 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     return new CreateTableBuilder(this, DEFAULT_DB.getString(sessionState), tableName);
   }
 
-  private void addConfigOptions(DataFrameReader dfr) {
-    dfr.option(USER.simpleKey, USER.getString(sessionState));
-    dfr.option(PASSWORD.simpleKey, PASSWORD.getString(sessionState));
-    dfr.option(HS2_URL.simpleKey, HS2_URL.getString(sessionState));
-    dfr.option(DBCP2_CONF.simpleKey, DBCP2_CONF.getString(sessionState));
-    dfr.option(DEFAULT_DB.simpleKey, DEFAULT_DB.getString(sessionState));
-  }
 
 }
 
