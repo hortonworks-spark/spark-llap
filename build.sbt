@@ -33,7 +33,7 @@ libraryDependencies ++= Seq(
   ("org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force())
     .exclude("org.apache.hive", "hive-exec"),
   "org.apache.spark" %% "spark-yarn" % testSparkVersion.value % "provided" force(),
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.4" % "compile",
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
   "junit" % "junit" % "4.11" % "test",
   "com.novocode" % "junit-interface" % "0.11" % "test",
@@ -48,7 +48,8 @@ libraryDependencies ++= Seq(
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging")
-    .exclude("com.google.guava", "guava"),
+    .exclude("com.google.guava", "guava")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
 
   ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "provided")
     .exclude("commons-beanutils", "commons-beanutils")
@@ -57,7 +58,8 @@ libraryDependencies ++= Seq(
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
     .exclude("org.apache.avro", "avro")
-    .exclude("com.google.guava", "guava"),
+    .exclude("com.google.guava", "guava")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
 
   ("org.apache.tez" % "tez-runtime-internals" % tezVersion % "compile")
     .exclude("javax.servlet", "servlet-api")
@@ -72,7 +74,8 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hadoop", "hadoop-annotations")
     .exclude("org.apache.hadoop", "hadoop-auth")
     .exclude("org.apache.hadoop", "hadoop-hdfs")
-    .exclude("com.google.guava", "guava"),
+    .exclude("com.google.guava", "guava")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
 
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
@@ -120,7 +123,8 @@ libraryDependencies ++= Seq(
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging")
     .exclude("org.apache.commons", "commons-lang3")
-    .exclude("com.google.guava", "guava"),
+    .exclude("com.google.guava", "guava")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
   ("org.apache.hive" % "hive-exec" % hiveVersion % "test")
     .exclude("ant", "ant")
     .exclude("com.fasterxml.jackson", "jackson-databind")
@@ -167,7 +171,8 @@ libraryDependencies ++= Seq(
     .exclude("commons-collections", "commons-collections")
     .exclude("org.apache.commons", "commons-lang3")
     .exclude("commons-logging", "commons-logging")
-    .exclude("com.google.guava", "guava"),
+    .exclude("com.google.guava", "guava")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
   ("org.apache.hive" % "hive-streaming" % hiveVersion)
     .exclude("ant", "ant")
     .exclude("com.fasterxml.jackson", "jackson-databind")
@@ -218,6 +223,7 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.commons", "commons-lang3")
     .exclude("org.apache.calcite", "calcite-core")
     .exclude("com.google.guava", "guava")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
 )
 
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
