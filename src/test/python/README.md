@@ -1,6 +1,6 @@
 ## PREREQUISITES
 
-This test assumes a HDP 2.6 cluster with spark-llap library (equal to or greater than v1.0.7-2.1).
+This test assumes a HDP 2.6 cluster with hive-warehouse-connector library (equal to or greater than v1.0.7-2.1).
 Import the following files in `../resources/policies/` via Apache Ranger UI.
 
   - 1_spark_system.json

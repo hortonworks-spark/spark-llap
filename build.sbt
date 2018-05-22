@@ -1,5 +1,5 @@
 
-name := "spark-llap"
+name := "hive-warehouse-connector"
 version := sys.props.getOrElse("version", "1.1.5-2.3-SNAPSHOT")
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
@@ -14,7 +14,7 @@ val tezVersion = sys.props.getOrElse("tez.version", "0.8.4")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
 val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
-spName := "hortonworks/spark-llap"
+spName := "hortonworks/hive-warehouse-connector"
 
 val testSparkVersion = settingKey[String]("The version of Spark to test against.")
 
@@ -183,7 +183,7 @@ resolvers += "Hortonworks Maven Repository" at "http://repo.hortonworks.com/cont
 publishMavenStyle := true
 pomIncludeRepository := { _ => false } // Remove repositories from pom
 pomExtra := (
-  <url>https://github.com/hortonworks-spark/spark-llap/</url>
+  <url>https://github.com/hortonworks/hive-warehouse-connector/</url>
   <licenses>
     <license>
       <name>Apache 2.0 License</name>
@@ -192,13 +192,13 @@ pomExtra := (
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git@github.com:hortonworks-spark/spark-llap.git</connection>
-    <url>scm:git:git@github.com:hortonworks-spark/spark-llap.git</url>
+    <connection>scm:git:git@github.com:hortonworks/hive-warehouse-connector.git</connection>
+    <url>scm:git:git@github.com:hortonworks/hive-warehouse-connector.git</url>
     <tag>HEAD</tag>
   </scm>
   <issueManagement>
     <system>GitHub</system>
-    <url>https://github.com/hortonworks-spark/spark-llap/issues</url>
+    <url>https://github.com/hortonworks/hive-warehouse-connector/issues</url>
   </issueManagement>)
 publishArtifact in Test := false
 

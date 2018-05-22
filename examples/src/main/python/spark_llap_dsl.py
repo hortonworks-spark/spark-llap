@@ -22,7 +22,7 @@ from pyspark.sql import SparkSession
 
 if __name__ == "__main__":
     """
-        Usage: bin/spark-submit --jars spark-llap_2.11-1.0.X-2.1.jar spark_llap_dsl.py
+        Usage: bin/spark-submit --jars hive-warehouse-connector_2.11-1.0.X-2.1.jar spark_llap_dsl.py
     """
     spark = SparkSession \
         .builder \
