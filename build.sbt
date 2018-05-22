@@ -1,7 +1,7 @@
 import sbtassembly.AssemblyPlugin.autoImport.ShadeRule
 
 name := "hive-warehouse-connector"
-version := sys.props.getOrElse("version", "1.1.5-2.3-SNAPSHOT")
+version := sys.props.getOrElse("version", "1.0.0-SNAPSHOT")
 organization := "com.hortonworks.spark"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
@@ -9,9 +9,9 @@ val scalatestVersion = "2.2.6"
 sparkVersion := sys.props.getOrElse("spark.version", "2.3.0")
 
 val hadoopVersion = sys.props.getOrElse("hadoop.version", "2.7.3.2.6.4.0-91")
-val hiveVersion = sys.props.getOrElse("hive.version", "2.1.0.2.6.4.0-91")
-val log4j2Version = sys.props.getOrElse("log4j2.version", "2.4.1")
-val tezVersion = sys.props.getOrElse("tez.version", "0.8.4")
+val hiveVersion = sys.props.getOrElse("hive.version", "3.0.0.3.0.0.0-1371")
+val log4j2Version = sys.props.getOrElse("log4j2.version", "2.10.0")
+val tezVersion = sys.props.getOrElse("tez.version", "0.9.1")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
 val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
@@ -30,32 +30,39 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
-  "org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force(),
+  ("org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force())
+    .exclude("org.apache.hive", "hive-exec"),
   "org.apache.spark" %% "spark-yarn" % testSparkVersion.value % "provided" force(),
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.4" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
-
+  "junit" % "junit" % "4.11" % "test",
+  "com.novocode" % "junit-interface" % "0.11" % "test",
   "org.scala-lang" % "scala-library" % scalaVersion.value % "provided",
   "org.scalatest" %% "scalatest" % scalatestVersion % "test",
 
   ("org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion % "provided")
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
+    .exclude("com.fasterxml.jackson", "jackson-databind")
     .exclude("org.apache.avro", "avro")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
-    .exclude("commons-logging", "commons-logging"),
+    .exclude("commons-logging", "commons-logging")
+    .exclude("com.google.guava", "guava"),
 
   ("org.apache.hadoop" % "hadoop-yarn-registry" % hadoopVersion % "provided")
     .exclude("commons-beanutils", "commons-beanutils")
     .exclude("commons-beanutils", "commons-beanutils-core")
+    .exclude("com.fasterxml.jackson", "jackson-databind")
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
-    .exclude("org.apache.avro", "avro"),
+    .exclude("org.apache.avro", "avro")
+    .exclude("com.google.guava", "guava"),
 
   ("org.apache.tez" % "tez-runtime-internals" % tezVersion % "compile")
     .exclude("javax.servlet", "servlet-api")
     .exclude("stax", "stax-api")
+    .exclude("com.fasterxml.jackson", "jackson-databind")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
     .exclude("commons-logging", "commons-logging")
@@ -64,7 +71,8 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hadoop", "hadoop-yarn-api")
     .exclude("org.apache.hadoop", "hadoop-annotations")
     .exclude("org.apache.hadoop", "hadoop-auth")
-    .exclude("org.apache.hadoop", "hadoop-hdfs"),
+    .exclude("org.apache.hadoop", "hadoop-hdfs")
+    .exclude("com.google.guava", "guava"),
 
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
@@ -81,6 +89,57 @@ libraryDependencies ++= Seq(
     .exclude("javax.servlet.jsp", "jsp-api")
     .exclude("javax.transaction", "jta")
     .exclude("javax.transaction", "transaction-api")
+    .exclude("org.eclipse.jetty", "jetty-annotations")
+    .exclude("org.eclipse.jetty", "jetty-runner")
+    .exclude("org.eclipse.jetty", "jetty-xml")
+    .exclude("org.mortbay.jetty", "jetty")
+    .exclude("org.mortbay.jetty", "jetty-util")
+    .exclude("org.mortbay.jetty", "jetty-sslengine")
+    .exclude("org.mortbay.jetty", "jsp-2.1")
+    .exclude("org.mortbay.jetty", "jsp-api-2.1")
+    .exclude("org.mortbay.jetty", "servlet-api-2.5")
+    .exclude("com.fasterxml.jackson", "jackson-databind")
+    .exclude("org.datanucleus", "datanucleus-api-jdo")
+    .exclude("org.datanucleus", "datanucleus-core")
+    .exclude("org.datanucleus", "datanucleus-rdbms")
+    .exclude("org.datanucleus", "javax.jdo")
+    .exclude("org.apache.hadoop", "hadoop-client")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-app")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-common")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-shuffle")
+    .exclude("org.apache.hadoop", "hadoop-mapreduce-client-jobclient")
+    .exclude("org.apache.hadoop", "hadoop-distcp")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-resourcemanager")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-common")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-applicationhistoryservice")
+    .exclude("org.apache.hadoop", "hadoop-yarn-server-web-proxy")
+    .exclude("org.apache.hadoop", "hadoop-common")
+    .exclude("org.apache.hadoop", "hadoop-hdfs")
+    .exclude("org.apache.hbase", "*")
+    .exclude("commons-beanutils", "commons-beanutils-core")
+    .exclude("commons-collections", "commons-collections")
+    .exclude("commons-logging", "commons-logging")
+    .exclude("org.apache.commons", "commons-lang3")
+    .exclude("com.google.guava", "guava"),
+  ("org.apache.hive" % "hive-exec" % hiveVersion % "test")
+    .exclude("ant", "ant")
+    .exclude("com.fasterxml.jackson", "jackson-databind")
+    .exclude("org.apache.ant", "ant")
+    .exclude("org.apache.avro", "avro")
+    .exclude("org.apache.curator", "apache-curator")
+    .exclude("org.apache.logging.log4j", "log4j-1.2-api")
+    .exclude("org.apache.logging.log4j", "log4j-slf4j-impl")
+    .exclude("org.apache.logging.log4j", "log4j-web")
+    .exclude("org.apache.slider", "slider-core")
+    .exclude("stax", "stax-api")
+    .exclude("javax.servlet", "jsp-api")
+    .exclude("javax.servlet", "servlet-api")
+    .exclude("javax.servlet.jsp", "jsp-api")
+    .exclude("javax.transaction", "jta")
+    .exclude("javax.transaction", "transaction-api")
+    .exclude("org.eclipse.jetty", "jetty-annotations")
+    .exclude("org.eclipse.jetty", "jetty-runner")
+    .exclude("org.eclipse.jetty", "jetty-xml")
     .exclude("org.mortbay.jetty", "jetty")
     .exclude("org.mortbay.jetty", "jetty-util")
     .exclude("org.mortbay.jetty", "jetty-sslengine")
@@ -106,10 +165,12 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hbase", "*")
     .exclude("commons-beanutils", "commons-beanutils-core")
     .exclude("commons-collections", "commons-collections")
-    .exclude("commons-logging", "commons-logging"),
-
+    .exclude("org.apache.commons", "commons-lang3")
+    .exclude("commons-logging", "commons-logging")
+    .exclude("com.google.guava", "guava"),
   ("org.apache.hive" % "hive-streaming" % hiveVersion)
     .exclude("ant", "ant")
+    .exclude("com.fasterxml.jackson", "jackson-databind")
     .exclude("org.apache.ant", "ant")
     .exclude("org.apache.avro", "avro")
     .exclude("org.apache.curator", "apache-curator")
@@ -123,6 +184,9 @@ libraryDependencies ++= Seq(
     .exclude("javax.servlet.jsp", "jsp-api")
     .exclude("javax.transaction", "jta")
     .exclude("javax.transaction", "transaction-api")
+    .exclude("org.eclipse.jetty", "jetty-annotations")
+    .exclude("org.eclipse.jetty", "jetty-runner")
+    .exclude("org.eclipse.jetty", "jetty-xml")
     .exclude("org.mortbay.jetty", "jetty")
     .exclude("org.mortbay.jetty", "jetty-util")
     .exclude("org.mortbay.jetty", "jetty-sslengine")
@@ -153,18 +217,20 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.calcite.avatica", "avatica")
     .exclude("org.apache.commons", "commons-lang3")
     .exclude("org.apache.calcite", "calcite-core")
+    .exclude("com.google.guava", "guava")
 )
+
 dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
-dependencyOverrides += "commons-codec" % "commons-codec" % "1.10"
+dependencyOverrides += "commons-codec" % "commons-codec" % "1.6"
 dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
 dependencyOverrides += "io.netty" % "netty-all" % "4.1.17.Final"
-dependencyOverrides += "org.apache.httpcomponents" % "httpclient" % "4.5.4"
-dependencyOverrides += "org.apache.httpcomponents" % "httpcore" % "4.4.8"
+dependencyOverrides += "org.apache.httpcomponents" % "httpclient" % "4.5.2"
+dependencyOverrides += "org.apache.httpcomponents" % "httpcore" % "4.4.4"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-core-asl" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-jaxrs" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.13"
 dependencyOverrides += "org.codehaus.jackson" % "jackson-xc" % "1.9.13"
-dependencyOverrides += "org.apache.commons" % "commons-lang3" % "3.5"
+dependencyOverrides += "org.apache.commons" % "commons-lang3" % "3.4"
 libraryDependencies += "org.apache.commons" % "commons-dbcp2" % "2.1"
 
 
