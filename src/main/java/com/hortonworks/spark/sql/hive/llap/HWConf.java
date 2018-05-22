@@ -57,7 +57,8 @@ enum HWConf {
 
   //This is called from executors so it can't depend explicitly on session state
   String getFromOptionsMap(Map<String, String> options) {
-    return Optional.ofNullable(options.get(simpleKey)).orElse((String) defaultValue);
+    return Optional.ofNullable(options.get(simpleKey))
+        .orElse(defaultValue == null ? null : defaultValue.toString());
   }
 
   String getString(HiveWarehouseSessionState state) {

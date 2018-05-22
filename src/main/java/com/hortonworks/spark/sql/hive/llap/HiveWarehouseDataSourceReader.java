@@ -45,7 +45,7 @@ public class HiveWarehouseDataSourceReader
   String getQueryString(String[] requiredColumns, Filter[] filters) throws Exception {
     String selectCols = "count(*)";
     if (requiredColumns.length > 0) {
-      selectCols = String.join(",", requiredColumns);
+      selectCols = "`" + String.join("` , `", requiredColumns) + "`";
     }
     String baseQuery = null;
     if (getQueryType().equals("table")) {
