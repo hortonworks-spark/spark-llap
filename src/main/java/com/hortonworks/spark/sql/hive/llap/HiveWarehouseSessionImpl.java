@@ -51,9 +51,13 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
     executeUpdate = (conn, database, sql) ->
       DefaultJDBCWrapper.executeUpdate(conn, database, sql);
     sessionState.session.listenerManager().register(new LlapQueryExecutionListener());
-    sessionState.session.extensions().injectOptimizerRule((session) -> {
-      return new DataSourceV2CountStrategy(sessionState.session);
-    });
+    sessionState.session.extensions().injectOptimizerRule(
+        new scala.runtime.AbstractFunction1() {
+          @Override public Object apply(Object v1) {
+            return new DataSourceV2CountStrategy(sessionState.session);
+          }
+        }
+    );
   }
 
   public Dataset<Row> q(String sql) {
