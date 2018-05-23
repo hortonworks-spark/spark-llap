@@ -174,7 +174,7 @@ public class HiveWarehouseDataSourceReader
       JobConf jobConf = createJobConf(options, queryString);
       List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
       if (countStar) {
-        factories.add(handleCountStar(queryString));
+        factories.addAll(handleCountStar(queryString));
       } else {
         LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
         try {
@@ -206,7 +206,7 @@ public class HiveWarehouseDataSourceReader
     long numPerTask = count/100;
     long numLastTask = count % 100;
     for(int i = 0; i < 99; i++) {
-      tasks.addAll(new CountDataReaderFactory(numPerTask));
+      tasks.add(new CountDataReaderFactory(numPerTask));
     }
     tasks.add(new CountDataReaderFactory(numLastTask));
     return tasks;
