@@ -113,6 +113,9 @@ public class HiveWarehouseDataSourceReader
 
   @Override public StructType readSchema() {
     try {
+      if(options.containsKey("isCountStar")) {
+        return StructType.fromDDL("c0 BIGINT");
+      }
       if (schema == null) {
         schema = getTableSchema();
       }
@@ -173,7 +176,7 @@ public class HiveWarehouseDataSourceReader
       InputSplit[] splits = null;
       JobConf jobConf = createJobConf(options, queryString);
       List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
-      if (countStar) {
+      if (countStar || options.containsKey("isCountStar")) {
         factories.addAll(handleCountStar(queryString));
       } else {
         LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
