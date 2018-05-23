@@ -27,7 +27,7 @@ public class CountDataReader implements DataReader<ColumnarBatch> {
     //for(int i = 0; i < size; i++) {
       vector.putLong(0, numRows);
     //}
-    //numRows -= size;
+    numRows = 0;
     return new ColumnarBatch(new ColumnVector[] {vector});
   }
 
