@@ -80,7 +80,8 @@ public class HiveWarehouseBuilder {
 
     //This is the only way for application to obtain a HiveWarehouseSessionImpl
     public HiveWarehouseSessionImpl build() {
-        return new HiveWarehouseSessionImpl(this.sessionState);
+      HWConf.RESOLVED_HS2_URL.setString(sessionState, HWConf.getConnectionUrl(sessionState));
+      return new HiveWarehouseSessionImpl(this.sessionState);
     }
 
     // Revealed internally for test only. Exposed for Python side.

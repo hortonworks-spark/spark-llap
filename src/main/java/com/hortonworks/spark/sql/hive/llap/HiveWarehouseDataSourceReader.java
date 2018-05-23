@@ -1,5 +1,6 @@
 package com.hortonworks.spark.sql.hive.llap;
 
+import com.sun.rowset.internal.Row;
 import org.apache.hadoop.hive.llap.LlapBaseInputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -86,11 +87,15 @@ public class HiveWarehouseDataSourceReader
     return new TableRef(nameParts[0], nameParts[1]);
   }
 
-  private StructType getTableSchema() throws Exception {
-    String url = HWConf.HS2_URL.getFromOptionsMap(options);
+  private Connection getConnection() {
+    String url = HWConf.RESOLVED_HS2_URL.getFromOptionsMap(options);
     String user = HWConf.USER.getFromOptionsMap(options);
     String dbcp2Configs = HWConf.DBCP2_CONF.getFromOptionsMap(options);
-    Connection conn = DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs);
+    return DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs);
+  }
+
+  private StructType getTableSchema() throws Exception {
+
     StatementType queryKey = getQueryType();
 
     try {
@@ -145,7 +150,7 @@ public class HiveWarehouseDataSourceReader
   static JobConf createJobConf(Map<String, String> options, String queryString) {
     JobConf jobConf = new JobConf(SparkContext.getOrCreate().hadoopConfiguration());
     jobConf.set("hive.llap.zk.registry.user", "hive");
-    jobConf.set("llap.if.hs2.connection", HWConf.HS2_URL.getFromOptionsMap(options));
+    jobConf.set("llap.if.hs2.connection", HWConf.RESOLVED_HS2_URL.getFromOptionsMap(options));
     if (queryString != null) {
       jobConf.set("llap.if.query", queryString);
     }
@@ -168,27 +173,44 @@ public class HiveWarehouseDataSourceReader
       String queryString = getQueryString(requiredColumns(schema), pushedFilters);
       InputSplit[] splits = null;
       JobConf jobConf = createJobConf(options, queryString);
+      List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
       if (countStar) {
-        //TODO: Add back countStar workaround in subsequent PR
-        throw new UnsupportedOperationException();
+        factories.add(handleCountStar(queryString));
       } else {
         LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
         try {
-          //TODO apparently numSplits doesn't do anything
+          //numSplits doesn't do anything, use 1 as dummy arg
           splits = llapInputFormat.getSplits(jobConf, 1);
+          for (InputSplit split : splits) {
+            factories.add(new HiveWarehouseDataReaderFactory(split, jobConf, getArrowAllocatorMax()));
+          }
         } catch (IOException e) {
           LOG.error("Unable to submit query to HS2");
           throw new RuntimeException(e);
         }
       }
-      List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
-      for (InputSplit split : splits) {
-        factories.add(new HiveWarehouseDataReaderFactory(split, jobConf, getArrowAllocatorMax()));
-      }
       return factories;
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private List<DataReaderFactory<ColumnarBatch>> handleCountStar(String query) {
+    List<DataReaderFactory<ColumnarBatch>> tasks = new ArrayList<>(100);
+    Connection conn = getConnection();
+    DriverResultSet rs = DefaultJDBCWrapper.executeStmt(conn,
+        HWConf.DEFAULT_DB.getFromOptionsMap(options),
+        query,
+        Long.parseLong(HWConf.MAX_EXEC_RESULTS.getFromOptionsMap(options))
+    );
+    long count = rs.getData().get(0).getLong(0);
+    long numPerTask = count/100;
+    long numLastTask = count % 100;
+    for(int i = 0; i < 99; i++) {
+      tasks.add(new CountDataReaderFactory(numPerTask));
+    }
+    tasks.add(new CountDataReaderFactory(numLastTask));
+    return tasks;
   }
 
   private long getArrowAllocatorMax () {

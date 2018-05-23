@@ -42,7 +42,7 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
   }
 
   @Override public void commit(WriterCommitMessage[] messages) {
-    String url = HWConf.HS2_URL.getFromOptionsMap(options);
+    String url = HWConf.RESOLVED_HS2_URL.getFromOptionsMap(options);
     String user = HWConf.USER.getFromOptionsMap(options);
     String dbcp2Configs = HWConf.DBCP2_CONF.getFromOptionsMap(options);
     String database = HWConf.DEFAULT_DB.getFromOptionsMap(options);

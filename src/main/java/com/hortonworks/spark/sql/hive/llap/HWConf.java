@@ -19,6 +19,9 @@ package com.hortonworks.spark.sql.hive.llap;
 
 import java.util.Map;
 import java.util.Optional;
+import org.apache.spark.sql.SparkSession;
+
+import static java.lang.String.format;
 
 /**
  * See: {@link org.apache.spark.sql.sources.v2.SessionConfigSupport}
@@ -29,6 +32,9 @@ enum HWConf {
   USER("user.name", warehouseKey("user.name"), ""),
   PASSWORD("password", warehouseKey("password"), ""),
   HS2_URL("hs2.url", warehouseKey("hs2.url"), "jdbc:hive2://localhost:10500"),
+  HS2_URL_PRINCIPAL("hs2.url.principal", warehouseKey("hs2.url.principal"), ""),
+  HS2_CREDENTIAL_ENABLED("hs2.credentials.enabled", warehouseKey("hs2.credentials.enabled"), "false"),
+  RESOLVED_HS2_URL("hs2.url.resolved", warehouseKey("hs2.url.resolved"), ""),
   DBCP2_CONF("dbcp2.conf", warehouseKey("dbcp2.conf"), null),
   DEFAULT_DB("default.db", warehouseKey("default.db"), "default"),
   MAX_EXEC_RESULTS("exec.results.max", warehouseKey("exec.results.max"), 1000),
@@ -57,29 +63,64 @@ enum HWConf {
 
   //This is called from executors so it can't depend explicitly on session state
   String getFromOptionsMap(Map<String, String> options) {
-    return Optional.ofNullable(options.get(simpleKey))
-        .orElse(defaultValue == null ? null : defaultValue.toString());
+    return Optional.ofNullable(options.get(simpleKey)).orElse(defaultValue == null ? null : defaultValue.toString());
   }
 
   String getString(HiveWarehouseSessionState state) {
     return Optional.
-      ofNullable((String) state.props.get(qualifiedKey)).
-      orElse(state.session.sessionState().conf().getConfString(
-        qualifiedKey, (String) defaultValue)
-      );
+        ofNullable((String) state.props.get(qualifiedKey)).
+        orElse(state.session.sessionState().conf().getConfString(qualifiedKey, (String) defaultValue));
   }
 
   Integer getInt(HiveWarehouseSessionState state) {
-    return Integer.parseInt(
-      Optional.
+    return Integer.parseInt(Optional.
         ofNullable(state.props.get(qualifiedKey)).
-        orElse(state.session.sessionState().conf().getConfString(
-        qualifiedKey, defaultValue.toString())
-      )
-      );
+        orElse(state.session.sessionState().conf().getConfString(qualifiedKey, defaultValue.toString())));
   }
 
   String simpleKey;
   String qualifiedKey;
   Object defaultValue;
+
+  /**
+   * Return connection URL (with replaced proxy user name if exists).
+   */
+  public static String getConnectionUrl(HiveWarehouseSessionState state) {
+    String userString = USER.getString(state);
+    if (userString == null) {
+      userString = "";
+    }
+    String urlString = getConnectionUrlFromConf(state);
+    return urlString.replace("${user}", userString);
+  }
+
+  /**
+   * For the given HiveServer2 JDBC URLs, attach the postfix strings if needed.
+   *
+   * For kerberized clusters,
+   *
+   * 1. YARN cluster mode: ";auth=delegationToken"
+   * 2. YARN client mode: ";principal=hive/_HOST@EXAMPLE.COM"
+   *
+   * Non-kerberied clusters,
+   * 3. Use the given URLs.
+   */
+   public static String getConnectionUrlFromConf(HiveWarehouseSessionState state) {
+     SparkSession sparkSession = state.session;
+     if (HS2_CREDENTIAL_ENABLED.getString(state).equals("true")) {
+       // 1. YARN Cluster mode for kerberized clusters
+       return format("%s;auth=delegationToken", HS2_URL.getString(state));
+     } else if (!HS2_URL_PRINCIPAL.getString(state).equals("")) {
+       // 2. YARN Client mode for kerberized clusters
+       return format("%s;principal=%s",
+           HS2_URL.getString(state),
+           HS2_URL_PRINCIPAL.getString(state));
+     } else {
+       // 3. For non-kerberized cluster
+       return HS2_URL.getString(state);
+     }
+   }
+
 }
+
+
