@@ -22,12 +22,12 @@ public class CountDataReader implements DataReader<ColumnarBatch> {
   }
 
   @Override public ColumnarBatch get() {
-    int size = (numRows >= 1000) ? 1000 : (int) numRows;
-    OnHeapColumnVector vector = new OnHeapColumnVector(size, DataTypes.BooleanType);
-    for(int i = 0; i < size; i++) {
-      vector.putBoolean(i, true);
-    }
-    numRows -= size;
+    //int size = (numRows >= 1000) ? 1000 : (int) numRows;
+    OnHeapColumnVector vector = new OnHeapColumnVector(1, DataTypes.LongType);
+    //for(int i = 0; i < size; i++) {
+      vector.putLong(i, numRows);
+    //}
+    //numRows -= size;
     return new ColumnarBatch(new ColumnVector[] {vector});
   }
 

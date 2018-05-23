@@ -203,12 +203,12 @@ public class HiveWarehouseDataSourceReader
         Long.parseLong(HWConf.MAX_EXEC_RESULTS.getFromOptionsMap(options))
     );
     long count = rs.getData().get(0).getLong(0);
-    long numPerTask = count/100;
-    long numLastTask = count % 100;
-    for(int i = 0; i < 99; i++) {
+    //long numPerTask = count/100;
+    //long numLastTask = count % 100;
+    //for(int i = 0; i < 99; i++) {
       tasks.add(new CountDataReaderFactory(numPerTask));
-    }
-    tasks.add(new CountDataReaderFactory(numLastTask));
+    //}
+    //tasks.add(new CountDataReaderFactory(numLastTask));
     return tasks;
   }
 
