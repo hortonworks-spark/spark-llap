@@ -1,6 +1,5 @@
 package com.hortonworks.spark.sql.hive.llap;
 
-import com.sun.rowset.internal.Row;
 import org.apache.hadoop.hive.llap.LlapBaseInputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -97,7 +96,7 @@ public class HiveWarehouseDataSourceReader
   private StructType getTableSchema() throws Exception {
 
     StatementType queryKey = getQueryType();
-
+    Connection conn = getConnection();
     try {
       if (queryKey == StatementType.FULL_TABLE_SCAN) {
         TableRef tableRef = getDbTableNames(options.get("table"));
@@ -207,7 +206,7 @@ public class HiveWarehouseDataSourceReader
     long numPerTask = count/100;
     long numLastTask = count % 100;
     for(int i = 0; i < 99; i++) {
-      tasks.add(new CountDataReaderFactory(numPerTask));
+      tasks.addAll(new CountDataReaderFactory(numPerTask));
     }
     tasks.add(new CountDataReaderFactory(numLastTask));
     return tasks;
