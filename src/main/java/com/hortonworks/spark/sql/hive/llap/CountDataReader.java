@@ -25,7 +25,7 @@ public class CountDataReader implements DataReader<ColumnarBatch> {
     //int size = (numRows >= 1000) ? 1000 : (int) numRows;
     OnHeapColumnVector vector = new OnHeapColumnVector(1, DataTypes.LongType);
     //for(int i = 0; i < size; i++) {
-      vector.putLong(i, numRows);
+      vector.putLong(0, numRows);
     //}
     //numRows -= size;
     return new ColumnarBatch(new ColumnVector[] {vector});
