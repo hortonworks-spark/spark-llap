@@ -113,9 +113,6 @@ public class HiveWarehouseDataSourceReader
 
   @Override public StructType readSchema() {
     try {
-      if(options.containsKey("isCountStar")) {
-        return StructType.fromDDL("c0 BIGINT");
-      }
       if (schema == null) {
         schema = getTableSchema();
       }

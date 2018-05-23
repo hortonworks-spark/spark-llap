@@ -16,11 +16,11 @@ case class DataSourceV2CountStrategy(spark: SparkSession) extends Rule[LogicalPl
   override def apply(plan: LogicalPlan): LogicalPlan = plan match {
     case Aggregate(groupingExpressions,
     Alias(AggregateExpression(af, _, _, _) , _) :: Nil,
-    Project(_, dsr @ DataSourceV2Relation(fullOutput, reader))) => {
+    p @ Project(_, DataSourceV2Relation(fullOutput, reader))) => {
       if(reader.isInstanceOf[HiveWarehouseDataSourceReader]) {
         val hiveReader = reader.asInstanceOf[HiveWarehouseDataSourceReader];
         hiveReader.options.put("isCountStar", "true");
-        dsr
+        p
       } else {
         plan
       }
