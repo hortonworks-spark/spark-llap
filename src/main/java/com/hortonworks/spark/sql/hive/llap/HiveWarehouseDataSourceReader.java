@@ -15,6 +15,7 @@ import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.vectorized.ColumnarBatch;
 import org.apache.hadoop.hive.llap.LlapInputSplit;
 import org.apache.hadoop.hive.llap.Schema;
+import org.apache.hadoop.hive.llap.FieldDesc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
@@ -42,6 +43,15 @@ public class HiveWarehouseDataSourceReader
 
   public HiveWarehouseDataSourceReader(Map<String, String> options) throws IOException {
     this.options = options;
+  }
+
+  private StructType convertSchema(Schema schema) {
+    List<FieldDesc> columns = schema.getColumns();
+    List<String> types = new ArrayList<>();
+    for(FieldDesc fieldDesc : columns) {
+      types.add(format("%s %s", fieldDesc.getName(), fieldDesc.getTypeInfo().toString()));
+    }
+    return StructType.fromDDL(String.join(", ", types));
   }
 
   String getQueryString(String[] requiredColumns, Filter[] filters) throws Exception {
@@ -109,7 +119,7 @@ public class HiveWarehouseDataSourceReader
         InputSplit[] splits = llapInputFormat.getSplits(conf, 0);
         LlapInputSplit schemaSplit = (LlapInputSplit) splits[0];
         Schema schema = schemaSplit.getSchema();
-        return StructType.fromDDL(schema.toString());
+        return convertSchema(schema);
       }
     } finally {
       conn.close();
