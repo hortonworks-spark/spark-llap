@@ -220,9 +220,7 @@ assemblyMergeStrategy in assembly := {
   case PathList("org","apache","logging","log4j","core","config","plugins","Log4j2Plugins.dat") => MergeStrategy.first
   case PathList("META-INF", "services", "org.apache.hadoop.fs.FileSystem") => MergeStrategy.discard
   case x if x.endsWith("package-info.class") => MergeStrategy.first
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
+  case x => MergeStrategy.first
 }
 
 def pyFilesZipRecursive(source: File, destZipFile: File): Unit = {
