@@ -49,7 +49,7 @@ public class HiveWarehouseDataSourceReader
     List<FieldDesc> columns = schema.getColumns();
     List<String> types = new ArrayList<>();
     for(FieldDesc fieldDesc : columns) {
-      types.add(format("%s %s", fieldDesc.getName(), fieldDesc.getTypeInfo().toString()));
+      types.add(format("%s %s", fieldDesc.getName().split("\\.")[1], fieldDesc.getTypeInfo().toString()));
     }
     return StructType.fromDDL(String.join(", ", types));
   }
