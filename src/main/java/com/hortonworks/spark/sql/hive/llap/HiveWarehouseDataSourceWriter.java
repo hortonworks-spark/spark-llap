@@ -16,6 +16,7 @@ import scala.Option;
 import java.sql.Connection;
 import java.util.Map;
 
+import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.loadInto;
 import static java.lang.String.format;
 
 public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
@@ -33,7 +34,7 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
     this.jobId = jobId;
     this.schema = schema;
     this.saveMode = mode;
-    this.path = new Path(new Path(path, "_temporary"), jobId);
+    this.path = new Path(path, jobId);
     this.conf = conf;
   }
 
@@ -42,24 +43,34 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
   }
 
   @Override public void commit(WriterCommitMessage[] messages) {
-    String url = HWConf.RESOLVED_HS2_URL.getFromOptionsMap(options);
-    String user = HWConf.USER.getFromOptionsMap(options);
-    String dbcp2Configs = HWConf.DBCP2_CONF.getFromOptionsMap(options);
-    String database = HWConf.DEFAULT_DB.getFromOptionsMap(options);
-    String table = options.get("table");
-    try (Connection conn = DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs)) {
-      DefaultJDBCWrapper.executeUpdate(conn, database, loadInto(this.path.toString(), database, table));
-    } catch (java.sql.SQLException e) {
-      throw new RuntimeException(e);
+    try {
+      String url = HWConf.RESOLVED_HS2_URL.getFromOptionsMap(options);
+      String user = HWConf.USER.getFromOptionsMap(options);
+      String dbcp2Configs = HWConf.DBCP2_CONF.getFromOptionsMap(options);
+      String database = HWConf.DEFAULT_DB.getFromOptionsMap(options);
+      String table = options.get("table");
+      try (Connection conn = DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs)) {
+        DefaultJDBCWrapper.executeUpdate(conn, database, loadInto(this.path.toString(), database, table));
+      } catch (java.sql.SQLException e) {
+        throw new RuntimeException(e);
+      }
+    } finally {
+      try {
+        path.getFileSystem(conf).delete(path, true);
+      } catch(Exception e) {
+        LOG.warn("Failed to cleanup temp dir {}", path.toString());
+      }
+      LOG.info("Commit job {}", jobId);
     }
-    LOG.info("Commit job {}", jobId);
   }
 
   @Override public void abort(WriterCommitMessage[] messages) {
+    try {
+      path.getFileSystem(conf).delete(path, true);
+    } catch(Exception e) {
+      LOG.warn("Failed to cleanup temp dir {}", path.toString());
+    }
     LOG.info("Abort job {}", jobId);
   }
 
-  private String loadInto(String path, String database, String table) {
-    return format("LOAD DATA INPATH '%s' INTO TABLE %s.%s", path, database, table);
-  }
 }

@@ -30,6 +30,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.hortonworks.spark.sql.hive.llap.FilterPushdown.buildWhereClause;
+import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.projections;
+import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.selectProjectAliasFilter;
+import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.selectStar;
 import static java.lang.String.format;
 import static scala.collection.JavaConversions.asScalaBuffer;
 
@@ -49,7 +52,13 @@ public class HiveWarehouseDataSourceReader
     List<FieldDesc> columns = schema.getColumns();
     List<String> types = new ArrayList<>();
     for(FieldDesc fieldDesc : columns) {
-      types.add(format("%s %s", fieldDesc.getName().split("\\.")[1], fieldDesc.getTypeInfo().toString()));
+      String name;
+      if(fieldDesc.getName().contains(".")) {
+        name = fieldDesc.getName().split("\\.")[1];
+      } else {
+        name = fieldDesc.getName();
+      }
+      types.add(format("%s %s", name, fieldDesc.getTypeInfo().toString()));
     }
     return StructType.fromDDL(String.join(", ", types));
   }
@@ -57,11 +66,11 @@ public class HiveWarehouseDataSourceReader
   String getQueryString(String[] requiredColumns, Filter[] filters) throws Exception {
     String selectCols = "count(*)";
     if (requiredColumns.length > 0) {
-      selectCols = "`" + String.join("` , `", requiredColumns) + "`";
+      selectCols = projections(requiredColumns);
     }
     String baseQuery = null;
     if (getQueryType().equals("table")) {
-      baseQuery = "select * from " + options.get("table");
+      baseQuery = selectStar(options.get("table"));
     } else {
       baseQuery = options.get("query");
     }
@@ -70,10 +79,7 @@ public class HiveWarehouseDataSourceReader
     Seq<Filter> filterSeq = asScalaBuffer(Arrays.asList(filters)).seq();
     String whereClause = buildWhereClause(schema, filterSeq);
 
-    String format = "select %s from (%s) as %s %s";
-    String queryString = format(format, selectCols, baseQuery, baseQueryAlias, whereClause);
-
-    return queryString;
+    return selectProjectAliasFilter(selectCols, baseQuery, baseQueryAlias, whereClause);
   }
 
   private StatementType getQueryType() throws Exception {
@@ -106,23 +112,28 @@ public class HiveWarehouseDataSourceReader
   }
 
   private StructType getTableSchema() throws Exception {
-
     StatementType queryKey = getQueryType();
-    Connection conn = getConnection();
-    try {
+    try(Connection conn = getConnection()) {
+      String query = null;
       if (queryKey == StatementType.FULL_TABLE_SCAN) {
         TableRef tableRef = getDbTableNames(options.get("table"));
-        return DefaultJDBCWrapper.resolveTable(conn, tableRef.databaseName, tableRef.tableName);
+        query = selectStar(tableRef.databaseName, tableRef.tableName);
       } else {
-        JobConf conf = createJobConf(options, options.get("query"));
-        LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
+        query = options.get("query");
+      }
+      LlapBaseInputFormat llapInputFormat = null;
+      try {
+        JobConf conf = createJobConf(options, query);
+        llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
         InputSplit[] splits = llapInputFormat.getSplits(conf, 0);
         LlapInputSplit schemaSplit = (LlapInputSplit) splits[0];
         Schema schema = schemaSplit.getSchema();
         return convertSchema(schema);
+      } finally {
+        if(llapInputFormat != null) {
+          close();
+        }
       }
-    } finally {
-      conn.close();
     }
   }
 
