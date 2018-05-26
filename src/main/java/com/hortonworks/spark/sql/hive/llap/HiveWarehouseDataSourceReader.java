@@ -40,6 +40,7 @@ public class HiveWarehouseDataSourceReader
     implements DataSourceReader, SupportsPushDownRequiredColumns, SupportsScanColumnarBatch, SupportsPushDownFilters {
 
   StructType schema = null;
+  StructType baseSchema = null;
   Filter[] pushedFilters = new Filter[0];
   Map<String, String> options;
   private static Logger LOG = LoggerFactory.getLogger(HiveWarehouseDataSourceReader.class);
@@ -77,7 +78,7 @@ public class HiveWarehouseDataSourceReader
 
     String baseQueryAlias = "q_" + UUID.randomUUID().toString().replaceAll("[^A-Za-z0-9 ]", "");
     Seq<Filter> filterSeq = asScalaBuffer(Arrays.asList(filters)).seq();
-    String whereClause = buildWhereClause(schema, filterSeq);
+    String whereClause = buildWhereClause(baseSchema, filterSeq);
 
     return selectProjectAliasFilter(selectCols, baseQuery, baseQueryAlias, whereClause);
   }
@@ -140,7 +141,8 @@ public class HiveWarehouseDataSourceReader
   @Override public StructType readSchema() {
     try {
       if (schema == null) {
-        schema = getTableSchema();
+        this.schema = getTableSchema();
+        this.baseSchema = this.schema;
       }
       return schema;
     } catch (Exception e) {
@@ -199,7 +201,7 @@ public class HiveWarehouseDataSourceReader
       InputSplit[] splits = null;
       JobConf jobConf = createJobConf(options, queryString);
       List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
-      if (countStar || options.containsKey("isCountStar")) {
+      if (countStar) {
         factories.addAll(handleCountStar(queryString));
       } else {
         LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);

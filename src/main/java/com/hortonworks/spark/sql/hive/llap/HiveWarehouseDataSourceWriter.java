@@ -70,7 +70,7 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
     } catch(Exception e) {
       LOG.warn("Failed to cleanup temp dir {}", path.toString());
     }
-    LOG.info("Abort job {}", jobId);
+    LOG.error("Aborted DataWriter job {}", jobId);
   }
 
 }
