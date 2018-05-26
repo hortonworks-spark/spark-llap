@@ -233,7 +233,7 @@ public class HiveWarehouseDataSourceReader
     long count = rs.getData().get(0).getLong(0);
     long numPerTask = count/100;
     long numLastTask = count % 100;
-    for(int i = 0; i < 99; i++) {
+    for(int i = 0; i < 100; i++) {
       tasks.add(new CountDataReaderFactory(numPerTask));
     }
     tasks.add(new CountDataReaderFactory(numLastTask));
