@@ -14,20 +14,26 @@ import org.apache.spark.sql.vectorized.ColumnarBatch;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
 
   private LlapArrowBatchRecordReader reader;
   private ArrowWrapperWritable wrapperWritable = new ArrowWrapperWritable();
   private long arrowAllocatorMax;
+  private static AtomicLong ids = new AtomicLong(0);
+  private long id;
 
   public HiveWarehouseDataReader(LlapInputSplit split, JobConf conf, long arrowAllocatorMax) throws Exception {
     LlapBaseInputFormat input = new LlapBaseInputFormat(true, arrowAllocatorMax);
     this.reader = (LlapArrowBatchRecordReader) input.getRecordReader(split, conf, null);
+    this.id = ids.getAndIncrement();
   }
 
   @Override public boolean next() throws IOException {
+    System.out.println(id + ": get next");
     boolean hasNextBatch = reader.next(null, wrapperWritable);
+    System.out.println(id + ": got next: " + hasNextBatch);
     return hasNextBatch;
   }
 
@@ -49,6 +55,7 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
     }
     ColumnarBatch columnarBatch = new ColumnarBatch(columnVectors);
     columnarBatch.setNumRows(rowCount);
+    System.out.println(id + ": rows: " + rowCount);
     return columnarBatch;
   }
 
