@@ -114,6 +114,10 @@ class HiveWarehouseBuilderTest(unittest.TestCase):
                 str(session._jsparkSession.conf().getOption(key).get()),
                 str(HiveWarehouseBuilderTest.conf_pairs[key]))
 
+    def test_session_build(self):
+        session = self.spark
+        self.assertTrue(HiveWarehouseBuilder.session(session).build() is not None)
+
 
 class HiveWarehouseSessionHiveQlTest(unittest.TestCase):
     @classmethod
