@@ -29,8 +29,8 @@ notifications:
   email: false
 
 install:
-  - build/sbt assembly
+  - build/sbt assembly -Drepourl=http://nexus-private.hortonworks.com/nexus/content/groups/public/ -Dhadoop.version=3.0.0.3.0.0.0-SNAPSHOT -Dhive.version=3.0.0.3.0.0.0-SNAPSHOT
 
 script:
-  - build/sbt test
+  - build/sbt test -Drepourl=http://nexus-private.hortonworks.com/nexus/content/groups/public/ -Dhadoop.version=3.0.0.3.0.0.0-SNAPSHOT -Dhive.version=3.0.0.3.0.0.0-SNAPSHOT
   - build/scalastyle
