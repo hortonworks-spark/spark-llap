@@ -24,31 +24,14 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-class HiveWarehouseBuilderTest {
+class HiveWarehouseBuilderTest extends SessionTestBase {
 
     static final String TEST_USER = "userX";
     static final String TEST_PASSWORD = "passwordX";
-    static final String TEST_HS2_URL = "jdbc:hive2://nohost:10084";
     static final String TEST_DBCP2_CONF = "defaultQueryTimeout=100";
     static final Integer TEST_EXEC_RESULTS_MAX = 12345;
     static final String TEST_DEFAULT_DB = "default12345";
 
-    transient SparkSession session = null;
-
-    @Before
-    public void setUp() {
-        session = SparkSession
-                .builder()
-                .master("local")
-                .appName("HiveWarehouseConnector test")
-                .getOrCreate();
-    }
-
-    @After
-    public void tearDown() {
-        session.stop();
-        session = null;
-    }
 
     @Test
     void testAllBuilderConfig() {
@@ -56,7 +39,6 @@ class HiveWarehouseBuilderTest {
                 HiveWarehouseBuilder
                         .session(session)
                         .userPassword(TEST_USER, TEST_PASSWORD)
-                        .hs2url(TEST_HS2_URL)
                         .dbcp2Conf(TEST_DBCP2_CONF)
                         .maxExecResults(TEST_EXEC_RESULTS_MAX)
                         .defaultDB(TEST_DEFAULT_DB)
@@ -65,7 +47,6 @@ class HiveWarehouseBuilderTest {
         assertEquals(hive.session(), session);
         assertEquals(HWConf.USER.getString(sessionState), TEST_USER);
         assertEquals(HWConf.PASSWORD.getString(sessionState), TEST_PASSWORD);
-        assertEquals(HWConf.HS2_URL.getString(sessionState), TEST_HS2_URL);
         assertEquals(HWConf.DBCP2_CONF.getString(sessionState), TEST_DBCP2_CONF);
         assertEquals(HWConf.MAX_EXEC_RESULTS.getInt(sessionState), TEST_EXEC_RESULTS_MAX);
         assertEquals(HWConf.DEFAULT_DB.getString(sessionState), TEST_DEFAULT_DB);
@@ -75,7 +56,6 @@ class HiveWarehouseBuilderTest {
     void testAllConfConfig() {
         session.conf().set(HWConf.USER.qualifiedKey, TEST_USER);
         session.conf().set(HWConf.PASSWORD.qualifiedKey, TEST_PASSWORD);
-        session.conf().set(HWConf.HS2_URL.qualifiedKey, TEST_HS2_URL);
         session.conf().set(HWConf.DBCP2_CONF.qualifiedKey, TEST_DBCP2_CONF);
         session.conf().set(HWConf.MAX_EXEC_RESULTS.qualifiedKey, TEST_EXEC_RESULTS_MAX);
         session.conf().set(HWConf.DEFAULT_DB.qualifiedKey, TEST_DEFAULT_DB);
@@ -87,7 +67,6 @@ class HiveWarehouseBuilderTest {
         assertEquals(hive.sessionState.session, session);
         assertEquals(HWConf.USER.getString(hive.sessionState), TEST_USER);
         assertEquals(HWConf.PASSWORD.getString(hive.sessionState), TEST_PASSWORD);
-        assertEquals(HWConf.HS2_URL.getString(hive.sessionState), TEST_HS2_URL);
         assertEquals(HWConf.DBCP2_CONF.getString(hive.sessionState), TEST_DBCP2_CONF);
         assertEquals(HWConf.MAX_EXEC_RESULTS.getInt(hive.sessionState), TEST_EXEC_RESULTS_MAX);
         assertEquals(HWConf.DEFAULT_DB.getString(hive.sessionState), TEST_DEFAULT_DB);
