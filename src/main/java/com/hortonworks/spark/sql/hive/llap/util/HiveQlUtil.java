@@ -17,6 +17,8 @@
 
 package com.hortonworks.spark.sql.hive.llap.util;
 
+import java.util.UUID;
+
 import static java.lang.String.format;
 
 public class HiveQlUtil {
@@ -94,5 +96,9 @@ public class HiveQlUtil {
 
   public static String loadInto(String path, String database, String table) {
     return format("LOAD DATA INPATH '%s' INTO TABLE %s.%s", path, database, table);
+  }
+
+  public static String randomAlias() {
+    return "q_" + UUID.randomUUID().toString().replaceAll("[^A-Za-z0-9 ]", "");
   }
 }

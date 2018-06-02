@@ -25,25 +25,18 @@ import org.junit.Test;
 import static com.hortonworks.spark.sql.hive.llap.HiveWarehouseBuilderTest.*;
 import static org.junit.Assert.assertEquals;
 
-class HiveWarehouseSessionHiveQlTest {
+class HiveWarehouseSessionHiveQlTest extends SessionTestBase {
 
     private HiveWarehouseSession hive;
     private int mockExecuteResultSize;
 
-    transient SparkSession session = null;
-
     @Before
-    void setUp() {
-        session = SparkSession
-                .builder()
-                .master("local")
-                .appName("HiveWarehouseSessionHiveQlTest test")
-                .getOrCreate();
+    public void setUp() {
+        super.setUp();
         HiveWarehouseSessionState sessionState =
                 HiveWarehouseBuilder
                         .session(session)
                         .userPassword(TEST_USER, TEST_PASSWORD)
-                        .hs2url(TEST_HS2_URL)
                         .dbcp2Conf(TEST_DBCP2_CONF)
                         .maxExecResults(TEST_EXEC_RESULTS_MAX)
                         .defaultDB(TEST_DEFAULT_DB)
@@ -51,12 +44,6 @@ class HiveWarehouseSessionHiveQlTest {
          hive = new MockHiveWarehouseSessionImpl(sessionState);
          mockExecuteResultSize =
                  MockHiveWarehouseSessionImpl.testFixture().data.size();
-    }
-
-    @After
-    public void tearDown() {
-        session.stop();
-        session = null;
     }
 
     @Test

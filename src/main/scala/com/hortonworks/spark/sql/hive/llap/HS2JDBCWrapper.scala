@@ -266,6 +266,7 @@ class JDBCWrapper {
         properties.setProperty("url", url)
         properties.setProperty("password", "password")
         properties.setProperty("username", userName)
+        log.info(s"Connecting to HS2: ($url)")
         val dataSource = BasicDataSourceFactory.createDataSource(properties)
         connectionPools.put(userName, dataSource)
         dataSource.getConnection

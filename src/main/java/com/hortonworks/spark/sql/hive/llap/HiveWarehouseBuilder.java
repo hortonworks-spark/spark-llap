@@ -20,6 +20,10 @@ package com.hortonworks.spark.sql.hive.llap;
 import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
+import static com.hortonworks.spark.sql.hive.llap.HWConf.HIVESERVER2_CREDENTIAL_ENABLED;
+import static com.hortonworks.spark.sql.hive.llap.HWConf.HIVESERVER2_JDBC_URL;
+import static com.hortonworks.spark.sql.hive.llap.HWConf.HIVESERVER2_JDBC_URL_PRINCIPAL;
+
 public class HiveWarehouseBuilder {
 
     HiveWarehouseSessionState sessionState = new HiveWarehouseSessionState();
@@ -57,8 +61,18 @@ public class HiveWarehouseBuilder {
     }
 
     public HiveWarehouseBuilder hs2url(String hs2url) {
-      HWConf.HS2_URL.setString(sessionState, hs2url);
-        return this;
+      sessionState.session.conf().set(HIVESERVER2_JDBC_URL, hs2url);
+      return this;
+    }
+
+    public HiveWarehouseBuilder principal(String principal) {
+      sessionState.session.conf().set(HIVESERVER2_JDBC_URL_PRINCIPAL, principal);
+      return this;
+    }
+
+    public HiveWarehouseBuilder credentialsEnabled() {
+      sessionState.session.conf().set(HIVESERVER2_CREDENTIAL_ENABLED, "true");
+      return this;
     }
 
     //Hive JDBC doesn't support java.sql.Statement.setLargeMaxResults(long)

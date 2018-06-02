@@ -31,9 +31,7 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
   }
 
   @Override public boolean next() throws IOException {
-    System.out.println(id + ": get next");
     boolean hasNextBatch = reader.next(null, wrapperWritable);
-    System.out.println(id + ": got next: " + hasNextBatch);
     return hasNextBatch;
   }
 
@@ -55,7 +53,6 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
     }
     ColumnarBatch columnarBatch = new ColumnarBatch(columnVectors);
     columnarBatch.setNumRows(rowCount);
-    System.out.println(id + ": rows: " + rowCount);
     return columnarBatch;
   }
 

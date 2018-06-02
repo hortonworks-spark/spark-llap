@@ -57,6 +57,7 @@ public class HiveWarehouseConnector implements DataSourceV2, ReadSupport, Sessio
   }
 
   private static Map<String, String> getOptions(DataSourceOptions options) {
+    System.out.println(options.asMap());
     return options.asMap();
   }
 

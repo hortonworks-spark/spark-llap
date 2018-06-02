@@ -1,21 +1,20 @@
 package com.hortonworks.spark.sql.hive.llap;
 
+import com.hortonworks.spark.sql.hive.llap.util.JobUtil;
+import com.hortonworks.spark.sql.hive.llap.util.SchemaUtil;
 import org.apache.hadoop.hive.llap.LlapBaseInputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.spark.SparkContext;
 import org.apache.spark.sql.sources.Filter;
 import org.apache.spark.sql.sources.v2.reader.DataReaderFactory;
 import org.apache.spark.sql.sources.v2.reader.DataSourceReader;
 import org.apache.spark.sql.sources.v2.reader.SupportsPushDownFilters;
 import org.apache.spark.sql.sources.v2.reader.SupportsPushDownRequiredColumns;
 import org.apache.spark.sql.sources.v2.reader.SupportsScanColumnarBatch;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.vectorized.ColumnarBatch;
 import org.apache.hadoop.hive.llap.LlapInputSplit;
 import org.apache.hadoop.hive.llap.Schema;
-import org.apache.hadoop.hive.llap.FieldDesc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
@@ -27,13 +26,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static com.hortonworks.spark.sql.hive.llap.FilterPushdown.buildWhereClause;
-import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.projections;
-import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.selectProjectAliasFilter;
-import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.selectStar;
-import static java.lang.String.format;
+import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.*;
 import static scala.collection.JavaConversions.asScalaBuffer;
 
 public class HiveWarehouseDataSourceReader
@@ -49,21 +44,6 @@ public class HiveWarehouseDataSourceReader
     this.options = options;
   }
 
-  private StructType convertSchema(Schema schema) {
-    List<FieldDesc> columns = schema.getColumns();
-    List<String> types = new ArrayList<>();
-    for(FieldDesc fieldDesc : columns) {
-      String name;
-      if(fieldDesc.getName().contains(".")) {
-        name = fieldDesc.getName().split("\\.")[1];
-      } else {
-        name = fieldDesc.getName();
-      }
-      types.add(format("%s %s", name, fieldDesc.getTypeInfo().toString()));
-    }
-    return StructType.fromDDL(String.join(", ", types));
-  }
-
   String getQueryString(String[] requiredColumns, Filter[] filters) throws Exception {
     String selectCols = "count(*)";
     if (requiredColumns.length > 0) {
@@ -76,11 +56,9 @@ public class HiveWarehouseDataSourceReader
       baseQuery = options.get("query");
     }
 
-    String baseQueryAlias = "q_" + UUID.randomUUID().toString().replaceAll("[^A-Za-z0-9 ]", "");
     Seq<Filter> filterSeq = asScalaBuffer(Arrays.asList(filters)).seq();
     String whereClause = buildWhereClause(baseSchema, filterSeq);
-
-    return selectProjectAliasFilter(selectCols, baseQuery, baseQueryAlias, whereClause);
+    return selectProjectAliasFilter(selectCols, baseQuery, randomAlias(), whereClause);
   }
 
   private StatementType getQueryType() throws Exception {
@@ -124,12 +102,12 @@ public class HiveWarehouseDataSourceReader
       }
       LlapBaseInputFormat llapInputFormat = null;
       try {
-        JobConf conf = createJobConf(options, query);
+        JobConf conf = JobUtil.createJobConf(options, query);
         llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
         InputSplit[] splits = llapInputFormat.getSplits(conf, 0);
         LlapInputSplit schemaSplit = (LlapInputSplit) splits[0];
         Schema schema = schemaSplit.getSchema();
-        return convertSchema(schema);
+        return SchemaUtil.convertSchema(schema);
       } finally {
         if(llapInputFormat != null) {
           close();
@@ -164,57 +142,15 @@ public class HiveWarehouseDataSourceReader
     this.schema = requiredSchema;
   }
 
-  private String[] requiredColumns(StructType schema) {
-    String[] requiredColumns = new String[schema.length()];
-    int i = 0;
-    for (StructField field : schema.fields()) {
-      requiredColumns[i] = field.name();
-      i++;
-    }
-    return requiredColumns;
-  }
-
-  static JobConf createJobConf(Map<String, String> options, String queryString) {
-    JobConf jobConf = new JobConf(SparkContext.getOrCreate().hadoopConfiguration());
-    jobConf.set("hive.llap.zk.registry.user", "hive");
-    jobConf.set("llap.if.hs2.connection", HWConf.RESOLVED_HS2_URL.getFromOptionsMap(options));
-    if (queryString != null) {
-      jobConf.set("llap.if.query", queryString);
-    }
-    jobConf.set("llap.if.user", HWConf.USER.getFromOptionsMap(options));
-    jobConf.set("llap.if.pwd", HWConf.PASSWORD.getFromOptionsMap(options));
-    if (options.containsKey("default.db")) {
-      jobConf.set("llap.if.database", HWConf.DEFAULT_DB.getFromOptionsMap(options));
-    }
-    if (!options.containsKey("handleid")) {
-      String handleId = UUID.randomUUID().toString();
-      options.put("handleid", handleId);
-    }
-    jobConf.set("llap.if.handleid", options.get("handleid"));
-    return jobConf;
-  }
-
   @Override public List<DataReaderFactory<ColumnarBatch>> createBatchDataReaderFactories() {
     try {
       boolean countStar = this.schema.length() == 0;
-      String queryString = getQueryString(requiredColumns(schema), pushedFilters);
-      InputSplit[] splits = null;
-      JobConf jobConf = createJobConf(options, queryString);
+      String queryString = getQueryString(SchemaUtil.columnNames(schema), pushedFilters);
       List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
       if (countStar) {
-        factories.addAll(handleCountStar(queryString));
+        factories.addAll(getCountStarFactories(queryString));
       } else {
-        LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
-        try {
-          //numSplits doesn't do anything, use 1 as dummy arg
-          splits = llapInputFormat.getSplits(jobConf, 1);
-          for (InputSplit split : splits) {
-            factories.add(new HiveWarehouseDataReaderFactory(split, jobConf, getArrowAllocatorMax()));
-          }
-        } catch (IOException e) {
-          LOG.error("Unable to submit query to HS2");
-          throw new RuntimeException(e);
-        }
+        factories.addAll(getSplitsFactories(queryString));
       }
       return factories;
     } catch (Exception e) {
@@ -222,7 +158,24 @@ public class HiveWarehouseDataSourceReader
     }
   }
 
-  private List<DataReaderFactory<ColumnarBatch>> handleCountStar(String query) {
+  private List<DataReaderFactory<ColumnarBatch>> getSplitsFactories(String query) {
+    List<DataReaderFactory<ColumnarBatch>> tasks = new ArrayList<>();
+    try {
+      JobConf jobConf = JobUtil.createJobConf(options, query);
+      LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
+      //numSplits arg not currently supported, use 1 as dummy arg
+      InputSplit[] splits = llapInputFormat.getSplits(jobConf, 1);
+      for (InputSplit split : splits) {
+        tasks.add(new HiveWarehouseDataReaderFactory(split, jobConf, getArrowAllocatorMax()));
+      }
+    } catch (IOException e) {
+      LOG.error("Unable to submit query to HS2");
+      throw new RuntimeException(e);
+    }
+    return tasks;
+  }
+
+  private List<DataReaderFactory<ColumnarBatch>> getCountStarFactories(String query) {
     List<DataReaderFactory<ColumnarBatch>> tasks = new ArrayList<>(100);
     Connection conn = getConnection();
     DriverResultSet rs = DefaultJDBCWrapper.executeStmt(conn,
@@ -231,9 +184,11 @@ public class HiveWarehouseDataSourceReader
         Long.parseLong(HWConf.MAX_EXEC_RESULTS.getFromOptionsMap(options))
     );
     long count = rs.getData().get(0).getLong(0);
-    long numPerTask = count/100;
-    long numLastTask = count % 100;
-    for(int i = 0; i < 100; i++) {
+    String numTasksString = HWConf.COUNT_TASKS.getFromOptionsMap(options);
+    int numTasks = Integer.parseInt(numTasksString);
+    long numPerTask = count/(numTasks - 1);
+    long numLastTask = count % (numTasks - 1);
+    for(int i = 0; i < (numTasks - 1); i++) {
       tasks.add(new CountDataReaderFactory(numPerTask));
     }
     tasks.add(new CountDataReaderFactory(numLastTask));

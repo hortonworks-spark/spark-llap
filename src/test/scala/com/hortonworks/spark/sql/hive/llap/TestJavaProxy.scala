@@ -20,31 +20,35 @@ package com.hortonworks.spark.sql.hive.llap
 import org.scalatest.FunSuite
 
 class TestJavaProxy extends FunSuite {
-  test("HiveWarehouseBuilder") {
-    val builderTest = new HiveWarehouseBuilderTest()
-    try {
-      builderTest.setUp()
-      builderTest.testAllBuilderConfig()
-    } finally {
-      builderTest.tearDown()
-    }
+
+  def withSetUpAndTearDown(suite: SessionTestBase, test: () => Unit): Unit = try {
+    suite.setUp()
+    test()
+  } finally {
+    suite.tearDown()
   }
 
-  test("HiveWarehouseSession") {
-    val hiveWarehouseSessionTest = new HiveWarehouseSessionHiveQlTest()
-
-    def withSetUpAndTearDown(test: () => Unit): Unit = try {
-      hiveWarehouseSessionTest.setUp()
-      test()
-    } finally {
-      hiveWarehouseSessionTest.tearDown()
-    }
-
-    withSetUpAndTearDown(hiveWarehouseSessionTest.testCreateDatabase)
-    withSetUpAndTearDown(hiveWarehouseSessionTest.testCreateTable)
-    withSetUpAndTearDown(hiveWarehouseSessionTest.testDescribeTable)
-    withSetUpAndTearDown(hiveWarehouseSessionTest.testExecuteQuery)
-    withSetUpAndTearDown(hiveWarehouseSessionTest.testSetDatabase)
-    withSetUpAndTearDown(hiveWarehouseSessionTest.testShowTable)
+  test("HiveWarehouseBuilderTest") {
+    val test = new HiveWarehouseBuilderTest()
+    withSetUpAndTearDown(test, test.testAllBuilderConfig)
+    withSetUpAndTearDown(test, test.testAllConfConfig)
   }
+
+  test("HiveWarehouseSessionHiveQlTest") {
+    val test = new HiveWarehouseSessionHiveQlTest()
+    withSetUpAndTearDown(test, test.testCreateDatabase)
+    withSetUpAndTearDown(test, test.testCreateTable)
+    withSetUpAndTearDown(test, test.testDescribeTable)
+    withSetUpAndTearDown(test, test.testExecuteQuery)
+    withSetUpAndTearDown(test, test.testSetDatabase)
+    withSetUpAndTearDown(test, test.testShowTable)
+  }
+
+  test("TestSecureHS2Url") {
+    val test = new TestSecureHS2Url()
+    withSetUpAndTearDown(test, test.kerberizedClusterMode)
+    withSetUpAndTearDown(test, test.kerberizedClientMode)
+    withSetUpAndTearDown(test, test.nonKerberized)
+  }
+
 }
