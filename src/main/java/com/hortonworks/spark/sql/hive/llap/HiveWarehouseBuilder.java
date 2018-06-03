@@ -36,7 +36,7 @@ public class HiveWarehouseBuilder {
         HiveWarehouseBuilder builder = new HiveWarehouseBuilder();
         builder.sessionState.session = session;
         //Copy all static configuration (e.g. spark-defaults.conf)
-        //with keys matching HWConf.CONF_PREFIX into
+        //with keys matching HiveWarehouseSession.CONF_PREFIX into
         //the SparkSQL session conf for this session
         //Otherwise these settings will not be available to
         //v2 DataSourceReader or DataSourceWriter
