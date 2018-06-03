@@ -74,6 +74,16 @@ class HiveWarehouseBuilder(object):
         self._jhwbuilder.defaultDB(defaultDB)
         return self
 
+    def principal(self, principal):
+        assert isinstance(defaultDB, basestring), "principal should be a string"
+
+        self._jhwbuilder.principal(principal)
+        return self
+
+    def credentialsEnabled(self):
+        self._jhwbuilder.credentialsEnabled()
+        return self
+
     def build(self):
         return HiveWarehouseSession(self._spark_session, self._jhwbuilder.build())
 

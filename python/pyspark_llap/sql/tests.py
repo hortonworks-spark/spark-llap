@@ -84,7 +84,6 @@ class HiveWarehouseBuilderTest(unittest.TestCase):
         u'spark.datasource.hive.warehouse.dbcp2.conf': u'defaultQueryTimeout=100',
         u'spark.datasource.hive.warehouse.default.db': u'default12345',
         u'spark.datasource.hive.warehouse.user.name': u'userX',
-        u'spark.datasource.hive.warehouse.hs2.url': u'jdbc:hive2://nohost:10084',
         u'spark.datasource.hive.warehouse.exec.results.max': u'12345',
     }
 
