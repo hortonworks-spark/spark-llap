@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import scala.collection.Seq;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -146,8 +147,7 @@ public class HiveWarehouseDataSourceReader
       String queryString = getQueryString(SchemaUtil.columnNames(schema), pushedFilters);
       List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
       if (countStar) {
-        //TODO: Add back in separate PR
-        //factories.addAll(getCountStarFactories(queryString));
+        factories.addAll(getCountStarFactories(queryString));
       } else {
         factories.addAll(getSplitsFactories(queryString));
       }
@@ -176,6 +176,26 @@ public class HiveWarehouseDataSourceReader
 
   protected DataReaderFactory<ColumnarBatch> getDataReaderFactory(InputSplit split, JobConf jobConf, long arrowAllocatorMax) {
     return new HiveWarehouseDataReaderFactory(split, jobConf, arrowAllocatorMax);
+  }
+
+  private List<DataReaderFactory<ColumnarBatch>> getCountStarFactories(String query) {
+    List<DataReaderFactory<ColumnarBatch>> tasks = new ArrayList<>(100);
+    Connection conn = getConnection();
+    DriverResultSet rs = DefaultJDBCWrapper.executeStmt(conn,
+        HWConf.DEFAULT_DB.getFromOptionsMap(options),
+        query,
+        Long.parseLong(HWConf.MAX_EXEC_RESULTS.getFromOptionsMap(options))
+    );
+    long count = rs.getData().get(0).getLong(0);
+    String numTasksString = HWConf.COUNT_TASKS.getFromOptionsMap(options);
+    int numTasks = Integer.parseInt(numTasksString);
+    long numPerTask = count/(numTasks - 1);
+    long numLastTask = count % (numTasks - 1);
+    for(int i = 0; i < (numTasks - 1); i++) {
+      tasks.add(new CountDataReaderFactory(numPerTask));
+    }
+    tasks.add(new CountDataReaderFactory(numLastTask));
+    return tasks;
   }
 
   private long getArrowAllocatorMax () {
