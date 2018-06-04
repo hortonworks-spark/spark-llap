@@ -17,10 +17,12 @@ import org.apache.hadoop.hive.llap.LlapInputSplit;
 import org.apache.hadoop.hive.llap.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Option;
 import scala.collection.Seq;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -147,6 +149,7 @@ public class HiveWarehouseDataSourceReader
       String queryString = getQueryString(SchemaUtil.columnNames(schema), pushedFilters);
       List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
       if (countStar) {
+        LOG.info("Executing count with query: {}", queryString);
         factories.addAll(getCountStarFactories(queryString));
       } else {
         factories.addAll(getSplitsFactories(queryString));
@@ -180,13 +183,7 @@ public class HiveWarehouseDataSourceReader
 
   private List<DataReaderFactory<ColumnarBatch>> getCountStarFactories(String query) {
     List<DataReaderFactory<ColumnarBatch>> tasks = new ArrayList<>(100);
-    Connection conn = getConnection();
-    DriverResultSet rs = DefaultJDBCWrapper.executeStmt(conn,
-        HWConf.DEFAULT_DB.getFromOptionsMap(options),
-        query,
-        Long.parseLong(HWConf.MAX_EXEC_RESULTS.getFromOptionsMap(options))
-    );
-    long count = rs.getData().get(0).getLong(0);
+    long count = getCount(query);
     String numTasksString = HWConf.COUNT_TASKS.getFromOptionsMap(options);
     int numTasks = Integer.parseInt(numTasksString);
     long numPerTask = count/(numTasks - 1);
@@ -196,6 +193,24 @@ public class HiveWarehouseDataSourceReader
     }
     tasks.add(new CountDataReaderFactory(numLastTask));
     return tasks;
+  }
+
+  protected long getCount(String query) {
+    try(Connection conn = getConnection()) {
+      DriverResultSet rs = DefaultJDBCWrapper.executeStmt(conn, HWConf.DEFAULT_DB.getFromOptionsMap(options), query,
+          Long.parseLong(HWConf.MAX_EXEC_RESULTS.getFromOptionsMap(options)));
+      return rs.getData().get(0).getLong(0);
+    } catch (SQLException e) {
+      LOG.error("Failed to connect to HS2", e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Connection getConnection() {
+    String url = HWConf.RESOLVED_HS2_URL.getFromOptionsMap(options);
+    String user = HWConf.USER.getFromOptionsMap(options);
+    String dbcp2Configs = HWConf.DBCP2_CONF.getFromOptionsMap(options);
+    return DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs);
   }
 
   private long getArrowAllocatorMax () {
