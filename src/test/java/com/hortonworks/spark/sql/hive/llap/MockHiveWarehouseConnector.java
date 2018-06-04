@@ -1,39 +1,131 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.hortonworks.spark.sql.hive.llap;
 
-import org.apache.spark.sql.sources.v2.DataSourceOptions;
-import org.apache.spark.sql.sources.v2.DataSourceV2;
-import org.apache.spark.sql.sources.v2.ReadSupport;
-import org.apache.spark.sql.sources.v2.SessionConfigSupport;
+import com.google.common.collect.Lists;
+import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.IntVector;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.hadoop.hive.llap.LlapInputSplit;
+import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
+import org.apache.hadoop.hive.ql.io.arrow.RootAllocatorFactory;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.RecordReader;
+import org.apache.spark.sql.sources.v2.reader.DataReader;
+import org.apache.spark.sql.sources.v2.reader.DataReaderFactory;
 import org.apache.spark.sql.sources.v2.reader.DataSourceReader;
+import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.vectorized.ColumnarBatch;
 
-public class MockHiveWarehouseConnector implements DataSourceV2, ReadSupport, SessionConfigSupport {
+import java.io.IOException;
+import java.sql.Struct;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
-    @Override
-    public DataSourceReader createReader(DataSourceOptions options) {
-        return new MockHiveWarehouseDataSourceReader();
+public class MockHiveWarehouseConnector extends HiveWarehouseConnector {
+
+  public static int[] testVector = {1, 2, 3, 4, 5};
+
+  @Override
+  protected DataSourceReader getDataSourceReader(Map<String, String> params) throws IOException {
+    return new MockHiveWarehouseDataSourceReader(params);
+  }
+
+  public static class MockHiveWarehouseDataReader extends HiveWarehouseDataReader {
+
+    public MockHiveWarehouseDataReader(LlapInputSplit split, JobConf conf, long arrowAllocatorMax) throws Exception {
+      super(split, conf, arrowAllocatorMax);
     }
 
     @Override
-    public String keyPrefix() {
-        return HiveWarehouseSession.CONF_PREFIX;
+    protected RecordReader<?, ArrowWrapperWritable> getRecordReader(LlapInputSplit split, JobConf conf, long arrowAllocatorMax)
+      throws IOException {
+       return new MockLlapArrowBatchRecordReader(arrowAllocatorMax);
+    }
+  }
+
+  public static class MockHiveWarehouseDataReaderFactory extends HiveWarehouseDataReaderFactory {
+
+    public MockHiveWarehouseDataReaderFactory(InputSplit split, JobConf jobConf, long arrowAllocatorMax) {
     }
 
+    @Override
+    public DataReader<ColumnarBatch> createDataReader() {
+      try {
+        return getDataReader(null, null, Long.MAX_VALUE);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
 
+    @Override
+    protected DataReader<ColumnarBatch> getDataReader(LlapInputSplit split, JobConf jobConf, long arrowAllocatorMax)
+        throws Exception {
+      return new MockHiveWarehouseDataReader(split, jobConf, arrowAllocatorMax);
+    }
+  }
+
+  public static class MockHiveWarehouseDataSourceReader extends HiveWarehouseDataSourceReader {
+
+    public MockHiveWarehouseDataSourceReader(Map<String, String> options) throws IOException {
+      super(options);
+    }
+
+    @Override
+    protected StructType getTableSchema() throws Exception {
+      return StructType.fromDDL("a INTEGER");
+    }
+
+    @Override
+    protected DataReaderFactory<ColumnarBatch> getDataReaderFactory(InputSplit split, JobConf jobConf, long arrowAllocatorMax) {
+      return new MockHiveWarehouseDataReaderFactory(split, jobConf, arrowAllocatorMax);
+    }
+
+    protected List<DataReaderFactory<ColumnarBatch>> getSplitsFactories(String query) {
+      return Lists.newArrayList(new MockHiveWarehouseDataReaderFactory(null, null, 0));
+    }
+
+  }
+
+  public static class MockLlapArrowBatchRecordReader implements RecordReader<ArrowWrapperWritable, ArrowWrapperWritable> {
+
+    VectorSchemaRoot vectorSchemaRoot;
+    boolean hasNext = true;
+
+    public MockLlapArrowBatchRecordReader(long arrowAllocatorMax) {
+      BufferAllocator allocator = RootAllocatorFactory.INSTANCE.getOrCreateRootAllocator(arrowAllocatorMax);
+      IntVector vector = new IntVector("a", allocator);
+      vector.allocateNewSafe();
+      for(int i = 0; i < testVector.length; i++) {
+        vector.set(i, testVector[i]);
+      }
+      vector.setValueCount(testVector.length);
+      List<Field> fields = Lists.newArrayList(vector.getField());
+      List<FieldVector> vectors = new ArrayList<>();
+      vectors.add(vector);
+      vectorSchemaRoot = new VectorSchemaRoot(fields, vectors, testVector.length);
+    }
+
+    @Override public boolean next(ArrowWrapperWritable empty, ArrowWrapperWritable value)
+        throws IOException {
+      if(hasNext) {
+        value.setVectorSchemaRoot(vectorSchemaRoot);
+        hasNext = false;
+        return true;
+      }
+      return hasNext;
+    }
+
+    @Override public ArrowWrapperWritable createKey() {
+      return null;
+    }
+    @Override public ArrowWrapperWritable createValue() {
+      return null;
+    }
+    @Override public long getPos() throws IOException { return 0; }
+    @Override public void close() throws IOException { }
+    @Override public float getProgress() throws IOException { return 0; }
+  }
 }

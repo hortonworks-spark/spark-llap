@@ -61,7 +61,7 @@ public class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
             }
         };
         HiveWarehouseSessionImpl.HIVE_WAREHOUSE_CONNECTOR_INTERNAL =
-                "com.hortonworks.spark.sql.hive.llap.MockHiveWarehouseConnector";
+                "com.hortonworks.spark.sql.hive.llap.SimpleMockConnector";
     }
 
 }

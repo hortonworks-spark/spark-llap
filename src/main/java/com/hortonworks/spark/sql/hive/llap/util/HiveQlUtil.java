@@ -17,10 +17,27 @@
 
 package com.hortonworks.spark.sql.hive.llap.util;
 
+import java.util.UUID;
+
 import static java.lang.String.format;
 
 public class HiveQlUtil {
 
+  public static String projections(String[] columns) {
+    return "`" + String.join("` , `", columns) + "`";
+  }
+
+  public static String selectStar(String database, String table) {
+    return format("SELECT * FROM %.%", database, table);
+  }
+
+  public static String selectStar(String table) {
+    return format("SELECT * FROM %s", table);
+  }
+
+  public static String selectProjectAliasFilter(String projections, String table, String alias, String whereClause) {
+    return format("select %s from (%s) as %s %s", projections, table, alias, whereClause);
+  }
     public static String useDatabase(String database) {
         return format("USE %s", database);
     }
@@ -85,5 +102,9 @@ public class HiveQlUtil {
 
     private static String orBlank(boolean useText, String text) {
         return (useText ? text : "");
+    }
+
+    public static String randomAlias() {
+        return "q_" + UUID.randomUUID().toString().replaceAll("[^A-Za-z0-9 ]", "");
     }
 }

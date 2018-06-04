@@ -17,8 +17,6 @@
 
 package com.hortonworks.spark.sql.hive.llap;
 
-import org.apache.spark.sql.SparkSession;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -53,7 +51,7 @@ class HiveWarehouseSessionHiveQlTest extends SessionTestBase {
     @Test
     void testExecuteQuery() {
         assertEquals(hive.executeQuery("SELECT * FROM t1").count(),
-                MockHiveWarehouseDataReader.RESULT_SIZE);
+                SimpleMockConnector.SimpleMockDataReader.RESULT_SIZE);
     }
 
     @Test
