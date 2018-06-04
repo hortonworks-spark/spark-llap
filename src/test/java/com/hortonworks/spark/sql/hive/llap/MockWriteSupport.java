@@ -9,6 +9,7 @@ import org.apache.spark.sql.execution.datasources.OutputWriter;
 import org.apache.spark.sql.execution.datasources.orc.OrcOutputWriter;
 import org.apache.spark.sql.sources.v2.writer.DataWriter;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
+import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.util.SerializableConfiguration;
 
@@ -30,13 +31,17 @@ public class MockWriteSupport {
 
     @Override
     public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
-      return new MockHiveWarehouseDataWriterFactory(jobId, schema, path, new SerializableConfiguration(conf));
+      return new MockHiveWarehouseDataWriterFactory(jobId, schema, path.toString(), new SerializableConfiguration(conf));
+    }
+
+    @Override public void commit(WriterCommitMessage[] messages) {
+
     }
   }
 
   public static class MockHiveWarehouseDataWriterFactory extends HiveWarehouseDataWriterFactory {
 
-    public MockHiveWarehouseDataWriterFactory(String jobId, StructType schema, Path path,
+    public MockHiveWarehouseDataWriterFactory(String jobId, StructType schema, String path,
         SerializableConfiguration conf) {
       super(jobId, schema, path, conf);
     }

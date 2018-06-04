@@ -37,7 +37,7 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
   }
 
   @Override public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
-    return new HiveWarehouseDataWriterFactory(jobId, schema, path, new SerializableConfiguration(conf));
+    return new HiveWarehouseDataWriterFactory(jobId, schema, path.toString(), new SerializableConfiguration(conf));
   }
 
   @Override public void commit(WriterCommitMessage[] messages) {

@@ -15,10 +15,10 @@ public class HiveWarehouseDataWriterFactory implements DataWriterFactory<Interna
 
   protected String jobId;
   protected StructType schema;
-  protected Path path;
+  protected String path;
   protected SerializableConfiguration conf;
 
-  public HiveWarehouseDataWriterFactory(String jobId, StructType schema, Path path,
+  public HiveWarehouseDataWriterFactory(String jobId, StructType schema, String path,
       SerializableConfiguration conf) {
     this.jobId = jobId;
     this.schema = schema;

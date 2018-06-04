@@ -26,6 +26,7 @@ import org.apache.spark.sql.vectorized.ColumnarBatch;
 import java.io.IOException;
 import java.sql.Struct;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,7 +34,7 @@ import java.util.Optional;
 public class MockHiveWarehouseConnector extends HiveWarehouseConnector {
 
   public static int[] testVector = {1, 2, 3, 4, 5};
-  public static Map<String, Object> writeOutputBuffer;
+  public static Map<String, Object> writeOutputBuffer = new HashMap<>();
 
   @Override
   protected DataSourceReader getDataSourceReader(Map<String, String> params) throws IOException {
