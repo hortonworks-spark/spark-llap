@@ -127,11 +127,11 @@ public class HiveWarehouseDataSourceReader
   //"returns unsupported filters."
   @Override public Filter[] pushFilters(Filter[] filters) {
     pushedFilters = Arrays.stream(filters).
-        filter(FilterPushdown::supportedFilter).
+        filter((filter) -> FilterPushdown.buildFilterExpression(baseSchema, filter).isDefined()).
         toArray(Filter[]::new);
 
     return Arrays.stream(filters).
-        filter((filter) -> !FilterPushdown.supportedFilter(filter)).
+        filter((filter) -> !FilterPushdown.buildFilterExpression(baseSchema, filter).isDefined()).
         toArray(Filter[]::new);
   }
 
