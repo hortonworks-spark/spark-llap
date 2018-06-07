@@ -51,9 +51,15 @@ class TestJavaProxy extends FunSuite {
     withSetUpAndTearDown(test, test.nonKerberized)
   }
 
+  test("TestWriteSupport") {
+    val test = new TestWriteSupport()
+    withSetUpAndTearDown(test, test.testWriteSupport);
+  }
+
   test("TestReadSupport") {
     val test = new TestReadSupport()
     withSetUpAndTearDown(test, test.testReadSupport);
+    withSetUpAndTearDown(test, test.testCountSupport);
   }
 
 }

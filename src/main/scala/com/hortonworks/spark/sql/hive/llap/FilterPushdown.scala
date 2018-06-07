@@ -26,6 +26,25 @@ private[llap] object FilterPushdown extends Object {
     if (filterExpressions.isEmpty) "" else "WHERE " + filterExpressions
   }
 
+  def supportedFilter(filter: Filter) : Boolean = filter match {
+    case  EqualTo(_, _) |
+          EqualNullSafe(_, _) |
+          LessThan (_, _) |
+          GreaterThan (_, _) |
+          LessThanOrEqual (_, _) |
+          GreaterThanOrEqual (_, _) |
+          In (_, _) |
+          StringStartsWith (_, _) |
+          StringEndsWith (_, _) |
+          StringContains (_, _) |
+          IsNull (_) |
+          IsNotNull (_) |
+          And (_, _) |
+          Or (_, _) |
+          Not (_) => true
+    case _ => false
+  }
+
   /**
    * Attempt to convert the given filter into a SQL expression. Returns None if the expression
    * could not be converted.

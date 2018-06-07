@@ -34,7 +34,7 @@ public class MockHiveWarehouseSessionImpl extends HiveWarehouseSessionImpl {
         row.add(new GenericRow(new Object[] {2, "ID 2"}));
         StructType schema = (new StructType())
                 .add("col1", "int")
-                .add("col1", "string");
+                .add("col2", "string");
         return new DriverResultSet(row, schema);
     }
 

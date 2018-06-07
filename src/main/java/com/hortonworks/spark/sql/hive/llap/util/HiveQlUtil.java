@@ -104,6 +104,10 @@ public class HiveQlUtil {
         return (useText ? text : "");
     }
 
+    public static String loadInto(String path, String database, String table) {
+      return format("LOAD DATA INPATH '%s' INTO TABLE %s.%s", path, database, table);
+    }
+
     public static String randomAlias() {
         return "q_" + UUID.randomUUID().toString().replaceAll("[^A-Za-z0-9 ]", "");
     }

@@ -6,31 +6,46 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.llap.LlapInputSplit;
 import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
 import org.apache.hadoop.hive.ql.io.arrow.RootAllocatorFactory;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
+import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.sources.v2.DataSourceOptions;
 import org.apache.spark.sql.sources.v2.reader.DataReader;
 import org.apache.spark.sql.sources.v2.reader.DataReaderFactory;
 import org.apache.spark.sql.sources.v2.reader.DataSourceReader;
+import org.apache.spark.sql.sources.v2.writer.DataSourceWriter;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.vectorized.ColumnarBatch;
 
 import java.io.IOException;
 import java.sql.Struct;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class MockHiveWarehouseConnector extends HiveWarehouseConnector {
 
   public static int[] testVector = {1, 2, 3, 4, 5};
+  public static Map<String, Object> writeOutputBuffer = new HashMap<>();
+  public static long COUNT_STAR_TEST_VALUE = 1024;
 
   @Override
   protected DataSourceReader getDataSourceReader(Map<String, String> params) throws IOException {
     return new MockHiveWarehouseDataSourceReader(params);
+  }
+
+  @Override
+  protected DataSourceWriter getDataSourceWriter(String jobId, StructType schema,
+      Path path, Map<String, String> options, Configuration conf) {
+    return new MockWriteSupport.MockHiveWarehouseDataSourceWriter(options, jobId, schema, path, conf);
   }
 
   public static class MockHiveWarehouseDataReader extends HiveWarehouseDataReader {
@@ -85,6 +100,12 @@ public class MockHiveWarehouseConnector extends HiveWarehouseConnector {
 
     protected List<DataReaderFactory<ColumnarBatch>> getSplitsFactories(String query) {
       return Lists.newArrayList(new MockHiveWarehouseDataReaderFactory(null, null, 0));
+    }
+
+    @Override
+    protected long getCount(String query) {
+      //Mock out the call to HS2 to get the count
+      return COUNT_STAR_TEST_VALUE;
     }
 
   }

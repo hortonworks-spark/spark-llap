@@ -22,4 +22,16 @@ public class TestReadSupport extends SessionTestBase {
     }
   }
 
+  @Test
+  public void testCountSupport() {
+    HiveWarehouseSession hive = HiveWarehouseBuilder.
+        session(session).
+        hs2url(TEST_HS2_URL).
+        build();
+    HiveWarehouseSessionImpl impl = (HiveWarehouseSessionImpl) hive;
+    impl.HIVE_WAREHOUSE_CONNECTOR_INTERNAL = "com.hortonworks.spark.sql.hive.llap.MockHiveWarehouseConnector";
+    long count = hive.executeQuery("SELECT a from fake").count();
+    assertEquals(count, MockHiveWarehouseConnector.COUNT_STAR_TEST_VALUE);
+  }
+
 }
