@@ -3,11 +3,10 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.zip.{ZipEntry, ZipOutputStream}
 
 
-name := "spark-llap"
-//<ownVersion>-<sparkVersion>-<hiveVersion>
-val versionString = sys.props.getOrElse("version", "1.2-2.3-3.0-SNAPSHOT")
+name := "hive-warehouse-connector"
+val versionString = sys.props.getOrElse("version", "1.0.0-SNAPSHOT")
 version := versionString
-organization := "com.hortonworks.spark"
+organization := "com.hortonworks.hive"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
@@ -20,7 +19,7 @@ val tezVersion = sys.props.getOrElse("tez.version", "0.9.1")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
 val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
-spName := "hortonworks/spark-llap"
+spName := "hortonworks/hive-warehouse-connector"
 
 val testSparkVersion = settingKey[String]("The version of Spark to test against.")
 
@@ -268,9 +267,8 @@ assemblyMergeStrategy in assembly := {
   case PathList("git.properties") => MergeStrategy.first
   case PathList("META-INF", "services", "org.apache.hadoop.fs.FileSystem") => MergeStrategy.discard
   case x if x.endsWith("package-info.class") => MergeStrategy.first
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
 }
 
 def pyFilesZipRecursive(source: File, destZipFile: File): Unit = {
