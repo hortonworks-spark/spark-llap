@@ -35,6 +35,7 @@ public class MockHiveWarehouseConnector extends HiveWarehouseConnector {
 
   public static int[] testVector = {1, 2, 3, 4, 5};
   public static Map<String, Object> writeOutputBuffer = new HashMap<>();
+  public static long COUNT_STAR_TEST_VALUE = 1024;
 
   @Override
   protected DataSourceReader getDataSourceReader(Map<String, String> params) throws IOException {
@@ -99,6 +100,12 @@ public class MockHiveWarehouseConnector extends HiveWarehouseConnector {
 
     protected List<DataReaderFactory<ColumnarBatch>> getSplitsFactories(String query) {
       return Lists.newArrayList(new MockHiveWarehouseDataReaderFactory(null, null, 0));
+    }
+
+    @Override
+    protected long getCount(String query) {
+      //Mock out the call to HS2 to get the count
+      return COUNT_STAR_TEST_VALUE;
     }
 
   }

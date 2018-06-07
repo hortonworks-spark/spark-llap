@@ -59,6 +59,7 @@ class TestJavaProxy extends FunSuite {
   test("TestReadSupport") {
     val test = new TestReadSupport()
     withSetUpAndTearDown(test, test.testReadSupport);
+    withSetUpAndTearDown(test, test.testCountSupport);
   }
 
 }
