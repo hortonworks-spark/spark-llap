@@ -30,7 +30,7 @@ private[llap] object FilterPushdown extends Object {
    * Attempt to convert the given filter into a SQL expression. Returns None if the expression
    * could not be converted.
    */
-  private[llap] def buildFilterExpression(schema: StructType, filter: Filter): Option[String] = {
+  def buildFilterExpression(schema: StructType, filter: Filter): Option[String] = {
     def buildComparison(attr: String, value: Any, comparisonOp: String): Option[String] = {
       getTypeForAttribute(schema, attr).map { dataType =>
         val sqlEscapedValue: String = getSqlEscapedValue(dataType, value)
@@ -74,6 +74,7 @@ private[llap] object FilterPushdown extends Object {
 
     val filterExpression: Option[String] = filter match {
       case EqualTo(attr, value) => buildComparison(attr, value, "=")
+      case EqualNullSafe(attr, value) => buildComparison(attr, value, "<=>")
       case LessThan(attr, value) => buildComparison(attr, value, "<")
       case GreaterThan(attr, value) => buildComparison(attr, value, ">")
       case LessThanOrEqual(attr, value) => buildComparison(attr, value, "<=")

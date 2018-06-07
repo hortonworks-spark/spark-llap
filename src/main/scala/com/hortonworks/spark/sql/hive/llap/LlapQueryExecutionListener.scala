@@ -20,6 +20,7 @@ package com.hortonworks.spark.sql.hive.llap
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.util.QueryExecutionListener
+import org.apache.spark.sql.execution.datasources.v2._
 
 class LlapQueryExecutionListener extends QueryExecutionListener with Logging {
 
@@ -31,6 +32,9 @@ class LlapQueryExecutionListener extends QueryExecutionListener with Logging {
       case r: RowDataSourceScanExec if r.relation.isInstanceOf[LlapRelation] =>
         r.relation.asInstanceOf[LlapRelation].close()
         logDebug(s"Closing Hive connection via ${classOf[LlapRelation].getName}")
+      case s: DataSourceV2ScanExec if s.reader.isInstanceOf[HiveWarehouseDataSourceReader] =>
+        s.reader.asInstanceOf[HiveWarehouseDataSourceReader].close()
+        logDebug(s"Closing Hive connection via ${classOf[HiveWarehouseDataSourceReader].getName}")
       case _ =>
     }
   }
