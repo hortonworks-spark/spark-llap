@@ -3,7 +3,7 @@ package com.hortonworks.spark.sql.hive.llap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.execution.datasources.OutputWriter;
 import org.apache.spark.sql.execution.datasources.orc.OrcOutputWriter;
