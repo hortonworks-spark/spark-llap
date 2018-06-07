@@ -13,4 +13,3 @@ public class SimpleWriterCommitMessage implements WriterCommitMessage {
     return message;
   }
 }
-
