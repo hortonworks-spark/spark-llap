@@ -103,3 +103,4 @@ class HiveIsolatedClassLoader(urls: Array[URL], baseClassLoader: ClassLoader)
   private def classToPath(name: String): String =
     name.replaceAll("\\.", "/") + ".class"
 }
+

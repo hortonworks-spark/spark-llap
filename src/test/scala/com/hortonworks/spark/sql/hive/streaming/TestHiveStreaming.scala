@@ -90,3 +90,4 @@ object TestHiveStreaming {
     sparkSession.stop()
   }
 }
+
