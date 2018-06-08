@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.sql.Connection;
 import java.util.Map;
 
@@ -37,7 +39,15 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
   }
 
   @Override public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
-    return new HiveWarehouseDataWriterFactory(jobId, schema, path.toString(), new SerializableConfiguration(conf));
+    ByteArrayOutputStream confByteArrayStream = new ByteArrayOutputStream();
+    byte[] confBytes;
+    try(DataOutputStream confByteData = new DataOutputStream(confByteArrayStream)) {
+      conf.write(confByteData);
+      confBytes = confByteArrayStream.toByteArray();
+    } catch(Exception e) {
+      throw new RuntimeException(e);
+    }
+    return new HiveWarehouseDataWriterFactory(jobId, schema, path.toString(), confBytes);
   }
 
   @Override public void commit(WriterCommitMessage[] messages) {

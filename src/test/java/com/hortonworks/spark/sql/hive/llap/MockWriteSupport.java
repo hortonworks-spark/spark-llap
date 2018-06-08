@@ -11,8 +11,9 @@ import org.apache.spark.sql.sources.v2.writer.DataWriter;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
 import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage;
 import org.apache.spark.sql.types.StructType;
-import org.apache.spark.util.SerializableConfiguration;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +32,15 @@ public class MockWriteSupport {
 
     @Override
     public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
-      return new MockHiveWarehouseDataWriterFactory(jobId, schema, path.toString(), new SerializableConfiguration(conf));
+      ByteArrayOutputStream confByteArrayStream = new ByteArrayOutputStream();
+      byte[] confBytes;
+      try(DataOutputStream confByteData = new DataOutputStream(confByteArrayStream)) {
+        conf.write(confByteData);
+        confBytes = confByteArrayStream.toByteArray();
+      } catch(Exception e) {
+        throw new RuntimeException(e);
+      }
+      return new MockHiveWarehouseDataWriterFactory(jobId, schema, path.toString(), confBytes);
     }
 
     @Override public void commit(WriterCommitMessage[] messages) {
@@ -42,8 +51,8 @@ public class MockWriteSupport {
   public static class MockHiveWarehouseDataWriterFactory extends HiveWarehouseDataWriterFactory {
 
     public MockHiveWarehouseDataWriterFactory(String jobId, StructType schema, String path,
-        SerializableConfiguration conf) {
-      super(jobId, schema, path, conf);
+        byte[] confBytes) {
+      super(jobId, schema, path, confBytes);
     }
 
     protected DataWriter<InternalRow> getDataWriter(Configuration conf, String jobId,
