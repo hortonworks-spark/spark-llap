@@ -3,6 +3,7 @@ package com.hortonworks.spark.sql.hive.llap.streaming;
 import java.util.Arrays;
 import java.util.List;
 
+import com.hortonworks.spark.sql.hive.llap.HiveWarehouseSession;
 import org.apache.spark.sql.sources.v2.DataSourceOptions;
 import org.apache.spark.sql.sources.v2.DataSourceV2;
 import org.apache.spark.sql.sources.v2.StreamWriteSupport;
@@ -24,6 +25,12 @@ public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport
 
   private HiveStreamingDataSourceWriter createDataSourceWriter(final String id, final StructType schema,
     final DataSourceOptions options) {
+    String dbName = null;
+    if(options.get("default.db").isPresent()) {
+      dbName = options.get("default.db");
+    } else {
+      dbName = options.get("database").orElse("default");
+    }
     String dbName = options.get("database").orElse("default");
     String tableName = options.get("table").orElse(null);
     String partition = options.get("partition").orElse(null);
@@ -35,6 +42,10 @@ public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport
       tableName, partition, commitInterval, metastoreUri);
     return new HiveStreamingDataSourceWriter(id, schema, commitInterval, dbName, tableName,
       partitionValues, metastoreUri);
+  }
+
+  @Override public String keyPrefix() {
+    return HiveWarehouseSession.HIVE_WAREHOUSE_POSTFIX;
   }
 
 }

@@ -13,7 +13,7 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HiveStreamingDataSource implements DataSourceV2, WriteSupport {
+public class HiveStreamingDataSource implements DataSourceV2, WriteSupport, SessionConfigSupport {
   private static final long DEFAULT_COMMIT_INTERVAL_ROWS = 10000;
   private static Logger LOG = LoggerFactory.getLogger(HiveStreamingDataSource.class);
 
@@ -25,7 +25,12 @@ public class HiveStreamingDataSource implements DataSourceV2, WriteSupport {
 
   private HiveStreamingDataSourceWriter createDataSourceWriter(final String id, final StructType schema,
     final DataSourceOptions options) {
-    String dbName = options.get("database").orElse("default");
+    String dbName = null;
+    if(options.get("default.db").isPresent()) {
+      dbName = options.get("default.db");
+    } else {
+      dbName = options.get("database").orElse("default");
+    }
     String tableName = options.get("table").orElse(null);
     String partition = options.get("partition").orElse(null);
     List<String> partitionValues = partition == null ? null : Arrays.asList(partition.split(","));
@@ -36,6 +41,10 @@ public class HiveStreamingDataSource implements DataSourceV2, WriteSupport {
       tableName, partition, commitInterval, metastoreUri);
     return new HiveStreamingDataSourceWriter(id, schema, commitInterval, dbName, tableName,
       partitionValues, metastoreUri);
+  }
+
+  @Override public String keyPrefix() {
+    return HiveWarehouseSession.HIVE_WAREHOUSE_POSTFIX;
   }
 
 }
