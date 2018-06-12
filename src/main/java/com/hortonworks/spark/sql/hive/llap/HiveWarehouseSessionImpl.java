@@ -43,7 +43,7 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   protected TriFunction<Connection, String, String, Boolean> executeUpdate;
 
-  HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
+  public HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
     this.sessionState = sessionState;
     getConnector = () -> DefaultJDBCWrapper.getConnector(sessionState);
     executeStmt = (conn, database, sql) ->
