@@ -13,7 +13,7 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport {
+public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport, SessionConfigSupport {
   private static final long DEFAULT_COMMIT_INTERVAL_ROWS = 10000;
   private static Logger LOG = LoggerFactory.getLogger(HiveStreamingDataSource.class);
 
