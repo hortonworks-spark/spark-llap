@@ -8,6 +8,7 @@ import org.apache.spark.sql.sources.v2.DataSourceOptions;
 import org.apache.spark.sql.sources.v2.DataSourceV2;
 import org.apache.spark.sql.sources.v2.StreamWriteSupport;
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter;
+import org.apache.spark.sql.sources.v2.SessionConfigSupport;
 import org.apache.spark.sql.streaming.OutputMode;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
@@ -27,11 +28,10 @@ public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport
     final DataSourceOptions options) {
     String dbName = null;
     if(options.get("default.db").isPresent()) {
-      dbName = options.get("default.db");
+      dbName = options.get("default.db").get();
     } else {
       dbName = options.get("database").orElse("default");
     }
-    String dbName = options.get("database").orElse("default");
     String tableName = options.get("table").orElse(null);
     String partition = options.get("partition").orElse(null);
     List<String> partitionValues = partition == null ? null : Arrays.asList(partition.split(","));

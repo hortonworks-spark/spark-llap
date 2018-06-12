@@ -9,6 +9,7 @@ import org.apache.spark.sql.sources.v2.DataSourceOptions;
 import org.apache.spark.sql.sources.v2.DataSourceV2;
 import org.apache.spark.sql.sources.v2.WriteSupport;
 import org.apache.spark.sql.sources.v2.writer.DataSourceWriter;
+import org.apache.spark.sql.sources.v2.SessionConfigSupport;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,7 @@ public class HiveStreamingDataSource implements DataSourceV2, WriteSupport, Sess
     final DataSourceOptions options) {
     String dbName = null;
     if(options.get("default.db").isPresent()) {
-      dbName = options.get("default.db");
+      dbName = options.get("default.db").get();
     } else {
       dbName = options.get("database").orElse("default");
     }
