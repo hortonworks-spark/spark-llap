@@ -79,7 +79,7 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
     try {
       streamingConnection.write(delimitedRow.getBytes(Charset.forName("UTF-8")));
       rowsWritten++;
-      if (rowsWritten > 0 && (rowsWritten % commitAfterNRows == 0)) {
+      if (rowsWritten > 0 && commitAfterNRows > 0 && (rowsWritten % commitAfterNRows == 0)) {
         LOG.info("Committing transaction after rows: {}", rowsWritten);
         streamingConnection.commitTransaction();
         streamingConnection.beginTransaction();

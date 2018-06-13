@@ -21,14 +21,12 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow, 
   private String db;
   private String table;
   private List<String> partition;
-  private long commitIntervalRows;
   private String metastoreUri;
 
-  public HiveStreamingDataSourceWriter(String jobId, StructType schema, long commitIntervalRows, String db,
+  public HiveStreamingDataSourceWriter(String jobId, StructType schema, String db,
     String table, List<String> partition, final String metastoreUri) {
     this.jobId = jobId;
     this.schema = schema;
-    this.commitIntervalRows = commitIntervalRows;
     this.db = db;
     this.table = table;
     this.partition = partition;
@@ -37,7 +35,8 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow, 
 
   @Override
   public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
-    return new HiveStreamingDataWriterFactory(jobId, schema, commitIntervalRows, db, table, partition, metastoreUri);
+    // for the streaming case, commit transaction happens on task commit() (atleast-once), so interval is set to -1
+    return new HiveStreamingDataWriterFactory(jobId, schema, -1, db, table, partition, metastoreUri);
   }
 
   @Override
