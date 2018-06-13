@@ -25,7 +25,7 @@ import java.util.Map;
 // Exposed for Python side.
 public class HiveWarehouseSessionState {
 
-    SparkSession session;
+    public SparkSession session;
     Map<String, String> props = new HashMap<>();
 
 
