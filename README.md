@@ -1,5 +1,10 @@
-pache Spark&trade; connector for Apache Hive&trade; LLAP.
-With Apache Ranger&trade;, this library provides row/column level fine-grained access controls.
+[![Build Status](https://travis-ci.org/hortonworks-spark/spark-llap.svg?branch=master)](https://travis-ci.org/hortonworks-spark/spark-llap)
+
+# Apache Spark&trade; connector for Apache Hive&trade; LLAP
+
+A library to load data into Apache Spark&trade; SQL DataFrames from
+Apache Hive&trade; using LLAP. With Apache Ranger&trade;,
+this library provides row/column level fine-grained access controls.
 
 Configuration
 =====
