@@ -20,11 +20,11 @@ language: python
 
 matrix:
   include:
-    # Spark 2.3.0
+    # Spark 2.3.1
     - jdk: oraclejdk8
       python: 2.7
       env: >
-        TEST_SPARK_VERSION=2.3.0
+        TEST_SPARK_VERSION=2.3.1
 
 cache:
   directories:
