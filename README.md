@@ -1,10 +1,22 @@
-[![Build Status](https://travis-ci.org/hortonworks-spark/spark-llap.svg?branch=master)](https://travis-ci.org/hortonworks-spark/spark-llap)
 
-# Apache Spark&trade; connector for Apache Hive&trade; LLAP
+# HiveWarehouseConnector
 
-A library to load data into Apache Spark&trade; SQL DataFrames from
+A library to read/write DataFrames and Streaming DataFrames to/from
 Apache Hive&trade; using LLAP. With Apache Ranger&trade;,
 this library provides row/column level fine-grained access controls.
+
+Compatibility
+=====
+Note that for open-source usage, master branch requires Hive 3.1.0 which is a
+forthcoming release. For configuration of prior versions, please see [prior documentation](https://github.com/hortonworks-spark/spark-llap/wiki).
+
+| branch | Spark | Hive  | HDP | 
+| ------------- |:-------------:|:-----:|-----:|
+| master (Summer 2018) | 2.3.1 | 3.1.0 | 3.0.0 (GA) |
+| branch-2.3 | 2.3.0 | 2.1.0 | 2.6.x (TP) |
+| branch-2.2| 2.2.0 | 2.1.0 | 2.6.x (TP) |
+| branch-2.1 | 2.1.1 | 2.1.0 | 2.6.x (TP) |
+| branch-1.6 | 1.6.3 | 2.1.0 | 2.5.x (TP) |
 
 Configuration
 =====
