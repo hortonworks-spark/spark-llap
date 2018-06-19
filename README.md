@@ -43,6 +43,29 @@ For use in Spark cluster-mode on kerberized Yarn cluster, set:
 | spark.security.credentials.hiveserver2.enabled | Use Spark ServiceCredentialProvider | true |
 
 
+Supported Types
+=====
+| Spark Type      | Hive Type               |
+| --------------- | ----------------------- |
+| ByteType        | TinyInt                 |
+| ShortType       | SmallInt                |
+| IntegerType     | Integer                 |
+| LongType        | BigInt                  |
+| FloatType       | Float                   |
+| DoubleType      | Double                  |
+| DecimalType     | Decimal                 |
+| StringType\*    | String, Char, Varchar\* |
+| BinaryType      | Binary                  |
+| BooleanType     | Boolean                 |
+| TimestampType\* | Timestamp\*             |
+| DateType        | Date                    |
+| ArrayType       | Array                   |
+| StructType      | Struct                  |
+
+- A Hive String, Char, Varchar column will be converted into a Spark StringType column.
+- When a Spark StringType column has maxLength metadata, it will be converted into a Hive Varchar column. Otherwise, it will be converted into a Hive String column.
+- A Hive Timestamp column will lose sub-microsecond precision when it is converted into a Spark TimestampType column. Because a Spark TimestampType column is microsecond precision, while a Hive Timestamp column is nanosecond precision.
+
 Submitting Applications
 =====
 Support is currently available for `spark-shell`, `pyspark`, and `spark-submit`.
