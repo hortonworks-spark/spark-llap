@@ -5,6 +5,7 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hive.streaming.HiveStreamingConnection;
 import org.apache.hive.streaming.StreamingConnection;
 import org.apache.hive.streaming.StreamingException;
@@ -60,6 +61,7 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
     // creating hive streaming connection (isolated classloader to load different hive versions and shadeprefix for
     // HIVE-19494)
     hiveConf.setVar(HiveConf.ConfVars.HIVE_CLASSLOADER_SHADE_PREFIX, "shadehive");
+    hiveConf.set(MetastoreConf.ConfVars.CATALOG_DEFAULT.getHiveName(), "hive");
     LOG.info("Creating hive streaming connection..");
     streamingConnection = HiveStreamingConnection.newBuilder()
       .withDatabase(db)
