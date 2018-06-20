@@ -73,6 +73,7 @@ Unsupported Types
 | CalendarIntervalType | Interval  | Planned for future support  |
 | MapType              | Map       | Planned for future support  |
 | N/A                  | Union     | Not supported in Spark      |
+| NullType             | N/A       | Not supported in Hive       |
 
 Submitting Applications
 =====
