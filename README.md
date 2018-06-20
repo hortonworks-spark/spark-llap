@@ -66,6 +66,14 @@ Supported Types
 - When a Spark StringType column has maxLength metadata, it will be converted into a Hive Varchar column. Otherwise, it will be converted into a Hive String column.
 - A Hive Timestamp column will lose sub-microsecond precision when it is converted into a Spark TimestampType column. Because a Spark TimestampType column is microsecond precision, while a Hive Timestamp column is nanosecond precision.
 
+Unsupported Types
+=====
+| Spark Type           | Hive Type | Plan                        |
+| -------------------- | --------- | --------------------------- |
+| CalendarIntervalType | Interval  | Planned for future support  |
+| MapType              | Map       | Planned for future support  |
+| N/A                  | Union     | Not supported in Spark      |
+
 Submitting Applications
 =====
 Support is currently available for `spark-shell`, `pyspark`, and `spark-submit`.
