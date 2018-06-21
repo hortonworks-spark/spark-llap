@@ -1,13 +1,23 @@
 package com.hortonworks.spark.sql.hive.llap.util;
 
 import com.hortonworks.spark.sql.hive.llap.HWConf;
+import com.hortonworks.spark.sql.hive.llap.HiveWarehouseDataSourceReader;
+import com.hortonworks.spark.sql.hive.llap.Utils;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.spark.SparkContext;
 
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.Enumeration;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JobUtil {
+
+  private static Logger LOG = LoggerFactory.getLogger(JobUtil.class);
 
   public static JobConf createJobConf(Map<String, String> options, String queryString) {
     JobConf jobConf = new JobConf(SparkContext.getOrCreate().hadoopConfiguration());
@@ -27,6 +37,23 @@ public class JobUtil {
     }
     jobConf.set("llap.if.handleid", options.get("handleid"));
     return jobConf;
+  }
+
+  public static void deregisterSparkHiveDriver() throws SQLException {
+    Enumeration<Driver> drivers = DriverManager.getDrivers();
+    while(drivers.hasMoreElements()) {
+      Driver driver = drivers.nextElement();
+      String driverName = driver.getClass().getName();
+      LOG.debug("Found a registered JDBC driver {}", driverName);
+      if(driverName.endsWith("HiveDriver")) {
+        LOG.debug("Deregistering {}", driverName);
+        DriverManager.deregisterDriver(driver);
+      } else {
+        LOG.debug("Not deregistering the {}", driverName);
+      }
+    }
+
+    Utils.classForName("shadehive.org.apache.hive.jdbc.HiveDriver");
   }
 
 }

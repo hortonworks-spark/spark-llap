@@ -22,14 +22,18 @@ import scala.collection.Seq;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
 import static com.hortonworks.spark.sql.hive.llap.FilterPushdown.buildWhereClause;
 import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.*;
+import static com.hortonworks.spark.sql.hive.llap.util.JobUtil.deregisterSparkHiveDriver;
 import static scala.collection.JavaConversions.asScalaBuffer;
 
 /**
@@ -88,6 +92,8 @@ public class HiveWarehouseDataSourceReader
   }
 
   protected StructType getTableSchema() throws Exception {
+    deregisterSparkHiveDriver();
+
     StatementType queryKey = getQueryType();
       String query;
       if (queryKey == StatementType.FULL_TABLE_SCAN) {
