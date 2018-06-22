@@ -39,7 +39,7 @@ public class JobUtil {
     return jobConf;
   }
 
-  public static void deregisterSparkHiveDriver() throws SQLException {
+  public static void replaceSparkHiveDriver() throws SQLException {
     Enumeration<Driver> drivers = DriverManager.getDrivers();
     while(drivers.hasMoreElements()) {
       Driver driver = drivers.nextElement();

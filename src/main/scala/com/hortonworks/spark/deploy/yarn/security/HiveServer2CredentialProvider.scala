@@ -44,7 +44,7 @@ private[security] class HiveServer2CredentialProvider extends ServiceCredentialP
       sparkConf: SparkConf,
       creds: Credentials): Option[Long] = {
 
-    JobUtil.deregisterSparkHiveDriver();
+    JobUtil.replaceSparkHiveDriver();
     var con: Connection = null
     try {
 
