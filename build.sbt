@@ -77,7 +77,9 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hadoop", "hadoop-hdfs")
     .exclude("com.fasterxml.jackson.core", "jackson-databind"),
   ("org.apache.hive" % "hive-service" % hiveVersion)
-    .exclude("org.apache.hadoop", "hadoop-aws"),
+    .exclude("org.apache.hadoop", "hadoop-aws")
+    .exclude("org.apache.logging.log4j", "log4j-slf4j-impl")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
     .exclude("org.apache.ant", "ant")
@@ -269,7 +271,7 @@ assemblyMergeStrategy in assembly := {
   case PathList("git.properties") => MergeStrategy.first
   case PathList("META-INF", "services", "org.apache.hadoop.fs.FileSystem") => MergeStrategy.discard
   case x if x.endsWith("package-info.class") => MergeStrategy.first
-  case PathList("META-INF", "services", xs @ _*) => MergeStrategy.first
+//  case PathList("META-INF", "services", xs @ _*) => MergeStrategy.first
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x => MergeStrategy.first
 }
