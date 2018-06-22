@@ -1,6 +1,5 @@
 package com.hortonworks.spark.sql.hive.llap;
 
-import com.hortonworks.spark.sql.hive.llap.util.SerializableHadoopConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -18,26 +17,38 @@ public class HiveWarehouseDataWriterFactory implements DataWriterFactory<Interna
 
   protected String jobId;
   protected StructType schema;
-  private Path path;
-  private SerializableHadoopConfiguration conf;
+  protected String path;
+  protected Configuration conf;
+  protected byte[] confBytes;
 
-  public HiveWarehouseDataWriterFactory(String jobId, StructType schema,
-      Path path, SerializableHadoopConfiguration conf) {
+  public HiveWarehouseDataWriterFactory() {
+    ByteArrayInputStream confByteArrayStream = new ByteArrayInputStream(confBytes);
+    conf = new Configuration();
+
+    try(DataInputStream confByteData = new DataInputStream(confByteArrayStream)) {
+      conf.readFields(confByteData);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public HiveWarehouseDataWriterFactory(String jobId, StructType schema, String path,
+      byte[] confBytes) {
     this.jobId = jobId;
     this.schema = schema;
     this.path = path;
-    this.conf = conf;
+    this.confBytes = confBytes;
   }
 
   @Override public DataWriter<InternalRow> createDataWriter(int partitionId, int attemptNumber) {
     Path filePath = new Path(this.path, String.format("%s_%s_%s", jobId, partitionId, attemptNumber));
     FileSystem fs = null;
     try {
-      fs = filePath.getFileSystem(conf.get());
+      fs = filePath.getFileSystem(conf);
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return getDataWriter(conf.get(), jobId, schema, partitionId, attemptNumber,
+    return getDataWriter(conf, jobId, schema, partitionId, attemptNumber,
         fs, filePath);
   }
 
@@ -47,3 +58,4 @@ public class HiveWarehouseDataWriterFactory implements DataWriterFactory<Interna
     return new HiveWarehouseDataWriter(conf, jobId, schema, partitionId, attemptNumber, fs, filePath);
   }
 }
+
