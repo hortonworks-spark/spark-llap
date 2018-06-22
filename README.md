@@ -1,5 +1,22 @@
-# Apache Spark&trade; connector for Apache Hive&trade; LLAP.
-With Apache Ranger&trade;, this library provides row/column level fine-grained access controls.
+
+# HiveWarehouseConnector
+
+A library to read/write DataFrames and Streaming DataFrames to/from
+Apache Hive&trade; using LLAP. With Apache Ranger&trade;,
+this library provides row/column level fine-grained access controls.
+
+Compatibility
+=====
+Note that for open-source usage, master branch requires Hive 3.1.0 which is a
+forthcoming release. For configuration of prior versions, please see [prior documentation](https://github.com/hortonworks-spark/spark-llap/wiki).
+
+| branch | Spark | Hive  | HDP |
+| ------------- |:-------------:|:-----:|-----:|
+| master (Summer 2018) | 2.3.1 | 3.1.0 | 3.0.0 (GA) |
+| branch-2.3 | 2.3.0 | 2.1.0 | 2.6.x (TP) |
+| branch-2.2| 2.2.0 | 2.1.0 | 2.6.x (TP) |
+| branch-2.1 | 2.1.1 | 2.1.0 | 2.6.x (TP) |
+| branch-1.6 | 1.6.3 | 2.1.0 | 2.5.x (TP) |
 
 Configuration
 =====
@@ -25,6 +42,38 @@ For use in Spark cluster-mode on kerberized Yarn cluster, set:
 | ------------- |:-------------:| -----:|
 | spark.security.credentials.hiveserver2.enabled | Use Spark ServiceCredentialProvider | true |
 
+
+Supported Types
+=====
+| Spark Type      | Hive Type               |
+| --------------- | ----------------------- |
+| ByteType        | TinyInt                 |
+| ShortType       | SmallInt                |
+| IntegerType     | Integer                 |
+| LongType        | BigInt                  |
+| FloatType       | Float                   |
+| DoubleType      | Double                  |
+| DecimalType     | Decimal                 |
+| StringType\*    | String, Char, Varchar\* |
+| BinaryType      | Binary                  |
+| BooleanType     | Boolean                 |
+| TimestampType\* | Timestamp\*             |
+| DateType        | Date                    |
+| ArrayType       | Array                   |
+| StructType      | Struct                  |
+
+- A Hive String, Char, Varchar column will be converted into a Spark StringType column.
+- When a Spark StringType column has maxLength metadata, it will be converted into a Hive Varchar column. Otherwise, it will be converted into a Hive String column.
+- A Hive Timestamp column will lose sub-microsecond precision when it is converted into a Spark TimestampType column. Because a Spark TimestampType column is microsecond precision, while a Hive Timestamp column is nanosecond precision.
+
+Unsupported Types
+=====
+| Spark Type           | Hive Type | Plan                        |
+| -------------------- | --------- | --------------------------- |
+| CalendarIntervalType | Interval  | Planned for future support  |
+| MapType              | Map       | Planned for future support  |
+| N/A                  | Union     | Not supported in Spark      |
+| NullType             | N/A       | Not supported in Hive       |
 
 Submitting Applications
 =====
@@ -149,6 +198,15 @@ Write Operations
    .save()
 ```
 
+* Write a Spark Stream to Hive using HiveStreaming, e.g.
+```
+stream.writeStream
+    .format("com.hortonworks.spark.sql.hive.llap.streaming.HiveStreamingDataSource")
+    .option("metastoreUri", metastoreUri)
+    .option("database", "streaming")
+    .option("table", "web_sales")
+    .start()
+```
 
 HiveWarehouseSession Interface
 ==============================
@@ -199,6 +257,7 @@ HiveWarehouseSession Interface
 	    void dropTable(String table, boolean ifExists, boolean purge);
 	}
 ```
+
 Batch Load Example
 ====
 Read table data from Hive, transform in Spark, write to new Hive table
@@ -214,7 +273,3 @@ Read table data from Hive, transform in Spark, write to new Hive table
 	df2.show(20)
 	hive.dropTable(tempTable, true, false)
 ```
-Streaming Example
-====
-
-See example here: [link](https://github.com/hortonworks/hive-warehouse-connector/blob/atlantic/src/main/scala/com/hortonworks/spark/sql/hive/llap/streaming/examples/HiveStreamingExample.scala)
