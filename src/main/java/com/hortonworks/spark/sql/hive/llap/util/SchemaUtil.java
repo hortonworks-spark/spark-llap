@@ -22,7 +22,7 @@ public class SchemaUtil {
       } else {
         name = fieldDesc.getName();
       }
-      types.add(format("%s %s", name, fieldDesc.getTypeInfo().toString()));
+      types.add(format("`%s` %s", name, fieldDesc.getTypeInfo().toString()));
     }
     return StructType.fromDDL(String.join(", ", types));
   }
