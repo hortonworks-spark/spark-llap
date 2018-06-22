@@ -80,10 +80,10 @@ case class Schema(ws_sold_date_sk: Int, ws_sold_time_sk: Int, ws_ship_date_sk: I
 object HiveStreamingExample {
 
   def main(args: Array[String]): Unit = {
-    if (args.length < 3 || args.length > 6) {
+    if (args.length < 3 || args.length > 5) {
       // scalastyle:off println
       System.err.println(s"Usage: HiveStreamingExample <socket host> <socket port>" +
-        s" <metastore uri> <metastore kerberos principal> <metastore kerberos keytab>")
+        s" <metastore uri> <metastore kerberos principal>")
       // scalastyle:on println
       System.exit(1)
     }
