@@ -18,9 +18,10 @@ public class HiveStreamingDataWriterFactory implements DataWriterFactory<Interna
   private String table;
   private List<String> partition;
   private String metastoreUri;
+  private String metastoreKrbPrincipal;
 
   public HiveStreamingDataWriterFactory(String jobId, StructType schema, long commitIntervalRows, String db,
-    String table, List<String> partition, final String metastoreUri) {
+    String table, List<String> partition, final String metastoreUri, final String metastoreKrbPrincipal) {
     this.jobId = jobId;
     this.schema = schema;
     this.db = db;
@@ -28,6 +29,7 @@ public class HiveStreamingDataWriterFactory implements DataWriterFactory<Interna
     this.partition = partition;
     this.commitIntervalRows = commitIntervalRows;
     this.metastoreUri = metastoreUri;
+    this.metastoreKrbPrincipal = metastoreKrbPrincipal;
   }
 
   @Override
@@ -37,7 +39,7 @@ public class HiveStreamingDataWriterFactory implements DataWriterFactory<Interna
     try {
       Thread.currentThread().setContextClassLoader(isolatedClassloader);
       return new HiveStreamingDataWriter(jobId, schema, commitIntervalRows, partitionId, attemptNumber, db,
-        table, partition, metastoreUri);
+        table, partition, metastoreUri, metastoreKrbPrincipal);
     } finally {
       Thread.currentThread().setContextClassLoader(restoredClassloader);
     }

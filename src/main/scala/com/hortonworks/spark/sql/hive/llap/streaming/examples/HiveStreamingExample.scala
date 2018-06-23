@@ -83,7 +83,7 @@ object HiveStreamingExample {
     if (args.length < 3 || args.length > 5) {
       // scalastyle:off println
       System.err.println(s"Usage: HiveStreamingExample <socket host> <socket port>" +
-        s" <metastore uri>")
+        s" <metastore uri> <metastore kerberos principal>")
       // scalastyle:on println
       System.exit(1)
     }
@@ -91,6 +91,10 @@ object HiveStreamingExample {
     val host = args(0)
     val port = args(1)
     val metastoreUri = args(2)
+    var metastoreKrbPrincipal: String = null
+    if (args.length > 3) {
+      metastoreKrbPrincipal = args(3)
+    }
 
     val sparkConf = new SparkConf()
       .set("spark.sql.streaming.checkpointLocation", "./checkpoint")
@@ -124,6 +128,10 @@ object HiveStreamingExample {
         .option("metastoreUri", metastoreUri)
         .option("database", "streaming")
         .option("table", "web_sales")
+
+    if (metastoreKrbPrincipal != null) {
+      writer.option("metastoreKrbPrincipal", metastoreKrbPrincipal)
+    }
 
     // before this, a new terminal that runs 'nc -l <port>' has to be started and
     // csv records for web_sales table has to be pasted so that spark streaming

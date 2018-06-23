@@ -35,10 +35,11 @@ public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport
     String partition = options.get("partition").orElse(null);
     List<String> partitionValues = partition == null ? null : Arrays.asList(partition.split(","));
     String metastoreUri = options.get("metastoreUri").orElse("thrift://localhost:9083");
-    LOG.info("OPTIONS - database: {} table: {} partition: {} metastoreUri: {}", dbName,
-      tableName, partition, metastoreUri);
+    String metastoreKerberosPrincipal = options.get("metastoreKrbPrincipal").orElse(null);
+    LOG.info("OPTIONS - database: {} table: {} partition: {} metastoreUri: {} metastoreKerberosPrincipal: {}",
+      dbName, tableName, partition, metastoreUri, metastoreKerberosPrincipal);
     return new HiveStreamingDataSourceWriter(id, schema, dbName, tableName,
-      partitionValues, metastoreUri);
+      partitionValues, metastoreUri, metastoreKerberosPrincipal);
   }
 
   @Override public String keyPrefix() {

@@ -26,7 +26,7 @@ public class HiveStreamingDataSource implements DataSourceV2, WriteSupport, Sess
 
   private HiveStreamingDataSourceWriter createDataSourceWriter(final String id, final StructType schema,
     final DataSourceOptions options) {
-    String dbName = null;
+    String dbName;
     if(options.get("default.db").isPresent()) {
       dbName = options.get("default.db").get();
     } else {
@@ -38,10 +38,12 @@ public class HiveStreamingDataSource implements DataSourceV2, WriteSupport, Sess
     String metastoreUri = options.get("metastoreUri").orElse("thrift://localhost:9083");
     String commitIntervalRows = options.get("commitIntervalRows").orElse("" + DEFAULT_COMMIT_INTERVAL_ROWS);
     long commitInterval = Long.parseLong(commitIntervalRows);
-    LOG.info("OPTIONS - database: {} table: {} partition: {} commitIntervalRows: {} metastoreUri: {}", dbName,
-      tableName, partition, commitInterval, metastoreUri);
+    String metastoreKrbPrincipal = options.get("metastoreKrbPrincipal").orElse(null);
+    LOG.info("OPTIONS - database: {} table: {} partition: {} commitIntervalRows: {} metastoreUri: {} " +
+        "metastoreKrbPrincipal: {}", dbName, tableName, partition, commitInterval,
+      metastoreUri, metastoreKrbPrincipal);
     return new HiveStreamingDataSourceWriter(id, schema, commitInterval, dbName, tableName,
-      partitionValues, metastoreUri);
+      partitionValues, metastoreUri, metastoreKrbPrincipal);
   }
 
   @Override public String keyPrefix() {
