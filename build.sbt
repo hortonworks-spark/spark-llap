@@ -79,7 +79,7 @@ libraryDependencies ++= Seq(
   ("org.apache.hive" % "hive-service" % hiveVersion)
     .exclude("org.apache.hadoop", "hadoop-aws")
     .exclude("org.apache.logging.log4j", "log4j-slf4j-impl")
-    .exclude("com.fasterxml.jackson.core", "jackson-databind"),
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
     .exclude("org.apache.hadoop", "hadoop-aws"),
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
