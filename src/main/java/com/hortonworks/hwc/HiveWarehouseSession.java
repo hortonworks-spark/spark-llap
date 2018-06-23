@@ -17,44 +17,15 @@
 
 package com.hortonworks.hwc;
 
-import com.hortonworks.spark.sql.hive.llap.CreateTableBuilder;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import com.hortonworks.spark.sql.hive.llap.HiveWarehouseBuilder;
 import org.apache.spark.sql.SparkSession;
 
-public interface HiveWarehouseSession {
-
+public interface HiveWarehouseSession extends com.hortonworks.spark.sql.hive.llap.HiveWarehouseSession {
     String HIVE_WAREHOUSE_CONNECTOR = "com.hortonworks.spark.sql.hive.llap.HiveWarehouseConnector";
     String DATAFRAME_TO_STREAM = "com.hortonworks.spark.sql.hive.llap.HiveStreamingDataSource";
     String STREAM_TO_STREAM = "com.hortonworks.spark.sql.hive.llap.streaming.HiveStreamingDataSource";
-    String SPARK_DATASOURCES_PREFIX = "spark.datasource";
-    String HIVE_WAREHOUSE_POSTFIX = "hive.warehouse";
-    String CONF_PREFIX = SPARK_DATASOURCES_PREFIX + "." + HIVE_WAREHOUSE_POSTFIX;
 
-    Dataset<Row> executeQuery(String sql);
-    Dataset<Row> q(String sql);
-
-    Dataset<Row> execute(String sql);
-
-    boolean executeUpdate(String sql);
-
-    Dataset<Row> table(String sql);
-
-    SparkSession session();
-
-    void setDatabase(String name);
-
-    Dataset<Row> showDatabases();
-
-    Dataset<Row> showTables();
-
-    Dataset<Row> describeTable(String table);
-
-    void createDatabase(String database, boolean ifNotExists);
-
-    CreateTableBuilder createTable(String tableName);
-
-    void dropDatabase(String database, boolean ifExists, boolean cascade);
-
-    void dropTable(String table, boolean ifExists, boolean purge);
+    static HiveWarehouseBuilder session(SparkSession session) {
+        return HiveWarehouseBuilder.session(session);
+    }
 }

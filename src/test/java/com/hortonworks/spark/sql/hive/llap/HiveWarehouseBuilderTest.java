@@ -32,6 +32,17 @@ class HiveWarehouseBuilderTest extends SessionTestBase {
     static final Integer TEST_EXEC_RESULTS_MAX = 12345;
     static final String TEST_DEFAULT_DB = "default12345";
 
+    @Test
+    void testNewEntryPoint() {
+        session.sessionState().conf().setConfString(HWConf.HIVESERVER2_JDBC_URL, "test");
+        com.hortonworks.hwc.HiveWarehouseSession hive =
+            com.hortonworks.hwc.HiveWarehouseSession.session(session)
+                .userPassword(TEST_USER, TEST_PASSWORD)
+                .dbcp2Conf(TEST_DBCP2_CONF)
+                .maxExecResults(TEST_EXEC_RESULTS_MAX)
+                .defaultDB(TEST_DEFAULT_DB).build();
+        assertEquals(hive.session(), session);
+    }
 
     @Test
     void testAllBuilderConfig() {

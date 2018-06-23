@@ -32,7 +32,7 @@ import java.util.function.Supplier;
 import static com.hortonworks.spark.sql.hive.llap.HWConf.*;
 import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.useDatabase;
 
-public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
+public class HiveWarehouseSessionImpl implements com.hortonworks.hwc.HiveWarehouseSession {
   static String HIVE_WAREHOUSE_CONNECTOR_INTERNAL = HiveWarehouseSession.HIVE_WAREHOUSE_CONNECTOR;
 
   protected HiveWarehouseSessionState sessionState;

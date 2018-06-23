@@ -30,6 +30,7 @@ class TestJavaProxy extends FunSuite {
 
   test("HiveWarehouseBuilderTest") {
     val test = new HiveWarehouseBuilderTest()
+    withSetUpAndTearDown(test, test.testNewEntryPoint)
     withSetUpAndTearDown(test, test.testAllBuilderConfig)
     withSetUpAndTearDown(test, test.testAllConfConfig)
   }
