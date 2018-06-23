@@ -39,7 +39,7 @@ public class JobUtil {
     return jobConf;
   }
 
-  public static void replaceSparkHiveDriver() throws SQLException {
+  public static void replaceSparkHiveDriver() throws Exception {
     Enumeration<Driver> drivers = DriverManager.getDrivers();
     while(drivers.hasMoreElements()) {
       Driver driver = drivers.nextElement();
@@ -52,8 +52,7 @@ public class JobUtil {
         LOG.debug("Not deregistering the {}", driverName);
       }
     }
-
-    Utils.classForName("shadehive.org.apache.hive.jdbc.HiveDriver");
+    DriverManager.registerDriver((Driver) Class.forName("shadehive.org.apache.hive.jdbc.HiveDriver").newInstance());
   }
 
 }
