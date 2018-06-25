@@ -14,3 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+from pyspark_llap.sql.session import HiveWarehouseSession
+
+__all__ = ['HiveWarehouseSession']

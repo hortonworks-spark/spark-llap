@@ -307,7 +307,7 @@ def addPyFilesToZipStream(parent: String, source: File, output: ZipOutputStream)
 }
 
 resourceGenerators in Compile += Def.macroValueI(resourceManaged in Compile map { outDir: File =>
-  val src = new File("./python/pyspark_llap")
+  val src = new File("./python/pyspark_hwc")
   val zipFile = new File(s"./target/pyspark_hwc-$versionString.zip")
   zipFile.delete()
   pyFilesZipRecursive(src, zipFile)

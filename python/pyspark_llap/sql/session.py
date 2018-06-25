@@ -85,11 +85,11 @@ class HiveWarehouseBuilder(object):
         return self
 
     def build(self):
-        return HiveWarehouseSession(self._spark_session, self._jhwbuilder.build())
+        return HiveWarehouseSessionImpl(self._spark_session, self._jhwbuilder.build())
 
 
-class HiveWarehouseSession(object):
-    """This only can be created via HiveWarehouseBuilder.session(...).build()."""
+class HiveWarehouseSessionImpl(object):
+    """This only can be created via HiveWarehouseSession.session(...).build()."""
 
     def __init__(self, spark_session, jhwsession):
         self._spark_session = spark_session
@@ -210,3 +210,14 @@ class CreateTableBuilder(object):
 
     def toString(self):
         return str(self._jtablebuilder.toString())
+
+
+class HiveWarehouseSession(object):
+    """Public interface for Spark LLAP."""
+    HIVE_WAREHOUSE_CONNECTOR = "com.hortonworks.spark.sql.hive.llap.HiveWarehouseConnector"
+    DATAFRAME_TO_STREAM = "com.hortonworks.spark.sql.hive.llap.HiveStreamingDataSource"
+    STREAM_TO_STREAM = "com.hortonworks.spark.sql.hive.llap.streaming.HiveStreamingDataSource"
+
+    @staticmethod
+    def session(session):
+        return HiveWarehouseBuilder.session(session)
