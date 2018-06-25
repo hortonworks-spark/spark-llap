@@ -75,7 +75,7 @@ class HiveWarehouseBuilder(object):
         return self
 
     def principal(self, principal):
-        assert isinstance(defaultDB, basestring), "principal should be a string"
+        assert isinstance(principal, basestring), "principal should be a string"
 
         self._jhwbuilder.principal(principal)
         return self
