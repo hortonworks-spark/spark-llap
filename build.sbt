@@ -228,7 +228,7 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.commons", "commons-lang3")
     .exclude("org.apache.calcite", "calcite-core")
 )
-dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
+dependencyOverrides += "com.google.guava" % "guava" % "14.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.10"
 dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
 dependencyOverrides += "io.netty" % "netty-all" % "4.1.17.Final"
@@ -307,7 +307,7 @@ def addPyFilesToZipStream(parent: String, source: File, output: ZipOutputStream)
 }
 
 resourceGenerators in Compile += Def.macroValueI(resourceManaged in Compile map { outDir: File =>
-  val src = new File("./python/pyspark_hwc")
+  val src = new File("./python/pyspark_llap")
   val zipFile = new File(s"./target/pyspark_hwc-$versionString.zip")
   zipFile.delete()
   pyFilesZipRecursive(src, zipFile)
