@@ -119,7 +119,7 @@ public enum HWConf {
    */
    public static String getConnectionUrlFromConf(HiveWarehouseSessionState state) {
      SparkSession sparkSession = state.session;
-     if (sparkSession.conf().get(HIVESERVER2_CREDENTIAL_ENABLED, "false").equals("true")) {
+     if (sparkSession.conf().get(HIVESERVER2_CREDENTIAL_ENABLED, "true").equals("true")) {
        // 1. YARN Cluster mode for kerberized clusters
        return format("%s;auth=delegationToken", sparkSession.conf().get(HIVESERVER2_JDBC_URL));
      } else if (sparkSession.conf().contains(HIVESERVER2_JDBC_URL_PRINCIPAL)) {
