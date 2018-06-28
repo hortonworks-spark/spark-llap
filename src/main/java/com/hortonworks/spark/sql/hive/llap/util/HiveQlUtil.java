@@ -73,7 +73,6 @@ public class HiveQlUtil {
         String x = format("CREATE DATABASE %s %s",
                 orBlank(ifNotExists, "IF NOT EXISTS"),
                 database);
-        System.out.println("TEST: " + x);
         return x;
     }
 
