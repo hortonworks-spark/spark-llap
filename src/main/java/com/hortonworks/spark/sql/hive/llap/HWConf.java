@@ -102,7 +102,7 @@ public enum HWConf {
 }
     String urlString = getConnectionUrlFromConf(state);
     String returnValue = urlString.replace("${user}", userString);
-    LOG.warn("Using HS2 URL: {}", returnValue);
+    LOG.info("Using HS2 URL: {}", returnValue);
     return returnValue;
   }
 
