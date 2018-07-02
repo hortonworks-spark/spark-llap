@@ -78,14 +78,16 @@ class HiveWarehouseSessionHiveQlTest extends SessionTestBase {
 
     @Test
     void testCreateTable() {
-        hive.createTable("TestTable")
-                .ifNotExists()
-                .column("id", "int")
-                .column("val", "string")
-                .partition("id", "int")
-                .clusterBy(100, "val")
-                .prop("key", "value")
-                .create();
+        com.hortonworks.hwc.CreateTableBuilder builder =
+          hive.createTable("TestTable");
+        builder
+          .ifNotExists()
+          .column("id", "int")
+          .column("val", "string")
+          .partition("id", "int")
+          .clusterBy(100, "val")
+          .prop("key", "value")
+          .create();
     }
 
 }
