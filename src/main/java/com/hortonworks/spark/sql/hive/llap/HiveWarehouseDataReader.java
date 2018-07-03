@@ -11,12 +11,20 @@ import org.apache.spark.sql.sources.v2.reader.DataReader;
 import org.apache.spark.sql.vectorized.ArrowColumnVector;
 import org.apache.spark.sql.vectorized.ColumnVector;
 import org.apache.spark.sql.vectorized.ColumnarBatch;
+import org.apache.spark.TaskContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.hive.llap.SubmitWorkInfo;
+import org.apache.hadoop.mapreduce.TaskType;
 
 public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
 
@@ -24,7 +32,18 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
   private ArrowWrapperWritable wrapperWritable = new ArrowWrapperWritable();
 
   public HiveWarehouseDataReader(LlapInputSplit split, JobConf conf, long arrowAllocatorMax) throws Exception {
+    //Set TASK_ATTEMPT_ID to submit to LlapOutputFormatService
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, getTaskAttemptID(split, conf).toString());
     this.reader = getRecordReader(split, conf, arrowAllocatorMax);
+  }
+
+  private static TaskAttemptID getTaskAttemptID(LlapInputSplit split, JobConf conf) throws IOException {
+    //Get pseudo-ApplicationId to submit task attempt from external client
+    SubmitWorkInfo submitWorkInfo = SubmitWorkInfo.fromBytes(split.getPlanBytes());
+    ApplicationId appId = submitWorkInfo.getFakeAppId();
+    JobID jobId = new JobID(Long.toString(appId.getClusterTimestamp()), appId.getId());
+    //Create TaskAttemptID from Spark TaskContext (TaskType doesn't matter)
+    return new TaskAttemptID(new TaskID(jobId, TaskType.MAP, TaskContext.get().partitionId()), TaskContext.get().attemptNumber());
   }
 
   protected RecordReader<?, ArrowWrapperWritable> getRecordReader(LlapInputSplit split, JobConf conf, long arrowAllocatorMax)
@@ -64,3 +83,4 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
   }
 
 }
+
