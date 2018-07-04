@@ -80,10 +80,11 @@ case class Schema(ws_sold_date_sk: Int, ws_sold_time_sk: Int, ws_ship_date_sk: I
 object HiveStreamingExample {
 
   def main(args: Array[String]): Unit = {
-    if (args.length < 3 || args.length > 5) {
+    if (args.length != 3 && args.length != 5) {
       // scalastyle:off println
-      System.err.println(s"Usage: HiveStreamingExample <socket host> <socket port>" +
-        s" <metastore uri> <metastore kerberos principal>")
+      System.err.println(s"Usage: HiveStreamingExample <socket host> <socket port>")
+      System.err.println(s"Usage: HiveStreamingExample " +
+        s"<socket host> <socket port> <database> <table>")
       // scalastyle:on println
       System.exit(1)
     }
@@ -91,10 +92,6 @@ object HiveStreamingExample {
     val host = args(0)
     val port = args(1)
     val metastoreUri = args(2)
-    var metastoreKrbPrincipal: String = null
-    if (args.length > 3) {
-      metastoreKrbPrincipal = args(3)
-    }
 
     val sparkConf = new SparkConf()
       .set("spark.sql.streaming.checkpointLocation", "./checkpoint")
@@ -112,6 +109,12 @@ object HiveStreamingExample {
       .load()
       .as[String]
 
+    val (dbName, tableName) = if (args.length == 5) {
+      (args(3), args(4))
+    } else {
+      (sparkConf.get("spark.datasource.hive.warehouse.dbname"),
+        sparkConf.get("spark.datasource.hive.warehouse.tablename"))
+    }
     val writer =
       socket.map { s =>
         val x = s.split(",")
@@ -126,12 +129,8 @@ object HiveStreamingExample {
         .writeStream
         .format("com.hortonworks.spark.sql.hive.llap.streaming.HiveStreamingDataSource")
         .option("metastoreUri", metastoreUri)
-        .option("database", "streaming")
-        .option("table", "web_sales")
-
-    if (metastoreKrbPrincipal != null) {
-      writer.option("metastoreKrbPrincipal", metastoreKrbPrincipal)
-    }
+        .option("database", dbName)
+        .option("table", tableName)
 
     // before this, a new terminal that runs 'nc -l <port>' has to be started and
     // csv records for web_sales table has to be pasted so that spark streaming
