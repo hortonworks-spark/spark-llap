@@ -195,10 +195,18 @@ class JDBCWrapper {
                   query: String): Boolean = {
     useDatabase(conn, currentDatabase)
     val stmt = conn.prepareStatement(query)
-    val succeed = stmt.execute()
-    stmt.close()
     log.debug(query)
-    succeed
+    //TODO Workaround until HIVE-14388 provides stmt.numRowsAffected
+    try {
+      stmt.execute()
+      true
+    } catch {
+      case e: Exception =>
+        log.error(s"executeUpdate failed for query: ${query}", e)
+        false
+    } finally {
+      stmt.close()
+    }
   }
 
   def useDatabase(conn: Connection, currentDatabase: String) {
