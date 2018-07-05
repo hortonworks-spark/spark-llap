@@ -196,6 +196,7 @@ class JDBCWrapper {
     useDatabase(conn, currentDatabase)
     val stmt = conn.prepareStatement(query)
     log.debug(query)
+    //TODO Workaround until HIVE-14388 provides stmt.numRowsAffected
     try {
       stmt.execute()
       true
