@@ -53,7 +53,7 @@ public class HiveWarehouseDataWriter implements DataWriter<InternalRow> {
   }
 
   @Override public void abort() throws IOException {
-    LOG.info("Driver sent abort for %s_%s_%s", jobId, partitionId, attemptNumber);
+    LOG.info("Driver sent abort for {}_{}_{}", jobId, partitionId, attemptNumber);
     try {
       out.close();
     } finally {
