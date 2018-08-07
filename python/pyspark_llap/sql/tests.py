@@ -177,6 +177,9 @@ class HiveWarehouseSessionHiveQlTest(unittest.TestCase):
     def test_execute_query(self):
         self.assertEqual(self.hive.executeQuery("SELECT * FROM t1").count(), self.RESULT_SIZE)
 
+    def test_execute_update(self):
+        self.assertEqual(self.hive.executeUpdate("SELECT * FROM t1"), True)
+
     def test_set_database(self):
         self.hive.setDatabase(TEST_DEFAULT_DB)
 

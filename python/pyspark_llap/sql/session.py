@@ -110,6 +110,11 @@ class HiveWarehouseSessionImpl(object):
 
         return DataFrame(self._jhwsession.execute(sql), self._spark_session._wrapped)
 
+    def executeUpdate(self, sql):
+        assert isinstance(sql, basestring), "sql should be a string"
+
+        return bool(self._jhwsession.executeUpdate(sql))
+
     def table(self, sql):
         assert isinstance(sql, basestring), "sql should be a string"
 
