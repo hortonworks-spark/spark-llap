@@ -228,6 +228,7 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.commons", "commons-lang3")
     .exclude("org.apache.calcite", "calcite-core")
 )
+excludeDependencies += "commons-cli" % "commons-cli"
 dependencyOverrides += "com.google.guava" % "guava" % "14.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.10"
 dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
