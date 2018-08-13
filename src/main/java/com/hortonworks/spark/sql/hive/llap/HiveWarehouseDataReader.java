@@ -81,7 +81,6 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
     //column types can be handled differently.
     //NumOfCols << NumOfRows so this is negligible
     List<FieldVector> fieldVectors = wrapperWritable.getVectorSchemaRoot().getFieldVectors();
-    ColumnVector[] columnVectors = new ColumnVector[fieldVectors.size()];
     if(columnVectors == null) {
       //Lazy create ColumnarBatch/ColumnVector[] instance
       columnVectors = new ColumnVector[fieldVectors.size()];
