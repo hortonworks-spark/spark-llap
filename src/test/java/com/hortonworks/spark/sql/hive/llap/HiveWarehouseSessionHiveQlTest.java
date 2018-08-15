@@ -55,6 +55,18 @@ class HiveWarehouseSessionHiveQlTest extends SessionTestBase {
     }
 
     @Test
+    void testUnqualifiedTable() {
+        assertEquals(hive.table("t1").count(),
+            SimpleMockConnector.SimpleMockDataReader.RESULT_SIZE);
+    }
+
+    @Test
+    void testQualifiedTable() {
+        assertEquals(hive.table("default.t1").count(),
+            SimpleMockConnector.SimpleMockDataReader.RESULT_SIZE);
+    }
+
+    @Test
     void testSetDatabase() {
         hive.setDatabase(TEST_DEFAULT_DB);
     }

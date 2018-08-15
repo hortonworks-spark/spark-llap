@@ -28,7 +28,7 @@ public class HiveQlUtil {
   }
 
   public static String selectStar(String database, String table) {
-    return format("SELECT * FROM %.%", database, table);
+    return format("SELECT * FROM %s.%s", database, table);
   }
 
   public static String selectStar(String table) {

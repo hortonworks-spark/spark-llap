@@ -76,7 +76,7 @@ public class HiveWarehouseDataSourceReader
       selectCols = projections(requiredColumns);
     }
     String baseQuery;
-    if (getQueryType().equals("table")) {
+    if (getQueryType() == StatementType.FULL_TABLE_SCAN) {
       baseQuery = selectStar(options.get("table"));
     } else {
       baseQuery = options.get("query");
@@ -97,7 +97,8 @@ public class HiveWarehouseDataSourceReader
     StatementType queryKey = getQueryType();
       String query;
       if (queryKey == StatementType.FULL_TABLE_SCAN) {
-        SchemaUtil.TableRef tableRef = SchemaUtil.getDbTableNames(options.get("table"));
+        String dbName = HWConf.DEFAULT_DB.getFromOptionsMap(options);
+        SchemaUtil.TableRef tableRef = SchemaUtil.getDbTableNames(dbName, options.get("table"));
         query = selectStar(tableRef.databaseName, tableRef.tableName);
       } else {
         query = options.get("query");

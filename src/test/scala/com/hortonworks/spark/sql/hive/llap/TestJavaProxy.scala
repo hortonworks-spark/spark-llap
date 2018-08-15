@@ -41,6 +41,8 @@ class TestJavaProxy extends FunSuite {
     withSetUpAndTearDown(test, test.testCreateTable)
     withSetUpAndTearDown(test, test.testDescribeTable)
     withSetUpAndTearDown(test, test.testExecuteQuery)
+    withSetUpAndTearDown(test, test.testUnqualifiedTable)
+    withSetUpAndTearDown(test, test.testQualifiedTable)
     withSetUpAndTearDown(test, test.testSetDatabase)
     withSetUpAndTearDown(test, test.testShowTable)
   }

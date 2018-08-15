@@ -37,12 +37,17 @@ public class SchemaUtil {
     return requiredColumns;
   }
 
-  public static TableRef getDbTableNames(String nameStr) {
+  public static TableRef getDbTableNames(String db, String nameStr) {
     String[] nameParts = nameStr.split("\\.");
-    if (nameParts.length != 2) {
-      throw new IllegalArgumentException("Expected " + nameStr + " to be in the form db.table");
+    if (nameParts.length == 1) {
+      //hive.table(<unqualified_tableName>) so fill in db from default session db
+      return new TableRef(db, nameStr);
+    } else if(nameParts.length == 2) {
+      //hive.table(<qualified_tableName>) so use the provided db
+      return new TableRef(nameParts[0], nameParts[1]);
+    } else {
+      throw new IllegalArgumentException("Table name should be specified as either <table> or <db.table>");
     }
-    return new TableRef(nameParts[0], nameParts[1]);
   }
 
   public static class TableRef {
