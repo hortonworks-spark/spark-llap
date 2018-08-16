@@ -55,9 +55,9 @@ public class HiveQlUtil {
     }
 
     public static String dropDatabase(String database, boolean ifExists, boolean cascade) {
-        return format("DROP %s %s %s",
-                database,
+        return format("DROP DATABASE %s %s %s",
                 orBlank(ifExists, "IF EXISTS"),
+                database,
                 orBlank(cascade, "CASCADE"));
     }
 

@@ -84,6 +84,15 @@ class HiveWarehouseSessionHiveQlTest extends SessionTestBase {
     }
 
     @Test
+    void testDropDatabase() {
+        //Tests if generated syntax is parsed by HiveParser
+        hive.dropDatabase(TEST_DEFAULT_DB, false, false);
+        hive.dropDatabase(TEST_DEFAULT_DB, false, true);
+        hive.dropDatabase(TEST_DEFAULT_DB, true, false);
+        hive.dropDatabase(TEST_DEFAULT_DB, true, true);
+    }
+
+    @Test
     void testShowTable() {
         assertEquals(hive.showTables().count(), mockExecuteResultSize);
     }
