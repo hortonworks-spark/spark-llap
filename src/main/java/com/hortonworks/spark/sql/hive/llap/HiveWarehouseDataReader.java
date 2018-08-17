@@ -49,7 +49,7 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
     this.reader = getRecordReader(split, conf, arrowAllocatorMax);
   }
 
-  private static TaskAttemptID getTaskAttemptID(LlapInputSplit split, JobConf conf) throws IOException {
+  protected TaskAttemptID getTaskAttemptID(LlapInputSplit split, JobConf conf) throws IOException {
     //Get pseudo-ApplicationId to submit task attempt from external client
     SubmitWorkInfo submitWorkInfo = SubmitWorkInfo.fromBytes(split.getPlanBytes());
     ApplicationId appId = submitWorkInfo.getFakeAppId();
