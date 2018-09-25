@@ -3,11 +3,9 @@ package com.hortonworks.spark.sql.hive.llap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.spark.sql.SaveMode;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.execution.datasources.OutputWriter;
 import org.apache.spark.sql.execution.datasources.orc.OrcOutputWriter;
@@ -38,7 +36,7 @@ public class HiveWarehouseDataWriter implements DataWriter<InternalRow> {
     this.attemptNumber = attemptNumber;
     this.fs = fs;
     this.filePath = filePath;
-    conf.set("orc.mapred.output.schema", this.schema.simpleString());
+    conf.set("orc.mapred.output.schema", this.schema.catalogString());
     TaskAttemptContext tac = new TaskAttemptContextImpl(conf, new TaskAttemptID());
     this.out = getOutputWriter(filePath.toString(), schema, tac);
   }
