@@ -59,6 +59,11 @@ class TestJavaProxy extends FunSuite {
     withSetUpAndTearDown(test, test.testWriteSupport);
   }
 
+  test("SchemaUtilTest") {
+    val test = new SchemaUtilTest()
+    withSetUpAndTearDown(test, test.testBuildHiveCreateTableQueryFromSparkDFSchema)
+  }
+
   test("TestReadSupport") {
     val test = new TestReadSupport()
     withSetUpAndTearDown(test, test.testReadSupport);

@@ -37,7 +37,7 @@ public class CreateTableBuilder implements com.hortonworks.hwc.CreateTableBuilde
     private String[] clusters;
     private Long buckets;
 
-    CreateTableBuilder(HiveWarehouseSession hive, String database, String tableName) {
+    public CreateTableBuilder(HiveWarehouseSession hive, String database, String tableName) {
         this.hive = hive;
         this.tableName = tableName;
         this.database = database;

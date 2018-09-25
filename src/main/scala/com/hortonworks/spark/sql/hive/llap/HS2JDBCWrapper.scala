@@ -132,6 +132,28 @@ class JDBCWrapper {
     }
   }
 
+  /**
+    * Checks if table exists in database.
+    *
+    * @param conn JDBC connection
+    * @param dbName Database name
+    * @param tableName Name of the table for which existence is to be checked
+    * @return true if table exists in database, false otherwise.
+    */
+  def tableExists(conn: Connection, dbName: String, tableName: String): Boolean = {
+    val dbMeta: DatabaseMetaData = conn.getMetaData
+    val rs: ResultSet = dbMeta.getTables(null, dbName, tableName, null)
+    try {
+      while (rs.next()) {
+        val tableNameFromDB: String = rs.getString("TABLE_NAME")
+        if (tableNameFromDB != null && tableNameFromDB.equalsIgnoreCase(tableName)) return true
+      }
+    } finally {
+      rs.close()
+    }
+    false
+  }
+
   def populateSchemaFields(ncols: Int,
                            rsmd: ResultSetMetaData,
                            fields: Array[StructField]): Unit = {
