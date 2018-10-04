@@ -1,14 +1,31 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hortonworks.spark.sql.hive.llap;
 
+import com.hortonworks.spark.sql.hive.llap.util.SchemaUtil;
+import com.hortonworks.spark.sql.hive.llap.util.SerializableHadoopConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
 import org.apache.spark.sql.sources.v2.writer.SupportsWriteInternalRow;
 import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage;
 import org.apache.spark.sql.types.StructType;
-import org.apache.spark.util.SerializableConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
@@ -17,7 +34,6 @@ import java.sql.Connection;
 import java.util.Map;
 
 import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.loadInto;
-import static java.lang.String.format;
 
 public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
   protected String jobId;
@@ -37,7 +53,7 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
   }
 
   @Override public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
-    return new HiveWarehouseDataWriterFactory(jobId, schema, path.toString(), new SerializableConfiguration(conf));
+    return new HiveWarehouseDataWriterFactory(jobId, schema, path, new SerializableHadoopConfiguration(conf));
   }
 
   @Override public void commit(WriterCommitMessage[] messages) {
@@ -47,7 +63,11 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
       String dbcp2Configs = HWConf.DBCP2_CONF.getFromOptionsMap(options);
       String database = HWConf.DEFAULT_DB.getFromOptionsMap(options);
       String table = options.get("table");
+      SchemaUtil.TableRef tableRef = SchemaUtil.getDbTableNames(database, table);
+      database = tableRef.databaseName;
+      table = tableRef.tableName;
       try (Connection conn = DefaultJDBCWrapper.getConnector(Option.empty(), url, user, dbcp2Configs)) {
+        createTableIfNeeded(database, table, conn);
         DefaultJDBCWrapper.executeUpdate(conn, database, loadInto(this.path.toString(), database, table));
       } catch (java.sql.SQLException e) {
         throw new RuntimeException(e);
@@ -59,6 +79,14 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
         LOG.warn("Failed to cleanup temp dir {}", path.toString());
       }
       LOG.info("Commit job {}", jobId);
+    }
+  }
+
+  private void createTableIfNeeded(String database, String table, Connection conn) {
+    if (!DefaultJDBCWrapper.tableExists(conn, database, table)) {
+      LOG.info("Table: {} does not exist in database: {}. Creating a new one.", table, database);
+      String createTableQuery = SchemaUtil.buildHiveCreateTableQueryFromSparkDFSchema(schema, database, table);
+      DefaultJDBCWrapper.executeUpdate(conn, database, createTableQuery);
     }
   }
 

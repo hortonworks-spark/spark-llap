@@ -3,11 +3,10 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.zip.{ZipEntry, ZipOutputStream}
 
 
-name := "spark-llap"
-//<ownVersion>-<sparkVersion>-<hiveVersion>
-val versionString = sys.props.getOrElse("version", "1.2-2.3-3.0-SNAPSHOT")
+name := "hive-warehouse-connector"
+val versionString = sys.props.getOrElse("version", "1.0.0-SNAPSHOT")
 version := versionString
-organization := "com.hortonworks.spark"
+organization := "com.hortonworks.hive"
 scalaVersion := "2.11.8"
 val scalatestVersion = "2.2.6"
 
@@ -20,7 +19,7 @@ val tezVersion = sys.props.getOrElse("tez.version", "0.9.1")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
 val repoUrl = sys.props.getOrElse("repourl", "https://repo1.maven.org/maven2/")
 
-spName := "hortonworks/spark-llap"
+spName := "hortonworks/hive-warehouse-connector"
 
 val testSparkVersion = settingKey[String]("The version of Spark to test against.")
 
@@ -38,7 +37,8 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-catalyst" % testSparkVersion.value % "provided" force(),
   "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "provided" force(),
   ("org.apache.spark" %% "spark-hive" % testSparkVersion.value % "provided" force())
-    .exclude("org.apache.hive", "hive-exec"),
+    .exclude("org.apache.hive", "hive-exec")
+    .exclude("org.apache.hive", "hive-service"),
   "org.apache.spark" %% "spark-yarn" % testSparkVersion.value % "provided" force(),
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.5" % "compile",
   "jline" % "jline" % "2.12.1" % "compile",
@@ -76,7 +76,11 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.hadoop", "hadoop-auth")
     .exclude("org.apache.hadoop", "hadoop-hdfs")
     .exclude("com.fasterxml.jackson.core", "jackson-databind"),
-
+  ("org.apache.hive" % "hive-service" % hiveVersion)
+    .exclude("org.apache.hadoop", "hadoop-aws")
+    .exclude("org.apache.logging.log4j", "log4j-slf4j-impl")
+    .exclude("com.fasterxml.jackson.core", "jackson-databind")
+    .exclude("org.apache.hadoop", "hadoop-aws"),
   ("org.apache.hive" % "hive-llap-ext-client" % hiveVersion)
     .exclude("ant", "ant")
     .exclude("org.apache.ant", "ant")
@@ -224,7 +228,8 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.commons", "commons-lang3")
     .exclude("org.apache.calcite", "calcite-core")
 )
-dependencyOverrides += "com.google.guava" % "guava" % "16.0.1"
+excludeDependencies += "commons-cli" % "commons-cli"
+dependencyOverrides += "com.google.guava" % "guava" % "14.0.1"
 dependencyOverrides += "commons-codec" % "commons-codec" % "1.10"
 dependencyOverrides += "commons-logging" % "commons-logging" % "1.2"
 dependencyOverrides += "io.netty" % "netty-all" % "4.1.17.Final"
@@ -268,9 +273,9 @@ assemblyMergeStrategy in assembly := {
   case PathList("git.properties") => MergeStrategy.first
   case PathList("META-INF", "services", "org.apache.hadoop.fs.FileSystem") => MergeStrategy.discard
   case x if x.endsWith("package-info.class") => MergeStrategy.first
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
+  case PathList("META-INF", "services", xs @ _*) => MergeStrategy.first
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
 }
 
 def pyFilesZipRecursive(source: File, destZipFile: File): Unit = {
@@ -304,7 +309,7 @@ def addPyFilesToZipStream(parent: String, source: File, output: ZipOutputStream)
 
 resourceGenerators in Compile += Def.macroValueI(resourceManaged in Compile map { outDir: File =>
   val src = new File("./python/pyspark_llap")
-  val zipFile = new File(s"./target/pyspark_llap-$versionString.zip")
+  val zipFile = new File(s"./target/pyspark_hwc-$versionString.zip")
   zipFile.delete()
   pyFilesZipRecursive(src, zipFile)
   Seq.empty[File]

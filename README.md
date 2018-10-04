@@ -10,7 +10,7 @@ Compatibility
 Note that for open-source usage, master branch requires Hive 3.1.0 which is a
 forthcoming release. For configuration of prior versions, please see [prior documentation](https://github.com/hortonworks-spark/spark-llap/wiki).
 
-| branch | Spark | Hive  | HDP | 
+| branch | Spark | Hive  | HDP |
 | ------------- |:-------------:|:-----:|-----:|
 | master (Summer 2018) | 2.3.1 | 3.1.0 | 3.0.0 (GA) |
 | branch-2.3 | 2.3.0 | 2.1.0 | 2.6.x (TP) |
@@ -273,4 +273,3 @@ Read table data from Hive, transform in Spark, write to new Hive table
 	df2.show(20)
 	hive.dropTable(tempTable, true, false)
 ```
-

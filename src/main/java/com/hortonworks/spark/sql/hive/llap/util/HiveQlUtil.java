@@ -28,7 +28,7 @@ public class HiveQlUtil {
   }
 
   public static String selectStar(String database, String table) {
-    return format("SELECT * FROM %.%", database, table);
+    return format("SELECT * FROM %s.%s", database, table);
   }
 
   public static String selectStar(String table) {
@@ -55,9 +55,9 @@ public class HiveQlUtil {
     }
 
     public static String dropDatabase(String database, boolean ifExists, boolean cascade) {
-        return format("DROP %s %s %s",
-                database,
+        return format("DROP DATABASE %s %s %s",
                 orBlank(ifExists, "IF EXISTS"),
+                database,
                 orBlank(cascade, "CASCADE"));
     }
 
@@ -73,7 +73,6 @@ public class HiveQlUtil {
         String x = format("CREATE DATABASE %s %s",
                 orBlank(ifNotExists, "IF NOT EXISTS"),
                 database);
-        System.out.println("TEST: " + x);
         return x;
     }
 

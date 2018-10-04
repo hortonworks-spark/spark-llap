@@ -15,22 +15,17 @@
  * limitations under the License.
  */
 
-package com.hortonworks.spark.sql.hive.llap;
+package com.hortonworks.hwc;
 
+import com.hortonworks.spark.sql.hive.llap.HiveWarehouseBuilder;
 import org.apache.spark.sql.SparkSession;
 
-import java.util.HashMap;
-import java.util.Map;
+public interface HiveWarehouseSession extends com.hortonworks.spark.sql.hive.llap.HiveWarehouseSession {
+    String HIVE_WAREHOUSE_CONNECTOR = "com.hortonworks.spark.sql.hive.llap.HiveWarehouseConnector";
+    String DATAFRAME_TO_STREAM = "com.hortonworks.spark.sql.hive.llap.HiveStreamingDataSource";
+    String STREAM_TO_STREAM = "com.hortonworks.spark.sql.hive.llap.streaming.HiveStreamingDataSource";
 
-// Exposed for Python side.
-public class HiveWarehouseSessionState {
-
-    public SparkSession session;
-    Map<String, String> props = new HashMap<>();
-
-
-    // Exposed for Python side.
-    public Map<String, String> getProps() {
-        return this.props;
+    static HiveWarehouseBuilder session(SparkSession session) {
+        return HiveWarehouseBuilder.session(session);
     }
 }

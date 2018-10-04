@@ -52,16 +52,16 @@ public enum HWConf {
   }
 
   private static Logger LOG = LoggerFactory.getLogger(HWConf.class);
-  static final String HIVESERVER2_CREDENTIAL_ENABLED = "spark.security.credentials.hiveserver2.enabled";
-  static final String HIVESERVER2_JDBC_URL_PRINCIPAL = "spark.sql.hive.hiveserver2.jdbc.url.principal";
-  static final String HIVESERVER2_JDBC_URL = "spark.sql.hive.hiveserver2.jdbc.url";
+  public static final String HIVESERVER2_CREDENTIAL_ENABLED = "spark.security.credentials.hiveserver2.enabled";
+  public static final String HIVESERVER2_JDBC_URL_PRINCIPAL = "spark.sql.hive.hiveserver2.jdbc.url.principal";
+  public static final String HIVESERVER2_JDBC_URL = "spark.sql.hive.hiveserver2.jdbc.url";
 
-  void setString(HiveWarehouseSessionState state, String value) {
+  public void setString(HiveWarehouseSessionState state, String value) {
     state.props.put(qualifiedKey, value);
     state.session.sessionState().conf().setConfString(qualifiedKey, value);
   }
 
-  void setInt(HiveWarehouseSessionState state, Integer value) {
+  public void setInt(HiveWarehouseSessionState state, Integer value) {
     state.props.put(qualifiedKey, Integer.toString(value));
     state.session.sessionState().conf().setConfString(qualifiedKey, Integer.toString(value));
   }
@@ -102,7 +102,7 @@ public enum HWConf {
 }
     String urlString = getConnectionUrlFromConf(state);
     String returnValue = urlString.replace("${user}", userString);
-    LOG.warn("Using HS2 URL: {}", returnValue);
+    LOG.info("Using HS2 URL: {}", returnValue);
     return returnValue;
   }
 
@@ -119,7 +119,7 @@ public enum HWConf {
    */
    public static String getConnectionUrlFromConf(HiveWarehouseSessionState state) {
      SparkSession sparkSession = state.session;
-     if (sparkSession.conf().get(HIVESERVER2_CREDENTIAL_ENABLED, "false").equals("true")) {
+     if (sparkSession.conf().get(HIVESERVER2_CREDENTIAL_ENABLED, "true").equals("true")) {
        // 1. YARN Cluster mode for kerberized clusters
        return format("%s;auth=delegationToken", sparkSession.conf().get(HIVESERVER2_JDBC_URL));
      } else if (sparkSession.conf().contains(HIVESERVER2_JDBC_URL_PRINCIPAL)) {

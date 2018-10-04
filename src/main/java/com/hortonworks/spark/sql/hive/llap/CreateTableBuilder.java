@@ -26,7 +26,7 @@ import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.*;
 import static java.lang.String.join;
 import static java.lang.String.format;
 
-public class CreateTableBuilder {
+public class CreateTableBuilder implements com.hortonworks.hwc.CreateTableBuilder {
     private HiveWarehouseSession hive;
     private String database;
     private String tableName;
@@ -37,38 +37,44 @@ public class CreateTableBuilder {
     private String[] clusters;
     private Long buckets;
 
-    CreateTableBuilder(HiveWarehouseSession hive, String database, String tableName) {
+    public CreateTableBuilder(HiveWarehouseSession hive, String database, String tableName) {
         this.hive = hive;
         this.tableName = tableName;
         this.database = database;
     }
 
+    @Override
     public CreateTableBuilder ifNotExists() {
         this.ifNotExists = true;
         return this;
     }
 
+    @Override
     public CreateTableBuilder column(String name, String type) {
         cols.add(Pair.of(name, type));
         return this;
     }
 
+    @Override
     public CreateTableBuilder partition(String name, String type) {
         parts.add(Pair.of(name, type));
         return this;
     }
 
+    @Override
     public CreateTableBuilder prop(String key, String value) {
         props.add(Pair.of(key, value));
         return this;
     }
 
+    @Override
     public CreateTableBuilder clusterBy(long numBuckets, String ... columns) {
         this.buckets = numBuckets;
         this.clusters = columns;
         return this;
     }
 
+    @Override
     public void create() {
         hive.executeUpdate(this.toString());
     }

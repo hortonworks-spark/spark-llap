@@ -21,8 +21,9 @@ import java.lang.reflect.UndeclaredThrowableException
 import java.security.PrivilegedExceptionAction
 import java.sql.{Connection, DriverManager}
 
-import scala.util.control.NonFatal
+import com.hortonworks.spark.sql.hive.llap.util.JobUtil
 
+import scala.util.control.NonFatal
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier
 import org.apache.hadoop.io.Text
@@ -31,8 +32,7 @@ import org.apache.hadoop.security.token.Token
 import org.apache.spark.SparkConf
 import org.apache.spark.deploy.yarn.security.ServiceCredentialProvider
 import org.apache.spark.internal.Logging
-
-import com.hortonworks.spark.sql.hive.llap.Utils
+import com.hortonworks.spark.sql.hive.llap.{LlapRelation, Utils}
 
 private[security] class HiveServer2CredentialProvider extends ServiceCredentialProvider
     with Logging {
@@ -44,9 +44,9 @@ private[security] class HiveServer2CredentialProvider extends ServiceCredentialP
       sparkConf: SparkConf,
       creds: Credentials): Option[Long] = {
 
+    JobUtil.replaceSparkHiveDriver();
     var con: Connection = null
     try {
-      Utils.classForName("org.apache.hive.jdbc.HiveDriver")
 
       val currentUser = UserGroupInformation.getCurrentUser()
       val userName = if (sparkConf.getBoolean(

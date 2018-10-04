@@ -32,7 +32,7 @@ import java.util.function.Supplier;
 import static com.hortonworks.spark.sql.hive.llap.HWConf.*;
 import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.useDatabase;
 
-public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
+public class HiveWarehouseSessionImpl implements com.hortonworks.hwc.HiveWarehouseSession {
   static String HIVE_WAREHOUSE_CONNECTOR_INTERNAL = HiveWarehouseSession.HIVE_WAREHOUSE_CONNECTOR;
 
   protected HiveWarehouseSessionState sessionState;
@@ -43,7 +43,7 @@ public class HiveWarehouseSessionImpl implements HiveWarehouseSession {
 
   protected TriFunction<Connection, String, String, Boolean> executeUpdate;
 
-  HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
+  public HiveWarehouseSessionImpl(HiveWarehouseSessionState sessionState) {
     this.sessionState = sessionState;
     getConnector = () -> DefaultJDBCWrapper.getConnector(sessionState);
     executeStmt = (conn, database, sql) ->

@@ -55,6 +55,18 @@ class HiveWarehouseSessionHiveQlTest extends SessionTestBase {
     }
 
     @Test
+    void testUnqualifiedTable() {
+        assertEquals(hive.table("t1").count(),
+            SimpleMockConnector.SimpleMockDataReader.RESULT_SIZE);
+    }
+
+    @Test
+    void testQualifiedTable() {
+        assertEquals(hive.table("default.t1").count(),
+            SimpleMockConnector.SimpleMockDataReader.RESULT_SIZE);
+    }
+
+    @Test
     void testSetDatabase() {
         hive.setDatabase(TEST_DEFAULT_DB);
     }
@@ -72,20 +84,31 @@ class HiveWarehouseSessionHiveQlTest extends SessionTestBase {
     }
 
     @Test
+    void testDropDatabase() {
+        //Tests if generated syntax is parsed by HiveParser
+        hive.dropDatabase(TEST_DEFAULT_DB, false, false);
+        hive.dropDatabase(TEST_DEFAULT_DB, false, true);
+        hive.dropDatabase(TEST_DEFAULT_DB, true, false);
+        hive.dropDatabase(TEST_DEFAULT_DB, true, true);
+    }
+
+    @Test
     void testShowTable() {
         assertEquals(hive.showTables().count(), mockExecuteResultSize);
     }
 
     @Test
     void testCreateTable() {
-        hive.createTable("TestTable")
-                .ifNotExists()
-                .column("id", "int")
-                .column("val", "string")
-                .partition("id", "int")
-                .clusterBy(100, "val")
-                .prop("key", "value")
-                .create();
+        com.hortonworks.hwc.CreateTableBuilder builder =
+          hive.createTable("TestTable");
+        builder
+          .ifNotExists()
+          .column("id", "int")
+          .column("val", "string")
+          .partition("id", "int")
+          .clusterBy(100, "val")
+          .prop("key", "value")
+          .create();
     }
 
 }

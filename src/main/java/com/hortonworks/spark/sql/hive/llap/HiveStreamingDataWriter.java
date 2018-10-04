@@ -5,6 +5,7 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hive.streaming.HiveStreamingConnection;
 import org.apache.hive.streaming.StreamingConnection;
 import org.apache.hive.streaming.StreamingException;
@@ -32,9 +33,11 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
   private StreamingConnection streamingConnection;
   private long commitAfterNRows;
   private long rowsWritten = 0;
+  private String metastoreKrbPrincipal;
 
   public HiveStreamingDataWriter(String jobId, StructType schema, long commitAfterNRows, int partitionId, int
-    attemptNumber, String db, String table, List<String> partition, final String metastoreUri) {
+    attemptNumber, String db, String table, List<String> partition, final String metastoreUri,
+    final String metastoreKrbPrincipal) {
     this.jobId = jobId;
     this.schema = schema;
     this.partitionId = partitionId;
@@ -44,6 +47,7 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
     this.partition = partition;
     this.metastoreUri = metastoreUri;
     this.commitAfterNRows = commitAfterNRows;
+    this.metastoreKrbPrincipal = metastoreKrbPrincipal;
     try {
       createStreamingConnection();
     } catch (StreamingException e) {
@@ -55,11 +59,20 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
     final StrictDelimitedInputWriter strictDelimitedInputWriter = StrictDelimitedInputWriter.newBuilder()
       .withFieldDelimiter(',').build();
     HiveConf hiveConf = new HiveConf();
-    hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, metastoreUri);
+    hiveConf.set(MetastoreConf.ConfVars.THRIFT_URIS.getHiveName(), metastoreUri);
     // isolated classloader and shadeprefix are required for reflective instantiation of outputformat class when
     // creating hive streaming connection (isolated classloader to load different hive versions and shadeprefix for
     // HIVE-19494)
     hiveConf.setVar(HiveConf.ConfVars.HIVE_CLASSLOADER_SHADE_PREFIX, "shadehive");
+    hiveConf.set(MetastoreConf.ConfVars.CATALOG_DEFAULT.getHiveName(), "hive");
+
+    // HiveStreamingCredentialProvider requires metastore uri and kerberos principal to obtain delegation token to
+    // talk to secure metastore. When HiveConf is created above, hive-site.xml is used from classpath. This option
+    // is just an override in case if kerberos principal cannot be obtained from hive-site.xml.
+    if (metastoreKrbPrincipal != null) {
+      hiveConf.set(MetastoreConf.ConfVars.KERBEROS_PRINCIPAL.getHiveName(), metastoreKrbPrincipal);
+    }
+
     LOG.info("Creating hive streaming connection..");
     streamingConnection = HiveStreamingConnection.newBuilder()
       .withDatabase(db)
@@ -75,11 +88,12 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
 
   @Override
   public void write(final InternalRow record) throws IOException {
-    String delimitedRow = Joiner.on(",").join(scala.collection.JavaConversions.seqAsJavaList(record.toSeq(schema)));
+    String delimitedRow = Joiner.on(",").useForNull("")
+      .join(scala.collection.JavaConversions.seqAsJavaList(record.toSeq(schema)));
     try {
       streamingConnection.write(delimitedRow.getBytes(Charset.forName("UTF-8")));
       rowsWritten++;
-      if (rowsWritten > 0 && (rowsWritten % commitAfterNRows == 0)) {
+      if (rowsWritten > 0 && commitAfterNRows > 0 && (rowsWritten % commitAfterNRows == 0)) {
         LOG.info("Committing transaction after rows: {}", rowsWritten);
         streamingConnection.commitTransaction();
         streamingConnection.beginTransaction();

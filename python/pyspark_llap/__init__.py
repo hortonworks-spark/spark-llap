@@ -14,3 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+from pyspark_llap.sql.session import HiveWarehouseSession
+
+# These are aliases so that importing this module exposes those attributes below directly.
+DATAFRAME_TO_STREAM = HiveWarehouseSession.DATAFRAME_TO_STREAM
+HIVE_WAREHOUSE_CONNECTOR = HiveWarehouseSession.HIVE_WAREHOUSE_CONNECTOR
+STREAM_TO_STREAM = HiveWarehouseSession.STREAM_TO_STREAM
+
+
+__all__ = [
+    'HiveWarehouseSession',
+    'DATAFRAME_TO_STREAM',
+    'HIVE_WAREHOUSE_CONNECTOR',
+    'STREAM_TO_STREAM',
+]

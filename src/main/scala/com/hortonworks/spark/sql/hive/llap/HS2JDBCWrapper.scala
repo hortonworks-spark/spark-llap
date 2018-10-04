@@ -132,6 +132,28 @@ class JDBCWrapper {
     }
   }
 
+  /**
+    * Checks if table exists in database.
+    *
+    * @param conn JDBC connection
+    * @param dbName Database name
+    * @param tableName Name of the table for which existence is to be checked
+    * @return true if table exists in database, false otherwise.
+    */
+  def tableExists(conn: Connection, dbName: String, tableName: String): Boolean = {
+    val dbMeta: DatabaseMetaData = conn.getMetaData
+    val rs: ResultSet = dbMeta.getTables(null, dbName, tableName, null)
+    try {
+      while (rs.next()) {
+        val tableNameFromDB: String = rs.getString("TABLE_NAME")
+        if (tableNameFromDB != null && tableNameFromDB.equalsIgnoreCase(tableName)) return true
+      }
+    } finally {
+      rs.close()
+    }
+    false
+  }
+
   def populateSchemaFields(ncols: Int,
                            rsmd: ResultSetMetaData,
                            fields: Array[StructField]): Unit = {
@@ -195,10 +217,18 @@ class JDBCWrapper {
                   query: String): Boolean = {
     useDatabase(conn, currentDatabase)
     val stmt = conn.prepareStatement(query)
-    val succeed = stmt.execute()
-    stmt.close()
     log.debug(query)
-    succeed
+    //TODO Workaround until HIVE-14388 provides stmt.numRowsAffected
+    try {
+      stmt.execute()
+      true
+    } catch {
+      case e: Exception =>
+        log.error(s"executeUpdate failed for query: ${query}", e)
+        false
+    } finally {
+      stmt.close()
+    }
   }
 
   def useDatabase(conn: Connection, currentDatabase: String) {

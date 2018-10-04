@@ -32,6 +32,7 @@ public class TestSecureHS2Url extends SessionTestBase {
 
   @Test
   public void kerberizedClientMode() {
+    session.conf().set("spark.security.credentials.hiveserver2.enabled", "false");
     HiveWarehouseSessionState state = HiveWarehouseBuilder
         .session(session)
         .hs2url(TEST_HS2_URL)
@@ -45,6 +46,7 @@ public class TestSecureHS2Url extends SessionTestBase {
 
   @Test
   public void nonKerberized() {
+    session.conf().set("spark.security.credentials.hiveserver2.enabled", "false");
     HiveWarehouseSessionState state = HiveWarehouseBuilder
         .session(session)
         .hs2url(TEST_HS2_URL)

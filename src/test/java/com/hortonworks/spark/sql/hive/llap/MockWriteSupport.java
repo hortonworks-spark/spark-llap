@@ -1,5 +1,6 @@
 package com.hortonworks.spark.sql.hive.llap;
 
+import com.hortonworks.spark.sql.hive.llap.util.SerializableHadoopConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -11,8 +12,9 @@ import org.apache.spark.sql.sources.v2.writer.DataWriter;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
 import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage;
 import org.apache.spark.sql.types.StructType;
-import org.apache.spark.util.SerializableConfiguration;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +33,7 @@ public class MockWriteSupport {
 
     @Override
     public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
-      return new MockHiveWarehouseDataWriterFactory(jobId, schema, path.toString(), new SerializableConfiguration(conf));
+      return new MockHiveWarehouseDataWriterFactory(jobId, schema, path, new SerializableHadoopConfiguration(conf));
     }
 
     @Override public void commit(WriterCommitMessage[] messages) {
@@ -41,8 +43,7 @@ public class MockWriteSupport {
 
   public static class MockHiveWarehouseDataWriterFactory extends HiveWarehouseDataWriterFactory {
 
-    public MockHiveWarehouseDataWriterFactory(String jobId, StructType schema, String path,
-        SerializableConfiguration conf) {
+    public MockHiveWarehouseDataWriterFactory(String jobId, StructType schema, Path path, SerializableHadoopConfiguration conf) {
       super(jobId, schema, path, conf);
     }
 

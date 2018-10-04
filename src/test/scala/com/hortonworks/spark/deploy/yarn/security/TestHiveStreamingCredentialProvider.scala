@@ -15,22 +15,21 @@
  * limitations under the License.
  */
 
-package com.hortonworks.spark.sql.hive.llap;
+package com.hortonworks.spark.deploy.yarn.security
 
-import org.apache.spark.sql.SparkSession;
+import org.apache.hadoop.conf.Configuration
+import org.apache.spark.SparkConf
+import org.apache.spark.deploy.yarn.{FakeYARNHadoopDelegationTokenManager, YarnSparkHadoopUtil}
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
-import java.util.HashMap;
-import java.util.Map;
+class TestHiveStreamingCredentialProvider extends FunSuite with BeforeAndAfterAll {
+  test("Correctly load hivestreaming credential provider") {
+    val sparkConf = new SparkConf()
+    val credentialManager = new FakeYARNHadoopDelegationTokenManager(
+      sparkConf,
+      new Configuration(),
+      conf => YarnSparkHadoopUtil.hadoopFSsToAccess(sparkConf, conf))
 
-// Exposed for Python side.
-public class HiveWarehouseSessionState {
-
-    public SparkSession session;
-    Map<String, String> props = new HashMap<>();
-
-
-    // Exposed for Python side.
-    public Map<String, String> getProps() {
-        return this.props;
-    }
+    assert(credentialManager.credentialProviders.get("hivestreaming").nonEmpty)
+  }
 }

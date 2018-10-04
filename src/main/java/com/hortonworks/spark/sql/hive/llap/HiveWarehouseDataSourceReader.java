@@ -22,14 +22,18 @@ import scala.collection.Seq;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
 import static com.hortonworks.spark.sql.hive.llap.FilterPushdown.buildWhereClause;
 import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.*;
+import static com.hortonworks.spark.sql.hive.llap.util.JobUtil.replaceSparkHiveDriver;
 import static scala.collection.JavaConversions.asScalaBuffer;
 
 /**
@@ -72,7 +76,7 @@ public class HiveWarehouseDataSourceReader
       selectCols = projections(requiredColumns);
     }
     String baseQuery;
-    if (getQueryType().equals("table")) {
+    if (getQueryType() == StatementType.FULL_TABLE_SCAN) {
       baseQuery = selectStar(options.get("table"));
     } else {
       baseQuery = options.get("query");
@@ -88,10 +92,13 @@ public class HiveWarehouseDataSourceReader
   }
 
   protected StructType getTableSchema() throws Exception {
+    replaceSparkHiveDriver();
+
     StatementType queryKey = getQueryType();
       String query;
       if (queryKey == StatementType.FULL_TABLE_SCAN) {
-        SchemaUtil.TableRef tableRef = SchemaUtil.getDbTableNames(options.get("table"));
+        String dbName = HWConf.DEFAULT_DB.getFromOptionsMap(options);
+        SchemaUtil.TableRef tableRef = SchemaUtil.getDbTableNames(dbName, options.get("table"));
         query = selectStar(tableRef.databaseName, tableRef.tableName);
       } else {
         query = options.get("query");

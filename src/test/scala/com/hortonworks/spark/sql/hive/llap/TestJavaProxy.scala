@@ -30,6 +30,7 @@ class TestJavaProxy extends FunSuite {
 
   test("HiveWarehouseBuilderTest") {
     val test = new HiveWarehouseBuilderTest()
+    withSetUpAndTearDown(test, test.testNewEntryPoint)
     withSetUpAndTearDown(test, test.testAllBuilderConfig)
     withSetUpAndTearDown(test, test.testAllConfConfig)
   }
@@ -40,6 +41,8 @@ class TestJavaProxy extends FunSuite {
     withSetUpAndTearDown(test, test.testCreateTable)
     withSetUpAndTearDown(test, test.testDescribeTable)
     withSetUpAndTearDown(test, test.testExecuteQuery)
+    withSetUpAndTearDown(test, test.testUnqualifiedTable)
+    withSetUpAndTearDown(test, test.testQualifiedTable)
     withSetUpAndTearDown(test, test.testSetDatabase)
     withSetUpAndTearDown(test, test.testShowTable)
   }
@@ -54,6 +57,11 @@ class TestJavaProxy extends FunSuite {
   test("TestWriteSupport") {
     val test = new TestWriteSupport()
     withSetUpAndTearDown(test, test.testWriteSupport);
+  }
+
+  test("SchemaUtilTest") {
+    val test = new SchemaUtilTest()
+    withSetUpAndTearDown(test, test.testBuildHiveCreateTableQueryFromSparkDFSchema)
   }
 
   test("TestReadSupport") {

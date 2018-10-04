@@ -22,6 +22,7 @@ import org.apache.spark.sql.sources.v2.reader.DataSourceReader;
 import org.apache.spark.sql.sources.v2.writer.DataSourceWriter;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.vectorized.ColumnarBatch;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 import java.io.IOException;
 import java.sql.Struct;
@@ -55,6 +56,11 @@ public class MockHiveWarehouseConnector extends HiveWarehouseConnector {
     }
 
     @Override
+    protected TaskAttemptID getTaskAttemptID(LlapInputSplit split, JobConf conf) throws IOException {
+      return new TaskAttemptID(); 
+    }
+
+    @Override
     protected RecordReader<?, ArrowWrapperWritable> getRecordReader(LlapInputSplit split, JobConf conf, long arrowAllocatorMax)
       throws IOException {
        return new MockLlapArrowBatchRecordReader(arrowAllocatorMax);
@@ -69,7 +75,7 @@ public class MockHiveWarehouseConnector extends HiveWarehouseConnector {
     @Override
     public DataReader<ColumnarBatch> createDataReader() {
       try {
-        return getDataReader(null, null, Long.MAX_VALUE);
+        return getDataReader(null, new JobConf(), Long.MAX_VALUE);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
