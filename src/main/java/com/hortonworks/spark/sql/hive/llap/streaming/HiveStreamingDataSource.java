@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.hortonworks.spark.sql.hive.llap.HiveWarehouseSession;
+import com.hortonworks.spark.sql.hive.llap.WriterType;
 import org.apache.spark.sql.sources.v2.DataSourceOptions;
 import org.apache.spark.sql.sources.v2.DataSourceV2;
 import org.apache.spark.sql.sources.v2.StreamWriteSupport;
@@ -25,6 +26,7 @@ public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport
 
   private HiveStreamingDataSourceWriter createDataSourceWriter(final String id, final StructType schema,
     final DataSourceOptions options) {
+    WriterType writerType = WriterType.parse(options.get("writer").orElse("delimited"));
     String dbName = null;
     if(options.get("default.db").isPresent()) {
       dbName = options.get("default.db").get();
@@ -38,7 +40,7 @@ public class HiveStreamingDataSource implements DataSourceV2, StreamWriteSupport
     String metastoreKerberosPrincipal = options.get("metastoreKrbPrincipal").orElse(null);
     LOG.info("OPTIONS - database: {} table: {} partition: {} metastoreUri: {} metastoreKerberosPrincipal: {}",
       dbName, tableName, partition, metastoreUri, metastoreKerberosPrincipal);
-    return new HiveStreamingDataSourceWriter(id, schema, dbName, tableName,
+    return new HiveStreamingDataSourceWriter(id, schema, writerType, dbName, tableName,
       partitionValues, metastoreUri, metastoreKerberosPrincipal);
   }
 

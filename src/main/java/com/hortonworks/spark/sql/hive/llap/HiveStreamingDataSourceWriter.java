@@ -15,6 +15,7 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow {
 
   private String jobId;
   private StructType schema;
+  private WriterType writerType;
   private String db;
   private String table;
   private List<String> partition;
@@ -22,11 +23,12 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow {
   private String metastoreUri;
   private String metastoreKrbPrincipal;
 
-  public HiveStreamingDataSourceWriter(String jobId, StructType schema, long commitIntervalRows, String db,
-    String table, List<String> partition, final String metastoreUri, final String metastoreKrbPrincipal) {
+  public HiveStreamingDataSourceWriter(String jobId, StructType schema, long commitIntervalRows, WriterType writerType,
+    String db, String table, List<String> partition, final String metastoreUri, final String metastoreKrbPrincipal) {
     this.jobId = jobId;
     this.schema = schema;
     this.commitIntervalRows = commitIntervalRows;
+    this.writerType = writerType;
     this.db = db;
     this.table = table;
     this.partition = partition;
@@ -36,8 +38,8 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow {
 
   @Override
   public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
-    return new HiveStreamingDataWriterFactory(jobId, schema, commitIntervalRows, db, table, partition, metastoreUri,
-      metastoreKrbPrincipal);
+    return new HiveStreamingDataWriterFactory(jobId, schema, commitIntervalRows, writerType, db, table, partition,
+            metastoreUri, metastoreKrbPrincipal);
   }
 
   @Override
