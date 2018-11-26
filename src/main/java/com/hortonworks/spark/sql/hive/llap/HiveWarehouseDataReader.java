@@ -67,7 +67,7 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
         attemptId,
         childAllocatorReservation,
         arrowAllocatorMax);
-    LlapBaseInputFormat input = new LlapBaseInputFormat(true, allocator);
+    LlapBaseInputFormat input = new LlapBaseInputFormat(true, arrowAllocatorMax);
     return input.getRecordReader(split, conf, null);
   }
 
