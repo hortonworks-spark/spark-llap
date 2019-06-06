@@ -1,3 +1,7 @@
+Hive Warehouse Connector project is now being maintained at - https://github.com/hortonworks/hive-warehouse-connector
+
+
+
 
 # HiveWarehouseConnector
 
