@@ -23,13 +23,13 @@ public class HiveWarehouseDataWriter implements DataWriter<InternalRow> {
   private String jobId;
   private StructType schema;
   private int partitionId;
-  private int attemptNumber;
+  private long attemptNumber;
   private FileSystem fs;
   private Path filePath;
   private OutputWriter out;
 
   public HiveWarehouseDataWriter(Configuration conf, String jobId, StructType schema,
-      int partitionId, int attemptNumber, FileSystem fs, Path filePath) {
+      int partitionId, long attemptNumber, FileSystem fs, Path filePath) {
     this.jobId = jobId;
     this.schema = schema;
     this.partitionId = partitionId;
