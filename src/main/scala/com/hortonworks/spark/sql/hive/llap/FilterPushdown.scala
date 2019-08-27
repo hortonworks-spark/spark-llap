@@ -80,7 +80,7 @@ private[llap] object FilterPushdown extends Object {
       if (leftExpr.isEmpty || rightExpr.isEmpty) {
         return None
       }
-      Option(s"(${leftExpr.get}) ${op} (${rightExpr.get})")
+      Option(s"((${leftExpr.get}) ${op} (${rightExpr.get}))")
     }
 
     def buildNotExpr(operand: Filter): Option[String] = {
