@@ -4,7 +4,7 @@ import java.util.zip.{ZipEntry, ZipOutputStream}
 
 
 name := "hive-warehouse-connector"
-val versionString = sys.props.getOrElse("version", "1.0.0-SNAPSHOT")
+val versionString = sys.props.getOrElse("version", "1.0.0-MOJIO-2")
 version := versionString
 organization := "com.hortonworks.hive"
 scalaVersion := "2.11.8"
@@ -13,7 +13,7 @@ val scalatestVersion = "2.2.6"
 sparkVersion := sys.props.getOrElse("spark.version", "2.3.1")
 
 val hadoopVersion = sys.props.getOrElse("hadoop.version", "3.1.0")
-val hiveVersion = sys.props.getOrElse("hive.version", "3.0.0")
+val hiveVersion = sys.props.getOrElse("hive.version", "3.1.0")
 val log4j2Version = sys.props.getOrElse("log4j2.version", "2.4.1")
 val tezVersion = sys.props.getOrElse("tez.version", "0.9.1")
 val thriftVersion = sys.props.getOrElse("thrift.version", "0.9.3")
@@ -132,7 +132,7 @@ libraryDependencies ++= Seq(
     .exclude("org.apache.arrow", "arrow-format")
     .exclude("org.apache.arrow", "arrow-memory"),
 //Use ParserUtils to validate generated HiveQl strings in tests
-  ("org.apache.hive" % "hive-exec" % hiveVersion % "test")
+  ("org.apache.hive" % "hive-exec" % hiveVersion)
     .exclude("ant", "ant")
     .exclude("com.fasterxml.jackson.core", "jackson-databind")
     .exclude("org.apache.ant", "ant")

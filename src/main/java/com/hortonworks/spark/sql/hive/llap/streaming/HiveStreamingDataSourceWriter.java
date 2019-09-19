@@ -2,6 +2,7 @@ package com.hortonworks.spark.sql.hive.llap.streaming;
 
 import java.util.List;
 
+import com.hortonworks.spark.sql.hive.llap.WriterType;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
 import org.apache.spark.sql.sources.v2.writer.SupportsWriteInternalRow;
@@ -18,16 +19,18 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow, 
 
   private String jobId;
   private StructType schema;
+  private WriterType writerType;
   private String db;
   private String table;
   private List<String> partition;
   private String metastoreUri;
   private String metastoreKerberosPrincipal;
 
-  public HiveStreamingDataSourceWriter(String jobId, StructType schema, String db,
+  public HiveStreamingDataSourceWriter(String jobId, StructType schema, WriterType writerType, String db,
     String table, List<String> partition, final String metastoreUri, final String metastoreKerberosPrincipal) {
     this.jobId = jobId;
     this.schema = schema;
+    this.writerType = writerType;
     this.db = db;
     this.table = table;
     this.partition = partition;
@@ -38,7 +41,7 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow, 
   @Override
   public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
     // for the streaming case, commit transaction happens on task commit() (atleast-once), so interval is set to -1
-    return new HiveStreamingDataWriterFactory(jobId, schema, -1, db, table, partition, metastoreUri,
+    return new HiveStreamingDataWriterFactory(jobId, schema, -1, writerType, db, table, partition, metastoreUri,
       metastoreKerberosPrincipal);
   }
 

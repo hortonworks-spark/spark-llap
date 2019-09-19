@@ -1,16 +1,17 @@
 package com.hortonworks.spark.sql.hive.llap;
 
+import java.io.ByteArrayInputStream;
+import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
-import org.apache.hive.streaming.HiveStreamingConnection;
-import org.apache.hive.streaming.StreamingConnection;
-import org.apache.hive.streaming.StreamingException;
-import org.apache.hive.streaming.StrictDelimitedInputWriter;
+import org.apache.hive.streaming.*;
 import org.apache.spark.sql.catalyst.InternalRow;
+import org.apache.spark.sql.catalyst.json.JacksonGenerator;
+import org.apache.spark.sql.catalyst.json.JacksonGeneratorHelper;
 import org.apache.spark.sql.sources.v2.writer.DataWriter;
 import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage;
 import org.apache.spark.sql.types.StructType;
@@ -22,10 +23,13 @@ import com.google.common.base.Joiner;
 public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
   private static Logger LOG = LoggerFactory.getLogger(HiveStreamingDataWriter.class);
 
+  private final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+
   private String jobId;
   private StructType schema;
   private int partitionId;
   private int attemptNumber;
+  private WriterType writerType;
   private String db;
   private String table;
   private List<String> partition;
@@ -34,14 +38,18 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
   private long commitAfterNRows;
   private long rowsWritten = 0;
   private String metastoreKrbPrincipal;
+  private JacksonGenerator jacksonGenerator;
+  private CharArrayWriter charArrayWriter;
+
 
   public HiveStreamingDataWriter(String jobId, StructType schema, long commitAfterNRows, int partitionId, int
-    attemptNumber, String db, String table, List<String> partition, final String metastoreUri,
+    attemptNumber, WriterType writerType, String db, String table, List<String> partition, final String metastoreUri,
     final String metastoreKrbPrincipal) {
     this.jobId = jobId;
     this.schema = schema;
     this.partitionId = partitionId;
     this.attemptNumber = attemptNumber;
+    this.writerType = writerType;
     this.db = db;
     this.table = table;
     this.partition = partition;
@@ -56,8 +64,13 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
   }
 
   private void createStreamingConnection() throws StreamingException {
-    final StrictDelimitedInputWriter strictDelimitedInputWriter = StrictDelimitedInputWriter.newBuilder()
-      .withFieldDelimiter(',').build();
+    AbstractRecordWriter inputWriter;
+    if (writerType == WriterType.JSON) {
+      inputWriter = StrictJsonWriter.newBuilder().build();
+    } else {
+      inputWriter = StrictDelimitedInputWriter.newBuilder()
+              .withFieldDelimiter(',').build();
+    }
     HiveConf hiveConf = new HiveConf();
     hiveConf.set(MetastoreConf.ConfVars.THRIFT_URIS.getHiveName(), metastoreUri);
     // isolated classloader and shadeprefix are required for reflective instantiation of outputformat class when
@@ -73,12 +86,17 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
       hiveConf.set(MetastoreConf.ConfVars.KERBEROS_PRINCIPAL.getHiveName(), metastoreKrbPrincipal);
     }
 
+    if (writerType == WriterType.JSON) {
+      charArrayWriter = new CharArrayWriter();
+      jacksonGenerator = JacksonGeneratorHelper.createJacksonGenerator(schema, charArrayWriter, null);
+    }
+
     LOG.info("Creating hive streaming connection..");
     streamingConnection = HiveStreamingConnection.newBuilder()
       .withDatabase(db)
       .withTable(table)
       .withStaticPartitionValues(partition)
-      .withRecordWriter(strictDelimitedInputWriter)
+      .withRecordWriter(inputWriter)
       .withHiveConf(hiveConf)
       .withAgentInfo(jobId + "(" + partitionId + ")")
       .connect();
@@ -88,10 +106,20 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
 
   @Override
   public void write(final InternalRow record) throws IOException {
-    String delimitedRow = Joiner.on(",").useForNull("")
-      .join(scala.collection.JavaConversions.seqAsJavaList(record.toSeq(schema)));
+    ByteArrayInputStream bais;
+    if (writerType == WriterType.JSON) {
+      jacksonGenerator.write(record);
+      jacksonGenerator.flush();
+      String jsonRow = charArrayWriter.toString();
+      charArrayWriter.reset();
+      bais = new ByteArrayInputStream(jsonRow.getBytes(UTF8_CHARSET));
+    } else {
+      String delimitedRow = Joiner.on(",").useForNull("")
+              .join(scala.collection.JavaConversions.seqAsJavaList(record.toSeq(schema)));
+      bais = new ByteArrayInputStream(delimitedRow.getBytes(UTF8_CHARSET));
+    }
     try {
-      streamingConnection.write(delimitedRow.getBytes(Charset.forName("UTF-8")));
+      streamingConnection.write(bais);
       rowsWritten++;
       if (rowsWritten > 0 && commitAfterNRows > 0 && (rowsWritten % commitAfterNRows == 0)) {
         LOG.info("Committing transaction after rows: {}", rowsWritten);
@@ -113,6 +141,10 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
     String msg = "Committed jobId: " + jobId + " partitionId: " + partitionId + " attemptNumber: " + attemptNumber +
       " connectionStats: " + streamingConnection.getConnectionStats();
     streamingConnection.close();
+    if (writerType == WriterType.JSON) {
+      jacksonGenerator.close();
+      charArrayWriter.close();
+    }
     LOG.info("Closing streaming connection on commit. Msg: {} rowsWritten: {}", rowsWritten);
     return new SimpleWriterCommitMessage(msg);
   }
@@ -128,6 +160,10 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
       String msg = "Aborted jobId: " + jobId + " partitionId: " + partitionId + " attemptNumber: " + attemptNumber +
         " connectionStats: " + streamingConnection.getConnectionStats();
       streamingConnection.close();
+      if (writerType == WriterType.JSON) {
+        jacksonGenerator.close();
+        charArrayWriter.close();
+      }
       LOG.info("Closing streaming connection on abort. Msg: {} rowsWritten: {}", msg, rowsWritten);
     }
   }

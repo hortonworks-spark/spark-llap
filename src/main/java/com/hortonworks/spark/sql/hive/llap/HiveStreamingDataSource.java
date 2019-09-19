@@ -26,6 +26,7 @@ public class HiveStreamingDataSource implements DataSourceV2, WriteSupport, Sess
 
   private HiveStreamingDataSourceWriter createDataSourceWriter(final String id, final StructType schema,
     final DataSourceOptions options) {
+    WriterType writerType = WriterType.parse(options.get("writer").orElse("delimited"));
     String dbName;
     if(options.get("default.db").isPresent()) {
       dbName = options.get("default.db").get();
@@ -42,7 +43,7 @@ public class HiveStreamingDataSource implements DataSourceV2, WriteSupport, Sess
     LOG.info("OPTIONS - database: {} table: {} partition: {} commitIntervalRows: {} metastoreUri: {} " +
         "metastoreKrbPrincipal: {}", dbName, tableName, partition, commitInterval,
       metastoreUri, metastoreKrbPrincipal);
-    return new HiveStreamingDataSourceWriter(id, schema, commitInterval, dbName, tableName,
+    return new HiveStreamingDataSourceWriter(id, schema, commitInterval, writerType, dbName, tableName,
       partitionValues, metastoreUri, metastoreKrbPrincipal);
   }
 

@@ -67,7 +67,7 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
         attemptId,
         childAllocatorReservation,
         arrowAllocatorMax);
-    LlapBaseInputFormat input = new LlapBaseInputFormat(true, allocator);
+    LlapBaseInputFormat input = new LlapBaseInputFormat(true, arrowAllocatorMax);
     return input.getRecordReader(split, conf, null);
   }
 
@@ -102,7 +102,9 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
 
   @Override public void close() throws IOException {
     //close() single ColumnarBatch instance
-    columnarBatch.close();
+    if(columnarBatch != null) {
+      columnarBatch.close();
+    }
     //reader.close() will throw exception unless all arrow buffers have been released
     //See org.apache.hadoop.hive.llap.close()
     //See org.apache.arrow.memory.BaseAllocator.close()
