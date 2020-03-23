@@ -21,7 +21,7 @@ public class HiveStreamingDataWriterFactory implements DataWriterFactory<Interna
   private String metastoreKrbPrincipal;
 
   public HiveStreamingDataWriterFactory(String jobId, StructType schema, long commitIntervalRows, String db,
-    String table, List<String> partition, final String metastoreUri, final String metastoreKrbPrincipal) {
+                                        String table, List<String> partition, final String metastoreUri, final String metastoreKrbPrincipal) {
     this.jobId = jobId;
     this.schema = schema;
     this.db = db;
@@ -33,16 +33,15 @@ public class HiveStreamingDataWriterFactory implements DataWriterFactory<Interna
   }
 
   @Override
-  public DataWriter<InternalRow> createDataWriter(int partitionId, int attemptNumber) {
+  public DataWriter<InternalRow> createDataWriter(int partitionId, long attemptNumber,long epochId) {
     ClassLoader restoredClassloader = Thread.currentThread().getContextClassLoader();
     ClassLoader isolatedClassloader = HiveIsolatedClassLoader.isolatedClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(isolatedClassloader);
       return new HiveStreamingDataWriter(jobId, schema, commitIntervalRows, partitionId, attemptNumber, db,
-        table, partition, metastoreUri, metastoreKrbPrincipal);
+              table, partition, metastoreUri, metastoreKrbPrincipal);
     } finally {
       Thread.currentThread().setContextClassLoader(restoredClassloader);
     }
   }
 }
-

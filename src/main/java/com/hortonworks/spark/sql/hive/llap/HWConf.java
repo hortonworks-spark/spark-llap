@@ -53,7 +53,8 @@ public enum HWConf {
 
   private static Logger LOG = LoggerFactory.getLogger(HWConf.class);
   public static final String HIVESERVER2_CREDENTIAL_ENABLED = "spark.security.credentials.hiveserver2.enabled";
-  public static final String HIVESERVER2_JDBC_URL_PRINCIPAL = "spark.sql.hive.hiveserver2.jdbc.url.principal";
+  public static final String HIVESERVER2_JDBC_URL_PRINCIPAL = "" +
+          "spark.sql.hive.hiveserver2.jdbc.url.principal";
   public static final String HIVESERVER2_JDBC_URL = "spark.sql.hive.hiveserver2.jdbc.url";
 
   public void setString(HiveWarehouseSessionState state, String value) {

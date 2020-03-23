@@ -7,7 +7,7 @@ import org.apache.hadoop.hive.llap.LlapInputSplit;
 import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
-import org.apache.spark.sql.sources.v2.reader.DataReader;
+import org.apache.spark.sql.sources.v2.reader.InputPartitionReader;
 import org.apache.spark.sql.vectorized.ArrowColumnVector;
 import org.apache.spark.sql.vectorized.ColumnVector;
 import org.apache.spark.sql.vectorized.ColumnarBatch;
@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.hadoop.hive.ql.io.arrow.RootAllocatorFactory;
 
-public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
+public class HiveWarehouseDataReader implements InputPartitionReader<ColumnarBatch> {
 
   private RecordReader<?, ArrowWrapperWritable> reader;
   private ArrowWrapperWritable wrapperWritable = new ArrowWrapperWritable();
@@ -67,7 +67,7 @@ public class HiveWarehouseDataReader implements DataReader<ColumnarBatch> {
         attemptId,
         childAllocatorReservation,
         arrowAllocatorMax);
-    LlapBaseInputFormat input = new LlapBaseInputFormat(true, allocator);
+    LlapBaseInputFormat input = new LlapBaseInputFormat(true, arrowAllocatorMax);
     return input.getRecordReader(split, conf, null);
   }
 

@@ -4,13 +4,13 @@ import java.util.List;
 
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
-import org.apache.spark.sql.sources.v2.writer.SupportsWriteInternalRow;
+import org.apache.spark.sql.sources.v2.writer.DataSourceWriter;
 import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow {
+public class HiveStreamingDataSourceWriter implements DataSourceWriter {
   private static Logger LOG = LoggerFactory.getLogger(HiveStreamingDataSourceWriter.class);
 
   private String jobId;
@@ -23,7 +23,7 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow {
   private String metastoreKrbPrincipal;
 
   public HiveStreamingDataSourceWriter(String jobId, StructType schema, long commitIntervalRows, String db,
-    String table, List<String> partition, final String metastoreUri, final String metastoreKrbPrincipal) {
+                                       String table, List<String> partition, final String metastoreUri, final String metastoreKrbPrincipal) {
     this.jobId = jobId;
     this.schema = schema;
     this.commitIntervalRows = commitIntervalRows;
@@ -35,9 +35,9 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow {
   }
 
   @Override
-  public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
+  public DataWriterFactory<InternalRow> createWriterFactory() {
     return new HiveStreamingDataWriterFactory(jobId, schema, commitIntervalRows, db, table, partition, metastoreUri,
-      metastoreKrbPrincipal);
+            metastoreKrbPrincipal);
   }
 
   @Override
@@ -50,4 +50,3 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow {
     LOG.info("Abort job {}", jobId);
   }
 }
-

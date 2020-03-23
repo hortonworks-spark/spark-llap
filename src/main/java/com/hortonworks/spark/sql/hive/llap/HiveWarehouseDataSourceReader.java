@@ -6,7 +6,7 @@ import org.apache.hadoop.hive.llap.LlapBaseInputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.spark.sql.sources.Filter;
-import org.apache.spark.sql.sources.v2.reader.DataReaderFactory;
+import org.apache.spark.sql.sources.v2.reader.InputPartition;
 import org.apache.spark.sql.sources.v2.reader.DataSourceReader;
 import org.apache.spark.sql.sources.v2.reader.SupportsPushDownFilters;
 import org.apache.spark.sql.sources.v2.reader.SupportsPushDownRequiredColumns;
@@ -44,7 +44,7 @@ import static scala.collection.JavaConversions.asScalaBuffer;
  * 5. Spark pulls factories, where factory/task are 1:1 -> createBatchDataReaderFactories(..)
  */
 public class HiveWarehouseDataSourceReader
-    implements DataSourceReader, SupportsPushDownRequiredColumns, SupportsScanColumnarBatch, SupportsPushDownFilters {
+        implements DataSourceReader, SupportsPushDownRequiredColumns, SupportsScanColumnarBatch, SupportsPushDownFilters {
 
   //The pruned schema
   StructType schema = null;
@@ -95,27 +95,27 @@ public class HiveWarehouseDataSourceReader
     replaceSparkHiveDriver();
 
     StatementType queryKey = getQueryType();
-      String query;
-      if (queryKey == StatementType.FULL_TABLE_SCAN) {
-        String dbName = HWConf.DEFAULT_DB.getFromOptionsMap(options);
-        SchemaUtil.TableRef tableRef = SchemaUtil.getDbTableNames(dbName, options.get("table"));
-        query = selectStar(tableRef.databaseName, tableRef.tableName);
-      } else {
-        query = options.get("query");
+    String query;
+    if (queryKey == StatementType.FULL_TABLE_SCAN) {
+      String dbName = HWConf.DEFAULT_DB.getFromOptionsMap(options);
+      SchemaUtil.TableRef tableRef = SchemaUtil.getDbTableNames(dbName, options.get("table"));
+      query = selectStar(tableRef.databaseName, tableRef.tableName);
+    } else {
+      query = options.get("query");
+    }
+    LlapBaseInputFormat llapInputFormat = null;
+    try {
+      JobConf conf = JobUtil.createJobConf(options, query);
+      llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
+      InputSplit[] splits = llapInputFormat.getSplits(conf, 0);
+      LlapInputSplit schemaSplit = (LlapInputSplit) splits[0];
+      Schema schema = schemaSplit.getSchema();
+      return SchemaUtil.convertSchema(schema);
+    } finally {
+      if(llapInputFormat != null) {
+        close();
       }
-      LlapBaseInputFormat llapInputFormat = null;
-      try {
-        JobConf conf = JobUtil.createJobConf(options, query);
-        llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
-        InputSplit[] splits = llapInputFormat.getSplits(conf, 0);
-        LlapInputSplit schemaSplit = (LlapInputSplit) splits[0];
-        Schema schema = schemaSplit.getSchema();
-        return SchemaUtil.convertSchema(schema);
-      } finally {
-        if(llapInputFormat != null) {
-          close();
-        }
-      }
+    }
   }
 
   @Override public StructType readSchema() {
@@ -134,12 +134,12 @@ public class HiveWarehouseDataSourceReader
   //"returns unsupported filters."
   @Override public Filter[] pushFilters(Filter[] filters) {
     pushedFilters = Arrays.stream(filters).
-        filter((filter) -> FilterPushdown.buildFilterExpression(baseSchema, filter).isDefined()).
-        toArray(Filter[]::new);
+            filter((filter) -> FilterPushdown.buildFilterExpression(baseSchema, filter).isDefined()).
+            toArray(Filter[]::new);
 
     return Arrays.stream(filters).
-        filter((filter) -> !FilterPushdown.buildFilterExpression(baseSchema, filter).isDefined()).
-        toArray(Filter[]::new);
+            filter((filter) -> !FilterPushdown.buildFilterExpression(baseSchema, filter).isDefined()).
+            toArray(Filter[]::new);
   }
 
   @Override public Filter[] pushedFilters() {
@@ -150,11 +150,11 @@ public class HiveWarehouseDataSourceReader
     this.schema = requiredSchema;
   }
 
-  @Override public List<DataReaderFactory<ColumnarBatch>> createBatchDataReaderFactories() {
+  public List<InputPartition<ColumnarBatch>> createBatchDataReaderFactories() {
     try {
       boolean countStar = this.schema.length() == 0;
       String queryString = getQueryString(SchemaUtil.columnNames(schema), pushedFilters);
-      List<DataReaderFactory<ColumnarBatch>> factories = new ArrayList<>();
+      List<InputPartition<ColumnarBatch>> factories = new ArrayList<>();
       if (countStar) {
         LOG.info("Executing count with query: {}", queryString);
         factories.addAll(getCountStarFactories(queryString));
@@ -167,8 +167,12 @@ public class HiveWarehouseDataSourceReader
     }
   }
 
-  protected List<DataReaderFactory<ColumnarBatch>> getSplitsFactories(String query) {
-    List<DataReaderFactory<ColumnarBatch>> tasks = new ArrayList<>();
+  @Override public List<InputPartition<ColumnarBatch>>  planBatchInputPartitions(){
+    return createBatchDataReaderFactories();
+  }
+
+  protected List<InputPartition<ColumnarBatch>> getSplitsFactories(String query) {
+    List<InputPartition<ColumnarBatch>> tasks = new ArrayList<>();
     try {
       JobConf jobConf = JobUtil.createJobConf(options, query);
       LlapBaseInputFormat llapInputFormat = new LlapBaseInputFormat(false, Long.MAX_VALUE);
@@ -184,12 +188,12 @@ public class HiveWarehouseDataSourceReader
     return tasks;
   }
 
-  protected DataReaderFactory<ColumnarBatch> getDataReaderFactory(InputSplit split, JobConf jobConf, long arrowAllocatorMax) {
+  protected InputPartition<ColumnarBatch> getDataReaderFactory(InputSplit split, JobConf jobConf, long arrowAllocatorMax) {
     return new HiveWarehouseDataReaderFactory(split, jobConf, arrowAllocatorMax);
   }
 
-  private List<DataReaderFactory<ColumnarBatch>> getCountStarFactories(String query) {
-    List<DataReaderFactory<ColumnarBatch>> tasks = new ArrayList<>(100);
+  private List<InputPartition<ColumnarBatch>> getCountStarFactories(String query) {
+    List<InputPartition<ColumnarBatch>> tasks = new ArrayList<>(100);
     long count = getCount(query);
     String numTasksString = HWConf.COUNT_TASKS.getFromOptionsMap(options);
     int numTasks = Integer.parseInt(numTasksString);
@@ -205,7 +209,7 @@ public class HiveWarehouseDataSourceReader
   protected long getCount(String query) {
     try(Connection conn = getConnection()) {
       DriverResultSet rs = DefaultJDBCWrapper.executeStmt(conn, HWConf.DEFAULT_DB.getFromOptionsMap(options), query,
-          Long.parseLong(HWConf.MAX_EXEC_RESULTS.getFromOptionsMap(options)));
+              Long.parseLong(HWConf.MAX_EXEC_RESULTS.getFromOptionsMap(options)));
       return rs.getData().get(0).getLong(0);
     } catch (SQLException e) {
       LOG.error("Failed to connect to HS2", e);

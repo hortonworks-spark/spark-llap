@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
-import org.apache.spark.sql.sources.v2.writer.SupportsWriteInternalRow;
+import org.apache.spark.sql.sources.v2.writer.DataSourceWriter;
 import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
@@ -35,7 +35,7 @@ import java.util.Map;
 
 import static com.hortonworks.spark.sql.hive.llap.util.HiveQlUtil.loadInto;
 
-public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
+public class HiveWarehouseDataSourceWriter implements DataSourceWriter {
   protected String jobId;
   protected StructType schema;
   protected Path path;
@@ -52,7 +52,7 @@ public class HiveWarehouseDataSourceWriter implements SupportsWriteInternalRow {
     this.conf = conf;
   }
 
-  @Override public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
+  @Override public DataWriterFactory<InternalRow>  createWriterFactory() {
     return new HiveWarehouseDataWriterFactory(jobId, schema, path, new SerializableHadoopConfiguration(conf));
   }
 

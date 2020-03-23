@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.sources.v2.writer.DataWriterFactory;
-import org.apache.spark.sql.sources.v2.writer.SupportsWriteInternalRow;
+import org.apache.spark.sql.sources.v2.writer.DataSourceWriter;
 import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage;
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter;
 import org.apache.spark.sql.types.StructType;
@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hortonworks.spark.sql.hive.llap.HiveStreamingDataWriterFactory;
 
-public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow, StreamWriter {
+public class HiveStreamingDataSourceWriter implements DataSourceWriter, StreamWriter {
   private static Logger LOG = LoggerFactory.getLogger(HiveStreamingDataSourceWriter.class);
 
   private String jobId;
@@ -36,7 +36,7 @@ public class HiveStreamingDataSourceWriter implements SupportsWriteInternalRow, 
   }
 
   @Override
-  public DataWriterFactory<InternalRow> createInternalRowWriterFactory() {
+  public DataWriterFactory<InternalRow> createWriterFactory() {
     // for the streaming case, commit transaction happens on task commit() (atleast-once), so interval is set to -1
     return new HiveStreamingDataWriterFactory(jobId, schema, -1, db, table, partition, metastoreUri,
       metastoreKerberosPrincipal);

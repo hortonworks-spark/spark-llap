@@ -29,7 +29,7 @@ public class HiveWarehouseDataWriterFactory implements DataWriterFactory<Interna
     this.conf = conf;
   }
 
-  @Override public DataWriter<InternalRow> createDataWriter(int partitionId, int attemptNumber) {
+  @Override public DataWriter<InternalRow> createDataWriter(int partitionId, long attemptNumber,long epochId) {
     Path filePath = new Path(this.path, String.format("%s_%s_%s", jobId, partitionId, attemptNumber));
     FileSystem fs = null;
     try {
@@ -42,7 +42,7 @@ public class HiveWarehouseDataWriterFactory implements DataWriterFactory<Interna
   }
 
   protected DataWriter<InternalRow> getDataWriter(Configuration conf, String jobId,
-      StructType schema, int partitionId, int attemptNumber,
+      StructType schema, int partitionId, long attemptNumber,
       FileSystem fs, Path filePath) {
     return new HiveWarehouseDataWriter(conf, jobId, schema, partitionId, attemptNumber, fs, filePath);
   }

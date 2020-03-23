@@ -25,7 +25,7 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
   private String jobId;
   private StructType schema;
   private int partitionId;
-  private int attemptNumber;
+  private long attemptNumber;
   private String db;
   private String table;
   private List<String> partition;
@@ -35,7 +35,7 @@ public class HiveStreamingDataWriter implements DataWriter<InternalRow> {
   private long rowsWritten = 0;
   private String metastoreKrbPrincipal;
 
-  public HiveStreamingDataWriter(String jobId, StructType schema, long commitAfterNRows, int partitionId, int
+  public HiveStreamingDataWriter(String jobId, StructType schema, long commitAfterNRows, int partitionId, long
     attemptNumber, String db, String table, List<String> partition, final String metastoreUri,
     final String metastoreKrbPrincipal) {
     this.jobId = jobId;
